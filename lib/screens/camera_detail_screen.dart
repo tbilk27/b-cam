@@ -5,7 +5,9 @@ import '../models/camera_device.dart';
 import '../services/camera_storage_service.dart';
 import '../theme/fluent_theme.dart';
 import '../widgets/live_player_view.dart';
+import '../widgets/vertical_event_timeline.dart';
 import 'commission_screen.dart';
+import 'fullscreen_camera_viewer.dart';
 
 class CameraDetailScreen extends StatefulWidget {
   final CameraDevice camera;
@@ -27,6 +29,19 @@ class _CameraDetailScreenState extends State<CameraDetailScreen> {
   void initState() {
     super.initState();
     _camera = widget.camera;
+  }
+
+  void _openFullScreen() {
+    final allCameras = context.read<CameraStorageService>().cameras;
+    final idx = allCameras.indexWhere((c) => c.id == _camera.id);
+    Navigator.of(context).push(
+      FluentPageRoute(
+        builder: (_) => FullscreenCameraViewer(
+          cameras: allCameras,
+          initialIndex: idx >= 0 ? idx : 0,
+        ),
+      ),
+    );
   }
 
   void _switchStreamQuality(int subType) {
@@ -121,20 +136,23 @@ class _CameraDetailScreenState extends State<CameraDetailScreen> {
         ),
       ),
       children: [
-        // Main Video Player View
+        // Main Video Player View (Double tap enters full screen)
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: AspectRatio(
             aspectRatio: 16 / 9,
-            child: LivePlayerView(
-              camera: _camera,
-              autoPlay: true,
-              showPtzOverlay: true,
+            child: GestureDetector(
+              onDoubleTap: _openFullScreen,
+              child: LivePlayerView(
+                camera: _camera,
+                autoPlay: true,
+                showPtzOverlay: true,
+              ),
             ),
           ),
         ),
 
-        // Action Toolbar (Snapshot, Stream Quality)
+        // Action Toolbar (Snapshot, Stream Quality, Fullscreen)
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
           child: Row(
@@ -145,26 +163,52 @@ class _CameraDetailScreenState extends State<CameraDetailScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(FluentIcons.camera, size: 15),
-                      const SizedBox(width: 6),
-                      Text('Snapshot', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600)),
+                      const Icon(FluentIcons.camera, size: 14),
+                      const SizedBox(width: 5),
+                      Flexible(
+                        child: Text(
+                          'Snapshot',
+                          style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w600),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                     ],
                   ),
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
               Expanded(
                 child: Button(
                   onPressed: () => _switchStreamQuality(_camera.subType == 0 ? 1 : 0),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(FluentIcons.video, size: 15),
-                      const SizedBox(width: 6),
+                      const Icon(FluentIcons.video, size: 14),
+                      const SizedBox(width: 5),
                       Flexible(
                         child: Text(
-                          _camera.subType == 0 ? 'HD Principal' : 'Sub Fluente',
-                          style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600),
+                          _camera.subType == 0 ? 'HD' : 'Sub',
+                          style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w600),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: FilledButton(
+                  onPressed: _openFullScreen,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(FluentIcons.full_screen, size: 14),
+                      const SizedBox(width: 5),
+                      Flexible(
+                        child: Text(
+                          'Tela Cheia',
+                          style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w600),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -173,6 +217,17 @@ class _CameraDetailScreenState extends State<CameraDetailScreen> {
                 ),
               ),
             ],
+          ),
+        ),
+
+        // Vertical Event Timeline Card (Timeline de Eventos da Câmera)
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Card(
+            backgroundColor: BCamTheme.darkSurface,
+            borderColor: BCamTheme.darkBorder,
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: VerticalEventTimeline(camera: _camera),
           ),
         ),
 

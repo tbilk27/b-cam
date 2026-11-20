@@ -170,6 +170,33 @@ Registro cronológico mantido pelo **Líder de Projeto & Orquestrador Geral**.
 
 ---
 
+## 📅 Sprint 1.8 • Modo Tela Cheia Imersivo, Gestos Táteis e Linha do Tempo Vertical
+- **Data**: 2026-11-20
+- **Solicitante**: Usuário ("se eu der duplo toque na camera, quero ela de tela cheia, e se arrastar para o lado, troque de câmera na tela cheia, se der duplo toque novamente, volte para a tela com a imagem menor. quero conseguir acessar a linha do tempo na vertical com os eventos registrados pela camera.")
+- **Parecer dos Agentes e Implementações**:
+  - **Especialista UX/UI**:
+    - Desenvolveu o fluxo de gestos imersivo: duplo toque para maximizar / minimizar e swipe horizontal tipo carrossel para alternância rápida entre câmeras comissionadas.
+    - Projetou o componente de Linha do Tempo Vertical (`VerticalEventTimeline`), com nós luminescentes coloridos por tipo de evento, etiquetas de tempo monoespaçadas, cards com resumo e miniatura interativa de reprodução de clipe NVR.
+    - Criou painel retrátil tipo *bottom sheet* em tela cheia com puxador e fechamento tátil.
+  - **Arquiteto de Software**:
+    - Elaborou a **ADR-012: Modo Tela Cheia Imersivo com Gestos de Navegação Horizontal e Linha do Tempo Vertical de Eventos**.
+    - Modelou as entidades `CameraEvent` e `CameraEventType` (pessoa, veículo, movimento, gravação e alarme) desacopladas e integradas ao `CameraEventService`.
+  - **Desenvolvedor Flutter**:
+    - Implementou `FullscreenCameraViewer`:
+      - `PageView.builder(scrollDirection: Axis.horizontal)` para troca suave de câmera em tela cheia.
+      - `GestureDetector(onDoubleTap)` para saída rápida de tela cheia.
+      - HUD translúcido com timer de auto-ocultamento (4s) e botões de ação ("Linha do Tempo", "Reduzir", contador "2 / 4").
+    - Adicionou gestos de duplo toque em `HomeScreen`, `CameraDetailScreen` e `MultiGridScreen`.
+    - Integrou a `VerticalEventTimeline` na tela de detalhes da câmera e no viewer de tela cheia.
+  - **Analista QA**:
+    - Criou suite de testes unitários para a modelagem de eventos e serviço (`test/camera_event_test.dart`). Total de 14/14 testes aprovados (100% de sucesso).
+    - `flutter analyze`: 0 erros.
+    - Validou a compilação ARM64 e instalou diretamente no Xiaomi Redmi Note 10S físico.
+  - **Líder de Projeto & Orquestrador**:
+    - Sincronizou todos os artefatos com o GitHub e manteve o registro do contexto atualizado.
+
+---
+
 ## 🚀 Backlog Priorizado (Próximos Passos)
 
 - [ ] **EPIC-01: Controle PTZ Real via ONVIF SOAP**:

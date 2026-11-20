@@ -10,6 +10,7 @@ import '../widgets/live_player_view.dart';
 import 'camera_detail_screen.dart';
 import 'commission_screen.dart';
 import 'diagnostics_screen.dart';
+import 'fullscreen_camera_viewer.dart';
 import 'multi_grid_screen.dart';
 import 'scan_screen.dart';
 
@@ -263,6 +264,17 @@ class _HomeScreenState extends State<HomeScreen> {
                           Navigator.of(context).push(
                             FluentPageRoute(
                               builder: (_) => CameraDetailScreen(camera: camera),
+                            ),
+                          );
+                        },
+                        onDoubleTap: () {
+                          final idx = filteredCameras.indexOf(camera);
+                          Navigator.of(context).push(
+                            FluentPageRoute(
+                              builder: (_) => FullscreenCameraViewer(
+                                cameras: filteredCameras,
+                                initialIndex: idx >= 0 ? idx : 0,
+                              ),
                             ),
                           );
                         },

@@ -5,6 +5,7 @@ import '../services/camera_storage_service.dart';
 import '../theme/fluent_theme.dart';
 import '../widgets/live_player_view.dart';
 import 'camera_detail_screen.dart';
+import 'fullscreen_camera_viewer.dart';
 
 class MultiGridScreen extends StatefulWidget {
   const MultiGridScreen({super.key});
@@ -93,6 +94,16 @@ class _MultiGridScreenState extends State<MultiGridScreen> {
                     Navigator.of(context).push(
                       FluentPageRoute(
                         builder: (_) => CameraDetailScreen(camera: cam),
+                      ),
+                    );
+                  },
+                  onDoubleTap: () {
+                    Navigator.of(context).push(
+                      FluentPageRoute(
+                        builder: (_) => FullscreenCameraViewer(
+                          cameras: cameras,
+                          initialIndex: index,
+                        ),
                       ),
                     );
                   },
