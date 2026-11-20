@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:fluent_ui/fluent_ui.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
@@ -6,9 +6,7 @@ import '../models/camera_device.dart';
 import '../models/manufacturer.dart';
 import '../models/scan_result.dart';
 import '../services/camera_storage_service.dart';
-import '../theme/gta_colors.dart';
-import '../widgets/gta_button.dart';
-import '../widgets/gta_neon_card.dart';
+import '../theme/fluent_theme.dart';
 import '../widgets/live_player_view.dart';
 
 class CommissionScreen extends StatefulWidget {
@@ -135,7 +133,7 @@ class _CommissionScreenState extends State<CommissionScreen> {
   }
 
   Future<void> _saveCamera() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!(_formKey.currentState?.validate() ?? false)) return;
 
     final device = _buildTempDevice();
     final storage = context.read<CameraStorageService>();
@@ -147,21 +145,13 @@ class _CommissionScreenState extends State<CommissionScreen> {
     }
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: GtaColors.bgCard,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-            side: const BorderSide(color: GtaColors.statusOnline),
-          ),
-          content: Text(
-            'Câmera "${device.name}" salva com sucesso!',
-            style: GoogleFonts.rajdhani(
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
+      displayInfoBar(
+        context,
+        builder: (context, close) => InfoBar(
+          title: const Text('Configuração Salva'),
+          content: Text('Câmera "${device.name}" foi salva com sucesso!'),
+          severity: InfoBarSeverity.success,
+          onClose: close,
         ),
       );
       Navigator.of(context).pop();
@@ -172,475 +162,542 @@ class _CommissionScreenState extends State<CommissionScreen> {
   Widget build(BuildContext context) {
     final previewDevice = _buildTempDevice();
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.existingCamera != null ? 'EDITAR CÂMERA' : 'COMISSIONAR CÂMERA'),
+    return SafeArea(
+      child: ScaffoldPage(
+      header: PageHeader(
+        title: Row(
+          children: [
+            IconButton(
+              icon: const Icon(FluentIcons.back, size: 16),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              widget.existingCamera != null ? 'Editar Câmera' : 'Comissionar Câmera',
+              style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w700),
+            ),
+          ],
+        ),
       ),
-      body: Form(
+      content: Form(
         key: _formKey,
         child: ListView(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: EdgeInsets.zero,
           children: [
-            // Auto-detected Banner if from Scan
-            if (widget.scanResult != null) ...[
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  gradient: GtaColors.neonCyanPinkGradient,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.radar_rounded, color: Colors.white, size: 28),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'DETECTADA AUTOMATICAMENTE',
-                            style: GoogleFonts.orbitron(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w900,
-                              color: Colors.white,
-                              letterSpacing: 1.2,
-                            ),
-                          ),
-                          Text(
-                            'Origem: ${widget.scanResult!.detectionSource}',
-                            style: GoogleFonts.rajdhani(
-                              fontSize: 13,
-                              color: Colors.white.withOpacity(0.9),
-                            ),
-                          ),
-                        ],
-                      ),
+              // Auto-detected Banner if from Scan
+              if (widget.scanResult != null) ...[
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  child: InfoBar(
+                    title: const Text('Dispositivo Detectado na Rede'),
+                    content: Text(
+                      'Origem: ${widget.scanResult!.detectionSource} • MAC: ${widget.scanResult!.macAddress ?? "Não resolvido"}',
                     ),
-                  ],
+                    severity: InfoBarSeverity.info,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-            ],
+                const SizedBox(height: 8),
+              ],
 
-            // Live Test Stream Card
-            if (_testingStream) ...[
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'TESTE EM TEMPO REAL',
-                        style: GoogleFonts.orbitron(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                          color: GtaColors.electricCyan,
-                          letterSpacing: 1.5,
+              // Live Test Stream Card
+              if (_testingStream) ...[
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Card(
+                    backgroundColor: BCamTheme.darkSurface,
+                    borderColor: BCamTheme.darkBorder,
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(FluentIcons.video, size: 16, color: BCamTheme.accentLightBlue),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Teste de Reprodução em Tempo Real',
+                                  style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: BCamTheme.textPrimary),
+                                ),
+                              ],
+                            ),
+                            IconButton(
+                              icon: const Icon(FluentIcons.chrome_close, size: 14),
+                              onPressed: () => setState(() => _testingStream = false),
+                            ),
+                          ],
                         ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close_rounded, size: 18, color: Colors.white60),
-                        onPressed: () => setState(() => _testingStream = false),
-                      ),
-                    ],
+                        const SizedBox(height: 10),
+                        AspectRatio(
+                          aspectRatio: 16 / 9,
+                          child: LivePlayerView(camera: previewDevice),
+                        ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    height: 220,
-                    child: LivePlayerView(camera: previewDevice),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-              ),
-            ],
+                ),
+                const SizedBox(height: 8),
+              ],
 
-            // 1. Manufacturer selection
-            Text(
-              'FABRICANTE / PROTOCOLO',
-              style: GoogleFonts.orbitron(
-                fontSize: 11,
-                fontWeight: FontWeight.w800,
-                color: GtaColors.neonPink,
-                letterSpacing: 1.2,
+              // 1. Manufacturer selection
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                child: Text(
+                  'FABRICANTE & PROTOCOLO',
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: BCamTheme.accentLightBlue,
+                    letterSpacing: 0.5,
+                  ),
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: CameraManufacturer.values.map((m) {
-                  final isSelected = m == _selectedManufacturer;
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: ChoiceChip(
-                      selected: isSelected,
-                      label: Text(m.displayName),
-                      labelStyle: GoogleFonts.rajdhani(
-                        fontWeight: FontWeight.w800,
-                        color: isSelected ? Colors.white : Colors.white70,
-                      ),
-                      selectedColor: m.brandColor,
-                      backgroundColor: GtaColors.bgCard,
-                      side: BorderSide(
-                        color: isSelected ? Colors.white : GtaColors.borderSubtle,
-                        width: isSelected ? 1.5 : 1,
-                      ),
-                      onSelected: (val) {
-                        if (val) {
-                          setState(() {
-                            _selectedManufacturer = m;
-                            _userController.text = m.defaultUser;
-                          });
-                        }
-                      },
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // 2. Camera Name & Location
-            GtaNeonCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'IDENTIFICAÇÃO',
-                    style: GoogleFonts.orbitron(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      color: GtaColors.electricCyan,
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _nameController,
-                    decoration: const InputDecoration(
-                      labelText: 'Nome da Câmera',
-                      prefixIcon: Icon(Icons.videocam_rounded),
-                    ),
-                    validator: (v) => v == null || v.isEmpty ? 'Informe o nome' : null,
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _locationController,
-                    decoration: const InputDecoration(
-                      labelText: 'Localização / Zona',
-                      prefixIcon: Icon(Icons.place_rounded),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 6,
-                    children: _commonLocations.map((loc) {
-                      return ActionChip(
-                        label: Text(loc, style: GoogleFonts.rajdhani(fontSize: 12)),
-                        backgroundColor: GtaColors.bgSurface,
-                        side: const BorderSide(color: GtaColors.borderSubtle),
-                        onPressed: () => setState(() => _locationController.text = loc),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: CameraManufacturer.values.map((m) {
+                      final isSelected = m == _selectedManufacturer;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: Button(
+                          style: ButtonStyle(
+                            backgroundColor: WidgetStateProperty.all(
+                              isSelected ? BCamTheme.accentBlue : BCamTheme.darkCard,
+                            ),
+                            shape: WidgetStateProperty.all(
+                              RoundedRectangleBorder(
+                                side: BorderSide(
+                                  color: isSelected ? BCamTheme.accentLightBlue : BCamTheme.darkBorder,
+                                  width: isSelected ? 1.5 : 1,
+                                ),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ),
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _selectedManufacturer = m;
+                              _userController.text = m.defaultUser;
+                            });
+                          },
+                          child: Text(
+                            m.displayName,
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                              color: isSelected ? Colors.white : BCamTheme.textPrimary,
+                            ),
+                          ),
+                        ),
                       );
                     }).toList(),
                   ),
-                ],
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 12),
 
-            // 3. Network & Connection
-            GtaNeonCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'REDE & COMUNICAÇÃO',
-                    style: GoogleFonts.orbitron(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      color: GtaColors.electricCyan,
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
+              // 2. Camera Name & Location
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                child: Card(
+                  backgroundColor: BCamTheme.darkSurface,
+                  borderColor: BCamTheme.darkBorder,
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        flex: 3,
-                        child: TextFormField(
-                          controller: _ipController,
-                          keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
-                            labelText: 'Endereço IP',
-                            prefixIcon: Icon(Icons.lan_rounded),
-                          ),
-                          validator: (v) => v == null || v.isEmpty ? 'Informe o IP' : null,
-                        ),
+                      Text(
+                        'Identificação do Dispositivo',
+                        style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: BCamTheme.textPrimary),
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        flex: 1,
-                        child: TextFormField(
-                          controller: _rtspPortController,
-                          keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
-                            labelText: 'Porta',
-                          ),
-                        ),
+                      const SizedBox(height: 10),
+                      Text(
+                        'Nome da Câmera',
+                        style: GoogleFonts.inter(fontSize: 12, color: BCamTheme.textSecondary),
+                      ),
+                      const SizedBox(height: 4),
+                      TextFormBox(
+                        controller: _nameController,
+                        placeholder: 'Ex: Câmera Portão Principal',
+                        validator: (v) => v == null || v.isEmpty ? 'Informe o nome da câmera' : null,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Local / Zona de Monitoramento',
+                        style: GoogleFonts.inter(fontSize: 12, color: BCamTheme.textSecondary),
+                      ),
+                      const SizedBox(height: 4),
+                      TextFormBox(
+                        controller: _locationController,
+                        placeholder: 'Ex: Entrada, Garagem, Perímetro',
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: _commonLocations.map((loc) {
+                          return Button(
+                            onPressed: () => setState(() => _locationController.text = loc),
+                            child: Text(loc, style: GoogleFonts.inter(fontSize: 11)),
+                          );
+                        }).toList(),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextFormField(
-                          controller: _channelController,
-                          keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
-                            labelText: 'Canal NVR / Cam',
-                            prefixIcon: Icon(Icons.grid_view_rounded),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: DropdownButtonFormField<int>(
-                          initialValue: _selectedSubType,
-                          decoration: const InputDecoration(labelText: 'Qualidade Fluxo'),
-                          dropdownColor: GtaColors.bgCard,
-                          items: const [
-                            DropdownMenuItem(value: 0, child: Text('Principal (HD/4K)')),
-                            DropdownMenuItem(value: 1, child: Text('Sub (Fluente)')),
-                          ],
-                          onChanged: (val) {
-                            if (val != null) setState(() => _selectedSubType = val);
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 12),
 
-            // 4. Credentials & Auto-Testing Helpers
-            GtaNeonCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'AUTENTICAÇÃO & CREDENCIAIS',
-                    style: GoogleFonts.orbitron(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      color: GtaColors.electricCyan,
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _userController,
-                    decoration: const InputDecoration(
-                      labelText: 'Usuário',
-                      prefixIcon: Icon(Icons.person_rounded),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _passController,
-                    obscureText: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Senha (Deixe em branco se não houver)',
-                      prefixIcon: Icon(Icons.lock_rounded),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    'Credenciais sugeridas e atalhos rápidos:',
-                    style: GoogleFonts.rajdhani(
-                      fontSize: 12,
-                      color: Colors.white60,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
+              // 3. Network & Connection
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                child: Card(
+                  backgroundColor: BCamTheme.darkSurface,
+                  borderColor: BCamTheme.darkBorder,
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // User environment presets
-                      if (_selectedManufacturer == CameraManufacturer.intelbras ||
-                          _ipController.text.endsWith('.74'))
-                        ActionChip(
-                          label: Text('admin / Zs29364835 (Frente)',
-                              style: GoogleFonts.rajdhani(fontSize: 11, fontWeight: FontWeight.bold, color: GtaColors.electricCyan)),
-                          backgroundColor: GtaColors.bgSurface,
-                          side: const BorderSide(color: GtaColors.electricCyan),
-                          onPressed: () => _applyQuickCredential('admin', 'Zs29364835'),
-                        ),
-                      if (_selectedManufacturer == CameraManufacturer.yoosee ||
-                          _ipController.text.endsWith('.23') ||
-                          _ipController.text.endsWith('.24'))
-                        ActionChip(
-                          label: Text('admin / Compras10@ (Yoosee)',
-                              style: GoogleFonts.rajdhani(fontSize: 11, fontWeight: FontWeight.bold, color: GtaColors.electricCyan)),
-                          backgroundColor: GtaColors.bgSurface,
-                          side: const BorderSide(color: GtaColors.electricCyan),
-                          onPressed: () => _applyQuickCredential('admin', 'Compras10@'),
-                        ),
-                      if (_selectedManufacturer == CameraManufacturer.intelbrasMibo ||
-                          _ipController.text.endsWith('.22'))
-                        ActionChip(
-                          label: Text('admin / compras10 (Mibo)',
-                              style: GoogleFonts.rajdhani(fontSize: 11, fontWeight: FontWeight.bold, color: GtaColors.electricCyan)),
-                          backgroundColor: GtaColors.bgSurface,
-                          side: const BorderSide(color: GtaColors.electricCyan),
-                          onPressed: () => _applyQuickCredential('admin', 'compras10'),
-                        ),
-                      ActionChip(
-                        label: Text('admin / admin', style: GoogleFonts.rajdhani(fontSize: 11)),
-                        backgroundColor: GtaColors.bgSurface,
-                        side: const BorderSide(color: GtaColors.borderSubtle),
-                        onPressed: () => _applyQuickCredential('admin', 'admin'),
+                      Text(
+                        'Rede & Conexão RTSP',
+                        style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: BCamTheme.textPrimary),
                       ),
-                      ActionChip(
-                        label: Text('admin / 123456', style: GoogleFonts.rajdhani(fontSize: 11)),
-                        backgroundColor: GtaColors.bgSurface,
-                        side: const BorderSide(color: GtaColors.borderSubtle),
-                        onPressed: () => _applyQuickCredential('admin', '123456'),
-                      ),
-                      ActionChip(
-                        label: Text('admin / (sem senha)', style: GoogleFonts.rajdhani(fontSize: 11)),
-                        backgroundColor: GtaColors.bgSurface,
-                        side: const BorderSide(color: GtaColors.borderSubtle),
-                        onPressed: () => _applyQuickCredential('admin', ''),
-                      ),
-                    ],
-                  ),
-                  if (_selectedManufacturer == CameraManufacturer.intelbrasMibo ||
-                      _ipController.text.endsWith('.22')) ...[
-                    const SizedBox(height: 10),
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.amber.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.amber.withValues(alpha: 0.4)),
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      const SizedBox(height: 10),
+                      Row(
                         children: [
-                          const Icon(Icons.info_outline_rounded, size: 16, color: Colors.amber),
-                          const SizedBox(width: 8),
                           Expanded(
-                            child: Text(
-                              'Dica Intelbras Mibo: O usuário local é "admin". A senha é a senha da sua conta Mibo ("compras10") ou o Código de Verificação de 6 dígitos impresso na etiqueta adesiva (Safety Code) caso a Criptografia esteja ativa no app Mibo.',
-                              style: GoogleFonts.rajdhani(fontSize: 11, color: Colors.white70),
+                            flex: 3,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Endereço IP Local',
+                                  style: GoogleFonts.inter(fontSize: 12, color: BCamTheme.textSecondary),
+                                ),
+                                const SizedBox(height: 4),
+                                TextFormBox(
+                                  controller: _ipController,
+                                  placeholder: '192.168.3.X',
+                                  validator: (v) => v == null || v.isEmpty ? 'Informe o IP' : null,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            flex: 1,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Porta RTSP',
+                                  style: GoogleFonts.inter(fontSize: 12, color: BCamTheme.textSecondary),
+                                ),
+                                const SizedBox(height: 4),
+                                TextFormBox(
+                                  controller: _rtspPortController,
+                                  placeholder: '554',
+                                ),
+                              ],
                             ),
                           ),
                         ],
                       ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // 5. RTSP URL Preview / Manual Override
-            GtaNeonCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'URL DO FLUXO RTSP GERADA',
-                        style: GoogleFonts.orbitron(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                          color: GtaColors.sunsetOrange,
-                          letterSpacing: 1.2,
-                        ),
-                      ),
-                      TextButton(
-                        onPressed: () {
-                          setState(() {
-                            _isManualCustomUrl = !_isManualCustomUrl;
-                            if (_isManualCustomUrl && _customUrlController.text.isEmpty) {
-                              _customUrlController.text = previewDevice.streamUrl;
-                            }
-                          });
-                        },
-                        child: Text(
-                          _isManualCustomUrl ? 'USAR AUTO' : 'CUSTOMIZAR',
-                          style: GoogleFonts.orbitron(fontSize: 10, color: GtaColors.electricCyan),
-                        ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Canal NVR / Câmera',
+                                  style: GoogleFonts.inter(fontSize: 12, color: BCamTheme.textSecondary),
+                                ),
+                                const SizedBox(height: 4),
+                                TextFormBox(
+                                  controller: _channelController,
+                                  placeholder: '1',
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Qualidade do Fluxo',
+                                  style: GoogleFonts.inter(fontSize: 12, color: BCamTheme.textSecondary),
+                                ),
+                                const SizedBox(height: 4),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: ComboBox<int>(
+                                    value: _selectedSubType,
+                                    items: const [
+                                      ComboBoxItem(value: 0, child: Text('Principal (HD/4K)')),
+                                      ComboBoxItem(value: 1, child: Text('Sub (Fluente)')),
+                                    ],
+                                    onChanged: (val) {
+                                      if (val != null) setState(() => _selectedSubType = val);
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                  const SizedBox(height: 6),
-                  if (_isManualCustomUrl)
-                    TextFormField(
-                      controller: _customUrlController,
-                      decoration: const InputDecoration(
-                        labelText: 'URL RTSP Customizada',
-                        hintText: 'rtsp://usuario:senha@ip:porta/caminho',
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // 4. Credentials & Auto-Testing Helpers
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                child: Card(
+                  backgroundColor: BCamTheme.darkSurface,
+                  borderColor: BCamTheme.darkBorder,
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Autenticação de Acesso',
+                        style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: BCamTheme.textPrimary),
                       ),
-                    )
-                  else
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.black45,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: GtaColors.borderSubtle),
+                      const SizedBox(height: 10),
+                      Text(
+                        'Nome de Usuário',
+                        style: GoogleFonts.inter(fontSize: 12, color: BCamTheme.textSecondary),
                       ),
-                      child: Text(
-                        previewDevice.maskedStreamUrl,
-                        style: GoogleFonts.robotoMono(
-                          fontSize: 11,
-                          color: GtaColors.electricCyan,
+                      const SizedBox(height: 4),
+                      TextFormBox(
+                        controller: _userController,
+                        placeholder: 'Ex: admin',
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Senha do Fluxo RTSP',
+                        style: GoogleFonts.inter(fontSize: 12, color: BCamTheme.textSecondary),
+                      ),
+                      const SizedBox(height: 4),
+                      TextFormBox(
+                        controller: _passController,
+                        obscureText: true,
+                        placeholder: 'Deixe em branco se não houver senha',
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Atalhos de credenciais do ambiente:',
+                        style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: BCamTheme.textSecondary),
+                      ),
+                      const SizedBox(height: 6),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: [
+                          if (_selectedManufacturer == CameraManufacturer.intelbras ||
+                              _ipController.text.endsWith('.74'))
+                            Button(
+                              style: ButtonStyle(
+                                shape: WidgetStateProperty.all(
+                                  RoundedRectangleBorder(
+                                    side: const BorderSide(color: BCamTheme.accentLightBlue),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                ),
+                              ),
+                              onPressed: () => _applyQuickCredential('admin', 'Zs29364835'),
+                              child: Text(
+                                'admin / Zs29364835 (Frente)',
+                                style: GoogleFonts.inter(fontSize: 11, color: BCamTheme.accentLightBlue, fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                          if (_selectedManufacturer == CameraManufacturer.yoosee ||
+                              _ipController.text.endsWith('.23') ||
+                              _ipController.text.endsWith('.24'))
+                            Button(
+                              style: ButtonStyle(
+                                shape: WidgetStateProperty.all(
+                                  RoundedRectangleBorder(
+                                    side: const BorderSide(color: BCamTheme.accentLightBlue),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                ),
+                              ),
+                              onPressed: () => _applyQuickCredential('admin', 'Compras10@'),
+                              child: Text(
+                                'admin / Compras10@ (Yoosee)',
+                                style: GoogleFonts.inter(fontSize: 11, color: BCamTheme.accentLightBlue, fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                          if (_selectedManufacturer == CameraManufacturer.intelbrasMibo ||
+                              _ipController.text.endsWith('.22'))
+                            Button(
+                              style: ButtonStyle(
+                                shape: WidgetStateProperty.all(
+                                  RoundedRectangleBorder(
+                                    side: const BorderSide(color: BCamTheme.accentLightBlue),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                ),
+                              ),
+                              onPressed: () => _applyQuickCredential('admin', 'compras10'),
+                              child: Text(
+                                'admin / compras10 (Mibo)',
+                                style: GoogleFonts.inter(fontSize: 11, color: BCamTheme.accentLightBlue, fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                          Button(
+                            onPressed: () => _applyQuickCredential('admin', 'admin'),
+                            child: Text('admin / admin', style: GoogleFonts.inter(fontSize: 11)),
+                          ),
+                          Button(
+                            onPressed: () => _applyQuickCredential('admin', '123456'),
+                            child: Text('admin / 123456', style: GoogleFonts.inter(fontSize: 11)),
+                          ),
+                          Button(
+                            onPressed: () => _applyQuickCredential('admin', ''),
+                            child: Text('admin / (vazio)', style: GoogleFonts.inter(fontSize: 11)),
+                          ),
+                        ],
+                      ),
+                      if (_selectedManufacturer == CameraManufacturer.intelbrasMibo ||
+                          _ipController.text.endsWith('.22')) ...[
+                        const SizedBox(height: 12),
+                        const InfoBar(
+                          title: Text('Dica Intelbras Mibo'),
+                          content: Text(
+                            'O usuário local é "admin". A senha é a da conta Mibo ("compras10") ou o Safety Code (código de verificação) da etiqueta se a criptografia estiver ativa.',
+                          ),
+                          severity: InfoBarSeverity.warning,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // 5. RTSP URL Preview / Manual Override
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                child: Card(
+                  backgroundColor: BCamTheme.darkSurface,
+                  borderColor: BCamTheme.darkBorder,
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'URL do Fluxo RTSP',
+                            style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: BCamTheme.textPrimary),
+                          ),
+                          Button(
+                            onPressed: () {
+                              setState(() {
+                                _isManualCustomUrl = !_isManualCustomUrl;
+                                if (_isManualCustomUrl && _customUrlController.text.isEmpty) {
+                                  _customUrlController.text = previewDevice.streamUrl;
+                                }
+                              });
+                            },
+                            child: Text(
+                              _isManualCustomUrl ? 'Modo Automático' : 'Personalizar URL',
+                              style: GoogleFonts.inter(fontSize: 11),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      if (_isManualCustomUrl)
+                        TextFormBox(
+                          controller: _customUrlController,
+                          placeholder: 'rtsp://usuario:senha@ip:porta/caminho',
+                        )
+                      else
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: BCamTheme.darkCard,
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: BCamTheme.darkBorderSubtle),
+                          ),
+                          child: Text(
+                            previewDevice.maskedStreamUrl,
+                            style: GoogleFonts.robotoMono(
+                              fontSize: 11,
+                              color: BCamTheme.accentLightBlue,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Action Buttons: Test Live & Save
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Button(
+                        onPressed: () {
+                          setState(() {
+                            _testingStream = true;
+                          });
+                        },
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(FluentIcons.play, size: 14),
+                            const SizedBox(width: 8),
+                            Text(
+                              _testingStream ? 'Recarregar Teste' : 'Testar Conexão',
+                              style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                ],
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: _saveCamera,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(FluentIcons.save, size: 14),
+                            const SizedBox(width: 8),
+                            Text(
+                              widget.existingCamera != null ? 'Salvar Alterações' : 'Comissionar Câmera',
+                              style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 24),
-
-            // Action Buttons: Test Live & Save
-            Row(
-              children: [
-                Expanded(
-                  child: GtaButton(
-                    label: _testingStream ? 'RECARREGAR TESTE' : 'TESTAR FLUXO',
-                    icon: Icons.play_circle_outline_rounded,
-                    outlined: true,
-                    onPressed: () {
-                      setState(() {
-                        _testingStream = true;
-                      });
-                    },
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: GtaButton(
-                    label: widget.existingCamera != null ? 'SALVAR ALTERAÇÕES' : 'COMISSIONAR',
-                    icon: Icons.check_circle_rounded,
-                    onPressed: _saveCamera,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 32),
-          ],
+              const SizedBox(height: 32),
+            ],
+          ),
         ),
       ),
     );

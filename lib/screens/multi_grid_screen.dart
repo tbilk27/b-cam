@@ -1,8 +1,8 @@
-import 'package:flutter/material.dart';
+import 'package:fluent_ui/fluent_ui.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../services/camera_storage_service.dart';
-import '../theme/gta_colors.dart';
+import '../theme/fluent_theme.dart';
 import '../widgets/live_player_view.dart';
 import 'camera_detail_screen.dart';
 
@@ -21,44 +21,68 @@ class _MultiGridScreenState extends State<MultiGridScreen> {
     final storage = context.watch<CameraStorageService>();
     final cameras = storage.cameras;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: FittedBox(
-          fit: BoxFit.scaleDown,
-          alignment: Alignment.centerLeft,
-          child: const Text('MATRIZ DE MONITORAMENTO'),
+    return SafeArea(
+      child: ScaffoldPage(
+      header: PageHeader(
+        title: Row(
+          children: [
+            IconButton(
+              icon: const Icon(FluentIcons.back, size: 16),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                'Matriz Grid',
+                style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w700),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
         ),
-        actions: [
-          IconButton(
-            tooltip: '1 Coluna',
-            icon: Icon(Icons.crop_square_rounded, color: _gridColumns == 1 ? GtaColors.neonPink : Colors.white60),
-            onPressed: () => setState(() => _gridColumns = 1),
-          ),
-          IconButton(
-            tooltip: '2 Colunas (Quad)',
-            icon: Icon(Icons.grid_view_rounded, color: _gridColumns == 2 ? GtaColors.neonPink : Colors.white60),
-            onPressed: () => setState(() => _gridColumns = 2),
-          ),
-          IconButton(
-            tooltip: '3 Colunas',
-            icon: Icon(Icons.view_comfy_rounded, color: _gridColumns == 3 ? GtaColors.neonPink : Colors.white60),
-            onPressed: () => setState(() => _gridColumns = 3),
-          ),
-        ],
+        commandBar: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: Icon(
+                FluentIcons.rectangle_shape,
+                size: 16,
+                color: _gridColumns == 1 ? BCamTheme.accentLightBlue : BCamTheme.textTertiary,
+              ),
+              onPressed: () => setState(() => _gridColumns = 1),
+            ),
+            IconButton(
+              icon: Icon(
+                FluentIcons.view_dashboard,
+                size: 16,
+                color: _gridColumns == 2 ? BCamTheme.accentLightBlue : BCamTheme.textTertiary,
+              ),
+              onPressed: () => setState(() => _gridColumns = 2),
+            ),
+            IconButton(
+              icon: Icon(
+                FluentIcons.tiles,
+                size: 16,
+                color: _gridColumns == 3 ? BCamTheme.accentLightBlue : BCamTheme.textTertiary,
+              ),
+              onPressed: () => setState(() => _gridColumns = 3),
+            ),
+          ],
+        ),
       ),
-      body: cameras.isEmpty
+      content: cameras.isEmpty
           ? Center(
               child: Text(
                 'Nenhuma câmera comissionada para exibir.',
-                style: GoogleFonts.rajdhani(fontSize: 16, color: Colors.white60),
+                style: GoogleFonts.inter(fontSize: 14, color: BCamTheme.textSecondary),
               ),
             )
           : GridView.builder(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(12),
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: _gridColumns,
-                crossAxisSpacing: 8,
-                mainAxisSpacing: 8,
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
                 childAspectRatio: _gridColumns == 1 ? 16 / 9 : 16 / 12,
               ),
               itemCount: cameras.length,
@@ -67,38 +91,59 @@ class _MultiGridScreenState extends State<MultiGridScreen> {
                 return GestureDetector(
                   onTap: () {
                     Navigator.of(context).push(
-                      MaterialPageRoute(
+                      FluentPageRoute(
                         builder: (_) => CameraDetailScreen(camera: cam),
                       ),
                     );
                   },
-                  child: Stack(
-                    children: [
-                      Positioned.fill(
-                        child: LivePlayerView(
-                          camera: cam,
-                          autoPlay: true,
-                          isMiniature: true,
-                        ),
-                      ),
-                      // Overlay click badge
-                      Positioned(
-                        top: 4,
-                        right: 4,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: Colors.black54,
-                            borderRadius: BorderRadius.circular(4),
+                  child: Card(
+                    backgroundColor: BCamTheme.darkSurface,
+                    borderColor: BCamTheme.darkBorder,
+                    padding: EdgeInsets.zero,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Expanded(
+                          child: LivePlayerView(
+                            camera: cam,
+                            autoPlay: true,
+                            isMiniature: true,
                           ),
-                          child: const Icon(Icons.fullscreen_rounded, size: 14, color: Colors.white70),
                         ),
-                      ),
-                    ],
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          color: BCamTheme.darkCard,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  cam.name,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: BCamTheme.textPrimary,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              Text(
+                                cam.ip,
+                                style: GoogleFonts.robotoMono(
+                                  fontSize: 9.5,
+                                  color: BCamTheme.textTertiary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 );
               },
             ),
+    ),
     );
   }
 }

@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:flutter/material.dart';
+import 'package:fluent_ui/fluent_ui.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
@@ -7,10 +7,7 @@ import '../models/camera_device.dart';
 import '../models/scan_result.dart';
 import '../services/camera_storage_service.dart';
 import '../services/network_scanner_service.dart';
-import '../theme/gta_colors.dart';
-import '../widgets/gta_button.dart';
-import '../widgets/gta_neon_card.dart';
-import '../widgets/radar_pulse.dart';
+import '../theme/fluent_theme.dart';
 import 'commission_screen.dart';
 
 class ScanScreen extends StatefulWidget {
@@ -77,14 +74,13 @@ class _ScanScreenState extends State<ScanScreen> {
               _progress = 1.0;
             });
             if (healedCount > 0) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  backgroundColor: GtaColors.bgCard,
-                  behavior: SnackBarBehavior.floating,
-                  content: Text(
-                    'Auto-cura DHCP: $healedCount câmera(s) re-vinculadas pelo endereço MAC!',
-                    style: GoogleFonts.rajdhani(color: GtaColors.statusOnline, fontWeight: FontWeight.bold),
-                  ),
+              displayInfoBar(
+                context,
+                builder: (context, close) => InfoBar(
+                  title: const Text('Auto-cura DHCP'),
+                  content: Text('$healedCount câmera(s) re-vinculadas pelo endereço MAC!'),
+                  severity: InfoBarSeverity.success,
+                  onClose: close,
                 ),
               );
             }
@@ -102,47 +98,44 @@ class _ScanScreenState extends State<ScanScreen> {
     });
   }
 
-  Future<void> _commissionAll() async {
-    if (_discoveredCameras.isEmpty) return;
+  @override
+  void dispose() {
+    _scanSub?.cancel();
+    _subnetController.dispose();
+    super.dispose();
+  }
 
+  Future<void> _commissionAllDiscovered() async {
     final storage = context.read<CameraStorageService>();
-    int addedCount = 0;
+    int count = 0;
 
     for (final scan in _discoveredCameras) {
-      final dev = CameraDevice(
+      final device = CameraDevice(
         id: const Uuid().v4(),
         name: scan.suggestedName,
         ip: scan.ip,
-        rtspPort: 554,
-        webPort: 80,
+        rtspPort: scan.openPorts.contains(554) ? 554 : scan.detectedManufacturer.defaultRtspPort,
+        webPort: scan.detectedManufacturer.defaultWebPort,
         manufacturer: scan.detectedManufacturer,
-        username: scan.detectedManufacturer.defaultUser,
+        username: 'admin',
         password: '',
         channel: 1,
         subType: 0,
         location: 'Rede Local',
         macAddress: scan.macAddress,
       );
-      await storage.addCamera(dev);
-      addedCount++;
+      await storage.addCamera(device);
+      count++;
     }
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: GtaColors.bgCard,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-            side: const BorderSide(color: GtaColors.statusOnline),
-          ),
-          content: Text(
-            '$addedCount câmeras comissionadas com sucesso!',
-            style: GoogleFonts.rajdhani(
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
+      displayInfoBar(
+        context,
+        builder: (context, close) => InfoBar(
+          title: const Text('Câmeras Comissionadas'),
+          content: Text('$count câmera(s) adicionadas com sucesso!'),
+          severity: InfoBarSeverity.success,
+          onClose: close,
         ),
       );
       Navigator.of(context).pop();
@@ -150,315 +143,236 @@ class _ScanScreenState extends State<ScanScreen> {
   }
 
   @override
-  void dispose() {
-    _scanSub?.cancel();
-    _scanner.cancelScan();
-    _subnetController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('RADAR DE VIGILÂNCIA WI-FI'),
-        actions: [
-          if (_discoveredCameras.isNotEmpty)
-            TextButton.icon(
-              icon: const Icon(Icons.playlist_add_check_rounded, color: GtaColors.statusOnline),
-              label: Text(
-                'COMISSIONAR TODAS',
-                style: GoogleFonts.orbitron(fontSize: 10, color: GtaColors.statusOnline, fontWeight: FontWeight.bold),
+    return SafeArea(
+      child: ScaffoldPage.scrollable(
+      header: PageHeader(
+        title: Row(
+          children: [
+            IconButton(
+              icon: const Icon(FluentIcons.back, size: 16),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                'Varredura Wi-Fi',
+                style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w700),
+                overflow: TextOverflow.ellipsis,
               ),
-              onPressed: _commissionAll,
             ),
-        ],
+          ],
+        ),
+        commandBar: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (_isScanning)
+              FilledButton(
+                style: ButtonStyle(
+                  backgroundColor: WidgetStateProperty.all(BCamTheme.statusOffline),
+                ),
+                onPressed: _stopScan,
+                child: const Text('Parar'),
+              )
+            else
+              FilledButton(
+                onPressed: _startScan,
+                child: const Text('Escanear Novamente'),
+              ),
+          ],
+        ),
       ),
-      body: Column(
-        children: [
-          // Subnet control & Scan status bar
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: const BoxDecoration(
-              color: GtaColors.bgSurface,
-              border: Border(bottom: BorderSide(color: GtaColors.borderSubtle)),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Row(
-                    children: [
-                      const Icon(Icons.wifi_tethering_rounded, color: GtaColors.electricCyan, size: 20),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Sub-rede: ',
-                        style: GoogleFonts.rajdhani(fontWeight: FontWeight.bold, color: Colors.white70),
-                      ),
-                      SizedBox(
-                        width: 110,
-                        height: 36,
-                        child: TextField(
-                          controller: _subnetController,
-                          style: GoogleFonts.robotoMono(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
-                          decoration: InputDecoration(
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                          ),
-                        ),
-                      ),
-                      Text(
-                        '.0/24',
-                        style: GoogleFonts.robotoMono(color: Colors.white60, fontSize: 13),
-                      ),
-                    ],
-                  ),
-                ),
-                IconButton(
-                  style: IconButton.styleFrom(
-                    backgroundColor: _isScanning ? GtaColors.statusOffline.withOpacity(0.2) : GtaColors.neonPink.withOpacity(0.2),
-                    side: BorderSide(color: _isScanning ? GtaColors.statusOffline : GtaColors.neonPink),
-                  ),
-                  icon: Icon(
-                    _isScanning ? Icons.stop_rounded : Icons.search_rounded,
-                    color: _isScanning ? GtaColors.statusOffline : GtaColors.neonPink,
-                  ),
-                  onPressed: _isScanning ? _stopScan : _startScan,
-                ),
-              ],
-            ),
-          ),
-
-          // Radar visualizer and live telemetry
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 16),
+      children: [
+        // Subnet Configuration Card
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Card(
+            backgroundColor: BCamTheme.darkSurface,
+            borderColor: BCamTheme.darkBorder,
+            padding: const EdgeInsets.all(14),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                RadarPulse(
-                  size: 190,
-                  isScanning: _isScanning,
-                  discoveredDevices: _discoveredCameras,
-                ),
-                const SizedBox(height: 12),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: Column(
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            _isScanning ? 'VARRENDO: $_currentIp' : 'VARREDURA CONCLUÍDA',
-                            style: GoogleFonts.orbitron(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: _isScanning ? GtaColors.electricCyan : GtaColors.statusOnline,
-                              letterSpacing: 1.2,
-                            ),
+                            'Faixa de IP Sub-rede',
+                            style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: BCamTheme.textSecondary),
                           ),
-                          Text(
-                            '${(_progress * 100).toInt()}%',
-                            style: GoogleFonts.orbitron(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: GtaColors.neonPink,
-                            ),
+                          const SizedBox(height: 6),
+                          TextBox(
+                            controller: _subnetController,
+                            placeholder: 'Ex: 192.168.3',
                           ),
                         ],
                       ),
-                      const SizedBox(height: 6),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: LinearProgressIndicator(
-                          value: _progress,
-                          minHeight: 6,
-                          backgroundColor: GtaColors.bgCard,
-                          valueColor: const AlwaysStoppedAnimation<Color>(GtaColors.neonPink),
-                        ),
+                    ),
+                    const SizedBox(width: 12),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 20),
+                      child: Button(
+                        onPressed: _isScanning ? null : _startScan,
+                        child: const Text('Definir'),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                ProgressBar(value: (_progress * 100).clamp(0, 100)),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      _isScanning
+                          ? 'Sondando: $_currentIp'
+                          : 'Varredura Concluída',
+                      style: GoogleFonts.robotoMono(fontSize: 11, color: BCamTheme.textSecondary),
+                    ),
+                    Text(
+                      '${(_progress * 100).toInt()}% • ${_discoveredCameras.length} detectadas',
+                      style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: BCamTheme.accentLightBlue),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
+        ),
 
-          // Discovered header
+        // Discovered Header & Bulk Action
+        if (_discoveredCameras.isNotEmpty)
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'CÂMERAS ENCONTRADAS (${_discoveredCameras.length})',
-                  style: GoogleFonts.orbitron(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 1.2,
-                    color: Colors.white,
-                  ),
+                  'Câmeras Detectadas (${_discoveredCameras.length})',
+                  style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700),
                 ),
-                if (_discoveredCameras.isNotEmpty)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: GtaColors.statusOnline.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: GtaColors.statusOnline),
-                    ),
-                    child: Text(
-                      'PRONTAS PARA COMISSIONAMENTO',
-                      style: GoogleFonts.rajdhani(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color: GtaColors.statusOnline,
-                      ),
-                    ),
-                  ),
+                Button(
+                  onPressed: _commissionAllDiscovered,
+                  child: const Text('Comissionar Todas'),
+                ),
               ],
             ),
           ),
 
-          // Discovered camera list
-          Expanded(
-            child: _discoveredCameras.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.radar_rounded,
-                          size: 48,
-                          color: Colors.white.withOpacity(0.2),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          _isScanning ? 'Procurando câmeras na rede...' : 'Nenhuma câmera detectada na faixa.',
-                          style: GoogleFonts.rajdhani(
-                            fontSize: 14,
-                            color: Colors.white60,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
+        // Discovered Camera Cards
+        if (_discoveredCameras.isEmpty && !_isScanning)
+          Padding(
+            padding: const EdgeInsets.all(32),
+            child: Center(
+              child: Column(
+                children: [
+                  const Icon(FluentIcons.wifi, size: 40, color: BCamTheme.textTertiary),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Nenhuma câmera identificada na sub-rede ${_subnetController.text}.1 - 254',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(fontSize: 13, color: BCamTheme.textSecondary),
+                  ),
+                ],
+              ),
+            ),
+          )
+        else
+          ..._discoveredCameras.map((scan) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              child: Card(
+                backgroundColor: BCamTheme.darkSurface,
+                borderColor: BCamTheme.darkBorder,
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: scan.detectedManufacturer.brandColor.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: scan.detectedManufacturer.brandColor, width: 0.8),
+                      ),
+                      child: const Center(
+                        child: Icon(FluentIcons.video, size: 18, color: Colors.white),
+                      ),
                     ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                    itemCount: _discoveredCameras.length,
-                    itemBuilder: (context, index) {
-                      final scan = _discoveredCameras[index];
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: GtaNeonCard(
-                          borderColor: scan.detectedManufacturer.brandColor.withOpacity(0.6),
-                          glowColor: scan.detectedManufacturer.brandColor,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
                             children: [
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // Brand Icon Badge
-                                  Container(
-                                    width: 44,
-                                    height: 44,
-                                    decoration: BoxDecoration(
-                                      color: scan.detectedManufacturer.brandColor.withOpacity(0.2),
-                                      borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(color: scan.detectedManufacturer.brandColor),
-                                    ),
-                                    child: const Icon(Icons.videocam_rounded, color: Colors.white),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          children: [
-                                            Text(
-                                              scan.detectedManufacturer.displayName.toUpperCase(),
-                                              style: GoogleFonts.orbitron(
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.w900,
-                                                color: Colors.white,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 8),
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                                              decoration: BoxDecoration(
-                                                color: GtaColors.statusOnline.withOpacity(0.2),
-                                                borderRadius: BorderRadius.circular(4),
-                                                border: Border.all(color: GtaColors.statusOnline, width: 0.8),
-                                              ),
-                                              child: Text(
-                                                'ONLINE',
-                                                style: GoogleFonts.orbitron(
-                                                  fontSize: 8,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: GtaColors.statusOnline,
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          'IP: ${scan.ip}  •  Portas: ${scan.openPorts.join(', ')}',
-                                          style: GoogleFonts.robotoMono(
-                                            fontSize: 12,
-                                            color: GtaColors.electricCyan,
-                                          ),
-                                        ),
-                                        if (scan.macAddress != null)
-                                          Text(
-                                            'MAC: ${scan.macAddress} (ID Físico Permanente)',
-                                            style: GoogleFonts.robotoMono(
-                                              fontSize: 10,
-                                              color: GtaColors.sunsetYellow,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        Text(
-                                          'Detecção: ${scan.detectionSource}',
-                                          style: GoogleFonts.rajdhani(
-                                            fontSize: 12,
-                                            color: Colors.white60,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
+                              Text(
+                                scan.detectedManufacturer.displayName,
+                                style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700),
                               ),
-                              const SizedBox(height: 12),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.end,
-                                children: [
-                                  GtaButton(
-                                    height: 38,
-                                    label: 'COMISSIONAR',
-                                    icon: Icons.add_link_rounded,
-                                    onPressed: () {
-                                      Navigator.of(context).push(
-                                        MaterialPageRoute(
-                                          builder: (_) => CommissionScreen(scanResult: scan),
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                ],
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                decoration: BoxDecoration(
+                                  color: BCamTheme.statusOnline.withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(color: BCamTheme.statusOnlineGlow, width: 0.8),
+                                ),
+                                child: Text(
+                                  'ONLINE',
+                                  style: GoogleFonts.inter(fontSize: 8.5, fontWeight: FontWeight.w700, color: BCamTheme.statusOnlineGlow),
+                                ),
                               ),
                             ],
                           ),
-                        ),
-                      );
-                    },
-                  ),
-          ),
-        ],
-      ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'IP: ${scan.ip}  •  Portas: ${scan.openPorts.join(', ')}',
+                            style: GoogleFonts.robotoMono(fontSize: 11, color: BCamTheme.textSecondary),
+                          ),
+                          if (scan.macAddress != null)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 2),
+                              child: Text(
+                                'MAC: ${scan.macAddress} (ID Permanente)',
+                                style: GoogleFonts.robotoMono(
+                                  fontSize: 10,
+                                  color: BCamTheme.accentLightBlue,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          Text(
+                            'Origem: ${scan.detectionSource} (${(scan.confidence * 100).toInt()}% precisão)',
+                            style: GoogleFonts.inter(fontSize: 10.5, color: BCamTheme.textTertiary),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    FilledButton(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          FluentPageRoute(
+                            builder: (_) => CommissionScreen(scanResult: scan),
+                          ),
+                        );
+                      },
+                      child: const Text('Comissionar'),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
+        const SizedBox(height: 24),
+      ],
+    ),
     );
   }
 }

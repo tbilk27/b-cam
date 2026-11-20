@@ -1,5 +1,4 @@
-import 'package:flutter/material.dart';
-import '../theme/gta_colors.dart';
+import 'package:flutter/widgets.dart';
 
 enum CameraManufacturer {
   intelbras(
@@ -99,7 +98,7 @@ enum CameraManufacturer {
     defaultRtspPath: '/onvif1',
     subStreamRtspPath: '/onvif2',
     defaultUser: 'admin',
-    brandColor: GtaColors.electricCyan,
+    brandColor: Color(0xFF0078D4),
   );
 
   final String id;

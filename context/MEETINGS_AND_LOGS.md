@@ -94,6 +94,35 @@ Registro cronológico mantido pelo **Líder de Projeto & Orquestrador Geral**.
 
 ---
 
+## 📅 Sprint 1.5 • Migração para Microsoft Fluent UI (Fluent 2) e Paleta Sóbria de Monitoramento
+- **Data**: 2026-11-20
+- **Solicitante**: Usuário ("mude o tema base do app para usar uma biblioteca como fluent_ui e com cores mais sóbrias, ficou muito 'escandaloso' este design system. quero algo mais moderno, simples e objetivo. Mas mantenha a definição da logo e ícones do projeto.")
+- **Parecer dos Agentes e Implementações**:
+  - **Especialista UX/UI**:
+    - Substituiu o tema vibrante/neon anterior por uma linguagem executiva baseada no Microsoft Fluent Design System 2.
+    - Definiu a nova paleta de vigilância sóbria (`#1B1B1F` dark zinc base, `#242429` mica surface, `#0078D4` cobalt blue accent, `#107C41` green online status).
+    - Preservou a marca oficial e o avatar `b-cam` (`assets/images/b_cam_icon.jpg`), criando o componente `BCamLogo` corporativo com badge "PRO".
+  - **Arquiteto de Software**:
+    - Formalizou **ADR-009: Migração para Fluent UI (Microsoft Fluent 2) e Design System Sóbrio**.
+    - Garantiu o desacoplamento do novo tema em `lib/theme/fluent_theme.dart` e compatibilidade total de tipos e rotas com `FluentPageRoute`.
+  - **Desenvolvedor Flutter**:
+    - Adicionou `fluent_ui: 4.15.1` ao `pubspec.yaml`, pinado para compatibilidade exata com o SDK Flutter 3.41.9 / Dart 3.11.5 da máquina.
+    - Refatorou todas as 5 telas da aplicação para Fluent UI:
+      1. `HomeScreen`: `PageHeader`, pills dinâmicos de filtro, cards de câmera com HUD limpo e menus em `ContentDialog`.
+      2. `ScanScreen`: `ProgressBar`, formulário de sub-rede `TextBox`, `InfoBar` corporativo e comissionamento em 1 clique.
+      3. `MultiGridScreen`: Alternador de modos 1, 2 e 3 colunas, grid responsivo sem overflow.
+      4. `CameraDetailScreen`: Player 16:9, botões compactos ("Snapshot", "HD Principal"), controle virtual PTZ (D-Pad + Slider com `-` e `+`) e tabela detalhada de telemetria.
+      5. `CommissionScreen`: Seletor horizontal de fabricantes, campos `TextFormBox`, dropdown `ComboBox`, atalhos de credenciais da rede e `InfoBar` de dicas para câmeras Mibo.
+    - Encapsulou todos os `ScaffoldPage` em `SafeArea` para perfeita integração com notches e barras de status de dispositivos móveis.
+  - **Analista QA**:
+    - `flutter analyze`: 0 erros.
+    - `flutter test`: 9/9 testes unitários e de widget passando com 100% de sucesso.
+    - Validou no emulador Android (`emulator-5554`), capturando screenshots de todas as telas (Home, Scan, Matriz Grid, Detalhe e Comissionamento), confirmando 0 pixel overflow e alta fidelidade visual.
+  - **Líder de Projeto & Orquestrador**:
+    - Contexto atualizado, ADR-009 arquivada e sincronização realizada no GitHub.
+
+---
+
 ## 🚀 Backlog Priorizado (Próximos Passos)
 
 - [ ] **EPIC-01: Controle PTZ Real via ONVIF SOAP**:

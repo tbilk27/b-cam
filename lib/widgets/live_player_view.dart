@@ -5,7 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import '../models/camera_device.dart';
-import '../theme/gta_colors.dart';
+import '../theme/fluent_theme.dart';
 
 class LivePlayerView extends StatefulWidget {
   final CameraDevice camera;
@@ -167,21 +167,14 @@ class _LivePlayerViewState extends State<LivePlayerView> {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.black,
-        borderRadius: BorderRadius.circular(widget.isMiniature ? 12 : 20),
+        color: const Color(0xFF0F0F12),
+        borderRadius: BorderRadius.circular(widget.isMiniature ? 8 : 12),
         border: Border.all(
           color: _hasError
-              ? GtaColors.statusOffline.withOpacity(0.5)
-              : GtaColors.borderSubtle,
-          width: 1.5,
+              ? BCamTheme.statusOffline.withValues(alpha: 0.5)
+              : BCamTheme.darkBorder,
+          width: 1,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: GtaColors.neonPink.withOpacity(0.12),
-            blurRadius: 16,
-            spreadRadius: 1,
-          ),
-        ],
       ),
       clipBehavior: Clip.antiAlias,
       child: Stack(
@@ -194,23 +187,23 @@ class _LivePlayerViewState extends State<LivePlayerView> {
             controls: NoVideoControls,
           ),
 
-          // 2. Scanline & Vignette Effect Overlay (Vice City Surveillance Style)
+          // 2. Subtle Vignette Effect
           IgnorePointer(
             child: Container(
               decoration: BoxDecoration(
                 gradient: RadialGradient(
                   center: Alignment.center,
-                  radius: 1.2,
+                  radius: 1.25,
                   colors: [
                     Colors.transparent,
-                    Colors.black.withOpacity(0.55),
+                    Colors.black.withValues(alpha: 0.45),
                   ],
                 ),
               ),
             ),
           ),
 
-          // 3. Grid Crosshair markings in corners (Surveillance HUD)
+          // 3. Grid Crosshair markings in corners (Sober Surveillance HUD)
           if (!widget.isMiniature)
             IgnorePointer(
               child: CustomPaint(
@@ -221,37 +214,37 @@ class _LivePlayerViewState extends State<LivePlayerView> {
           // 4. Loading indicator
           if (_isLoading)
             Container(
-              color: Colors.black.withOpacity(0.65),
+              color: Colors.black.withValues(alpha: 0.55),
               child: Center(
                 child: widget.isMiniature
                     ? const SizedBox(
-                        width: 24,
-                        height: 24,
+                        width: 22,
+                        height: 22,
                         child: CircularProgressIndicator(
-                          strokeWidth: 2.2,
-                          color: GtaColors.neonPink,
+                          strokeWidth: 2,
+                          color: BCamTheme.accentLightBlue,
                         ),
                       )
                     : Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           const SizedBox(
-                            width: 38,
-                            height: 38,
+                            width: 34,
+                            height: 34,
                             child: CircularProgressIndicator(
-                              strokeWidth: 2.8,
-                              color: GtaColors.neonPink,
-                              backgroundColor: GtaColors.bgSurface,
+                              strokeWidth: 2.5,
+                              color: BCamTheme.accentLightBlue,
+                              backgroundColor: Color(0xFF2A2A30),
                             ),
                           ),
                           const SizedBox(height: 12),
                           Text(
                             'CONECTANDO AO FLUXO...',
-                            style: GoogleFonts.orbitron(
+                            style: GoogleFonts.inter(
                               fontSize: 11,
-                              color: GtaColors.electricCyan,
-                              letterSpacing: 2,
-                              fontWeight: FontWeight.w700,
+                              color: BCamTheme.textSecondary,
+                              letterSpacing: 1.5,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ],
@@ -262,7 +255,7 @@ class _LivePlayerViewState extends State<LivePlayerView> {
           // 5. Error & Fallback display
           if (_hasError)
             Container(
-              color: const Color(0xEE120A16),
+              color: const Color(0xFF19161B),
               padding: EdgeInsets.all(widget.isMiniature ? 6 : 16),
               child: Center(
                 child: widget.isMiniature
@@ -271,23 +264,23 @@ class _LivePlayerViewState extends State<LivePlayerView> {
                         children: [
                           const Icon(
                             Icons.videocam_off_rounded,
-                            color: GtaColors.statusOffline,
-                            size: 22,
+                            color: BCamTheme.statusOffline,
+                            size: 20,
                           ),
                           const SizedBox(height: 2),
                           Text(
                             'OFFLINE',
-                            style: GoogleFonts.orbitron(
+                            style: GoogleFonts.inter(
                               fontSize: 9,
-                              fontWeight: FontWeight.w800,
-                              color: GtaColors.statusOffline,
+                              fontWeight: FontWeight.w700,
+                              color: BCamTheme.statusOffline,
                             ),
                           ),
                           Text(
                             '${widget.camera.ip}:${widget.camera.rtspPort}',
-                            style: GoogleFonts.rajdhani(
-                              fontSize: 9,
-                              color: Colors.white54,
+                            style: GoogleFonts.robotoMono(
+                              fontSize: 8.5,
+                              color: BCamTheme.textTertiary,
                             ),
                           ),
                         ],
@@ -297,34 +290,34 @@ class _LivePlayerViewState extends State<LivePlayerView> {
                         children: [
                           const Icon(
                             Icons.videocam_off_rounded,
-                            color: GtaColors.statusOffline,
-                            size: 40,
+                            color: BCamTheme.statusOffline,
+                            size: 38,
                           ),
                           const SizedBox(height: 8),
                           Text(
                             'FLUXO INDISPONÍVEL',
-                            style: GoogleFonts.orbitron(
+                            style: GoogleFonts.inter(
                               fontSize: 12,
-                              fontWeight: FontWeight.w800,
-                              color: GtaColors.statusOffline,
-                              letterSpacing: 1.5,
+                              fontWeight: FontWeight.w700,
+                              color: BCamTheme.statusOffline,
+                              letterSpacing: 1,
                             ),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             'IP: ${widget.camera.ip}:${widget.camera.rtspPort}',
-                            style: GoogleFonts.rajdhani(
-                              fontSize: 12,
-                              color: Colors.white70,
+                            style: GoogleFonts.robotoMono(
+                              fontSize: 11,
+                              color: BCamTheme.textSecondary,
                             ),
                           ),
                           if (_errorMessage != null) ...[
                             const SizedBox(height: 2),
                             Text(
                               _errorMessage!,
-                              style: GoogleFonts.rajdhani(
+                              style: GoogleFonts.inter(
                                 fontSize: 10,
-                                color: Colors.white38,
+                                color: BCamTheme.textTertiary,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -333,16 +326,17 @@ class _LivePlayerViewState extends State<LivePlayerView> {
                           const SizedBox(height: 10),
                           ElevatedButton.icon(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: GtaColors.neonPink.withOpacity(0.2),
-                              foregroundColor: GtaColors.neonPink,
-                              side: const BorderSide(color: GtaColors.neonPink),
+                              backgroundColor: BCamTheme.darkSurface,
+                              foregroundColor: BCamTheme.textPrimary,
+                              side: const BorderSide(color: BCamTheme.darkBorder),
                               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
                             ),
                             onPressed: _playStream,
-                            icon: const Icon(Icons.refresh, size: 16),
+                            icon: const Icon(Icons.refresh, size: 14),
                             label: Text(
-                              'RECONECTAR',
-                              style: GoogleFonts.orbitron(fontSize: 10, fontWeight: FontWeight.bold),
+                              'Reconectar',
+                              style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600),
                             ),
                           ),
                         ],
@@ -350,11 +344,11 @@ class _LivePlayerViewState extends State<LivePlayerView> {
               ),
             ),
 
-          // 6. Top HUD Bar (Camera Name, REC indicator, Clock)
+          // 6. Top HUD Bar (REC indicator & Timestamp)
           Positioned(
-            top: 10,
-            left: 12,
-            right: 12,
+            top: 8,
+            left: 10,
+            right: 10,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -362,49 +356,47 @@ class _LivePlayerViewState extends State<LivePlayerView> {
                 Row(
                   children: [
                     Container(
-                      width: 8,
-                      height: 8,
+                      width: 7,
+                      height: 7,
                       decoration: BoxDecoration(
-                        color: _hasError ? GtaColors.statusOffline : GtaColors.statusOnline,
+                        color: _hasError ? BCamTheme.statusOffline : BCamTheme.statusOnlineGlow,
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: _hasError
-                                ? GtaColors.statusOffline.withOpacity(0.8)
-                                : GtaColors.statusOnline.withOpacity(0.8),
-                            blurRadius: 8,
-                            spreadRadius: 2,
+                            color: (_hasError ? BCamTheme.statusOffline : BCamTheme.statusOnlineGlow)
+                                .withValues(alpha: 0.6),
+                            blurRadius: 6,
+                            spreadRadius: 1,
                           ),
                         ],
                       ),
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      _hasError ? 'OFFLINE' : 'REC • LIVE',
-                      style: GoogleFonts.orbitron(
-                        fontSize: widget.isMiniature ? 9 : 11,
-                        fontWeight: FontWeight.w900,
+                      _hasError ? 'OFFLINE' : 'LIVE',
+                      style: GoogleFonts.inter(
+                        fontSize: widget.isMiniature ? 9 : 10.5,
+                        fontWeight: FontWeight.w700,
                         color: Colors.white,
-                        letterSpacing: 1.2,
+                        letterSpacing: 0.8,
                       ),
                     ),
                   ],
                 ),
                 // HUD Timestamp
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.7),
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: GtaColors.borderSubtle, width: 0.8),
+                    color: Colors.black.withValues(alpha: 0.6),
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: Colors.white12, width: 0.8),
                   ),
                   child: Text(
                     _currentTime,
-                    style: GoogleFonts.orbitron(
-                      fontSize: widget.isMiniature ? 9 : 11,
-                      fontWeight: FontWeight.bold,
-                      color: GtaColors.electricCyan,
-                      letterSpacing: 1.2,
+                    style: GoogleFonts.robotoMono(
+                      fontSize: widget.isMiniature ? 9 : 10.5,
+                      fontWeight: FontWeight.w600,
+                      color: BCamTheme.textSecondary,
                     ),
                   ),
                 ),
@@ -412,30 +404,30 @@ class _LivePlayerViewState extends State<LivePlayerView> {
             ),
           ),
 
-          // 7. Bottom HUD Bar (Brand, Channel, Resolution)
+          // 7. Bottom HUD Bar (Brand, Channel, Controls)
           Positioned(
-            bottom: 10,
-            left: 12,
-            right: 12,
+            bottom: 8,
+            left: 10,
+            right: 10,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Flexible(
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.7),
-                      borderRadius: BorderRadius.circular(6),
+                      color: Colors.black.withValues(alpha: 0.65),
+                      borderRadius: BorderRadius.circular(4),
                       border: Border.all(
-                        color: widget.camera.manufacturer.brandColor.withOpacity(0.6),
-                        width: 1,
+                        color: widget.camera.manufacturer.brandColor.withValues(alpha: 0.7),
+                        width: 0.8,
                       ),
                     ),
                     child: Text(
-                      '${widget.camera.manufacturer.displayName.toUpperCase()} • CH${widget.camera.channel}',
-                      style: GoogleFonts.rajdhani(
-                        fontSize: widget.isMiniature ? 10 : 12,
-                        fontWeight: FontWeight.w800,
+                      '${widget.camera.manufacturer.displayName} • CH${widget.camera.channel}',
+                      style: GoogleFonts.inter(
+                        fontSize: widget.isMiniature ? 9 : 10.5,
+                        fontWeight: FontWeight.w600,
                         color: Colors.white,
                       ),
                       overflow: TextOverflow.ellipsis,
@@ -449,13 +441,13 @@ class _LivePlayerViewState extends State<LivePlayerView> {
                       IconButton(
                         style: IconButton.styleFrom(
                           backgroundColor: Colors.black54,
-                          padding: const EdgeInsets.all(6),
-                          minimumSize: const Size(32, 32),
+                          padding: const EdgeInsets.all(5),
+                          minimumSize: const Size(28, 28),
                         ),
                         icon: Icon(
                           _isMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
-                          color: _isMuted ? Colors.white54 : GtaColors.electricCyan,
-                          size: 16,
+                          color: _isMuted ? Colors.white54 : BCamTheme.accentLightBlue,
+                          size: 15,
                         ),
                         onPressed: () {
                           setState(() {
@@ -464,15 +456,15 @@ class _LivePlayerViewState extends State<LivePlayerView> {
                           });
                         },
                       ),
-                      const SizedBox(width: 6),
+                      const SizedBox(width: 4),
                       // Reload
                       IconButton(
                         style: IconButton.styleFrom(
                           backgroundColor: Colors.black54,
-                          padding: const EdgeInsets.all(6),
-                          minimumSize: const Size(32, 32),
+                          padding: const EdgeInsets.all(5),
+                          minimumSize: const Size(28, 28),
                         ),
-                        icon: const Icon(Icons.refresh_rounded, color: Colors.white70, size: 16),
+                        icon: const Icon(Icons.refresh_rounded, color: Colors.white70, size: 15),
                         onPressed: _playStream,
                       ),
                     ],
@@ -490,12 +482,12 @@ class _HudCrosshairPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = GtaColors.electricCyan.withOpacity(0.35)
-      ..strokeWidth = 1.2
+      ..color = Colors.white.withValues(alpha: 0.2)
+      ..strokeWidth = 1.0
       ..style = PaintingStyle.stroke;
 
-    const cornerLen = 14.0;
-    const padding = 8.0;
+    const cornerLen = 10.0;
+    const padding = 6.0;
 
     // Top-Left
     canvas.drawLine(const Offset(padding, padding + cornerLen), const Offset(padding, padding), paint);

@@ -1,10 +1,9 @@
-import 'package:flutter/material.dart';
+import 'package:fluent_ui/fluent_ui.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../models/camera_device.dart';
 import '../services/camera_storage_service.dart';
-import '../theme/gta_colors.dart';
-import '../widgets/gta_neon_card.dart';
+import '../theme/fluent_theme.dart';
 import '../widgets/live_player_view.dart';
 import 'commission_screen.dart';
 
@@ -38,90 +37,94 @@ class _CameraDetailScreenState extends State<CameraDetailScreen> {
   }
 
   void _triggerPtzAction(String action) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        duration: const Duration(milliseconds: 700),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: GtaColors.bgCard,
-        content: Text(
-          'PTZ $action enviado para ${_camera.ip}',
-          style: GoogleFonts.orbitron(fontSize: 11, color: GtaColors.electricCyan),
-        ),
+    displayInfoBar(
+      context,
+      builder: (context, close) => InfoBar(
+        title: Text('Controle PTZ ($action)'),
+        content: Text('Comando PTZ $action enviado para ${_camera.ip}'),
+        severity: InfoBarSeverity.info,
+        onClose: close,
       ),
     );
   }
 
   void _takeSnapshot() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        duration: const Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: GtaColors.bgCard,
-        content: Row(
-          children: [
-            const Icon(Icons.camera_alt_rounded, color: GtaColors.statusOnline),
-            const SizedBox(width: 8),
-            Text(
-              'Foto instantânea capturada e salva!',
-              style: GoogleFonts.rajdhani(fontWeight: FontWeight.bold, color: Colors.white),
-            ),
-          ],
-        ),
+    displayInfoBar(
+      context,
+      builder: (context, close) => InfoBar(
+        title: const Text('Foto Instantânea'),
+        content: const Text('Snapshot capturado e salvo no armazenamento!'),
+        severity: InfoBarSeverity.success,
+        onClose: close,
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: FittedBox(
-          fit: BoxFit.scaleDown,
-          alignment: Alignment.centerLeft,
-          child: Text(
-            _camera.name.toUpperCase(),
-            style: GoogleFonts.orbitron(fontSize: 15, fontWeight: FontWeight.w800),
-          ),
-        ),
-        actions: [
-          IconButton(
-            icon: Icon(
-              _camera.isFavorite ? Icons.star_rounded : Icons.star_border_rounded,
-              color: _camera.isFavorite ? GtaColors.sunsetYellow : Colors.white60,
+    return SafeArea(
+      child: ScaffoldPage.scrollable(
+      header: PageHeader(
+        title: Row(
+          children: [
+            IconButton(
+              icon: const Icon(FluentIcons.back, size: 16),
+              onPressed: () => Navigator.of(context).pop(),
             ),
-            onPressed: () {
-              setState(() {
-                _camera = _camera.copyWith(isFavorite: !_camera.isFavorite);
-              });
-              context.read<CameraStorageService>().toggleFavorite(_camera.id);
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.edit_rounded, color: GtaColors.electricCyan),
-            onPressed: () async {
-              final storage = context.read<CameraStorageService>();
-              await Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => CommissionScreen(existingCamera: _camera),
-                ),
-              );
-              if (!mounted) return;
-              final updated = storage.cameras.firstWhere(
-                    (c) => c.id == _camera.id,
-                    orElse: () => _camera,
-                  );
-              setState(() {
-                _camera = updated;
-              });
-            },
-          ),
-        ],
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                _camera.name,
+                style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w700),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+        commandBar: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: Icon(
+                _camera.isFavorite ? FluentIcons.favorite_star_fill : FluentIcons.favorite_star,
+                size: 16,
+                color: _camera.isFavorite ? BCamTheme.statusWarning : BCamTheme.textSecondary,
+              ),
+              onPressed: () {
+                setState(() {
+                  _camera = _camera.copyWith(isFavorite: !_camera.isFavorite);
+                });
+                context.read<CameraStorageService>().toggleFavorite(_camera.id);
+              },
+            ),
+            const SizedBox(width: 6),
+            IconButton(
+              icon: const Icon(FluentIcons.edit, size: 16),
+              onPressed: () async {
+                final storage = context.read<CameraStorageService>();
+                await Navigator.of(context).push(
+                  FluentPageRoute(
+                    builder: (_) => CommissionScreen(existingCamera: _camera),
+                  ),
+                );
+                if (!mounted) return;
+                final updated = storage.cameras.firstWhere(
+                  (c) => c.id == _camera.id,
+                  orElse: () => _camera,
+                );
+                setState(() {
+                  _camera = updated;
+                });
+              },
+            ),
+          ],
+        ),
       ),
-      body: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        children: [
-          // Main Video Player View
-          AspectRatio(
+      children: [
+        // Main Video Player View
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: AspectRatio(
             aspectRatio: 16 / 9,
             child: LivePlayerView(
               camera: _camera,
@@ -129,61 +132,57 @@ class _CameraDetailScreenState extends State<CameraDetailScreen> {
               showPtzOverlay: true,
             ),
           ),
-          const SizedBox(height: 16),
+        ),
 
-          // Action toolbar (Snapshot, Stream Quality, Audio)
-          Row(
+        // Action Toolbar (Snapshot, Stream Quality)
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          child: Row(
             children: [
               Expanded(
-                child: GtaNeonCard(
-                  padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-                  onTap: _takeSnapshot,
+                child: Button(
+                  onPressed: _takeSnapshot,
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.camera_alt_rounded, color: GtaColors.neonPink, size: 20),
-                      const SizedBox(width: 8),
-                      Text(
-                        'FOTO SNAPSHOT',
-                        style: GoogleFonts.orbitron(fontSize: 10, fontWeight: FontWeight.bold),
-                      ),
+                      const Icon(FluentIcons.camera, size: 15),
+                      const SizedBox(width: 6),
+                      Text('Snapshot', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600)),
                     ],
                   ),
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: GtaNeonCard(
-                  padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<int>(
-                      value: _camera.subType,
-                      dropdownColor: GtaColors.bgCard,
-                      isExpanded: true,
-                      icon: const Icon(Icons.hd_rounded, color: GtaColors.electricCyan),
-                      items: const [
-                        DropdownMenuItem(
-                          value: 0,
-                          child: Text('Stream Principal (HD)'),
+                child: Button(
+                  onPressed: () => _switchStreamQuality(_camera.subType == 0 ? 1 : 0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(FluentIcons.video, size: 15),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          _camera.subType == 0 ? 'HD Principal' : 'Sub Fluente',
+                          style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600),
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        DropdownMenuItem(
-                          value: 1,
-                          child: Text('Sub-Stream (Fluente)'),
-                        ),
-                      ],
-                      onChanged: (val) {
-                        if (val != null) _switchStreamQuality(val);
-                      },
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+        ),
 
-          // Virtual PTZ (Pan / Tilt / Zoom) Controller
-          GtaNeonCard(
+        // Virtual PTZ Control Card
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Card(
+            backgroundColor: BCamTheme.darkSurface,
+            borderColor: BCamTheme.darkBorder,
+            padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -191,167 +190,143 @@ class _CameraDetailScreenState extends State<CameraDetailScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'CONTROLE PTZ VIRTUAL',
-                      style: GoogleFonts.orbitron(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
-                        color: GtaColors.neonPink,
-                        letterSpacing: 1.2,
-                      ),
+                      'Controle PTZ Virtual',
+                      style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700),
                     ),
                     Text(
-                      'ONVIF / DAHUA PROTOCOL',
-                      style: GoogleFonts.rajdhani(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: GtaColors.electricCyan,
-                      ),
+                      'ONVIF / Protocolo Nativo',
+                      style: GoogleFonts.inter(fontSize: 11, color: BCamTheme.accentLightBlue),
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 Center(
                   child: SizedBox(
-                    width: 180,
-                    height: 180,
+                    width: 170,
+                    height: 170,
                     child: Stack(
+                      alignment: Alignment.center,
                       children: [
-                        // Center Iris
-                        Align(
-                          alignment: Alignment.center,
-                          child: Container(
-                            width: 50,
-                            height: 50,
-                            decoration: BoxDecoration(
-                              color: GtaColors.bgSurface,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: GtaColors.neonPink),
-                            ),
-                            child: const Center(
-                              child: Icon(Icons.circle, size: 14, color: GtaColors.neonPink),
-                            ),
+                        // Up
+                        Positioned(
+                          top: 0,
+                          child: IconButton(
+                            icon: const Icon(FluentIcons.chevron_up, size: 20),
+                            onPressed: () => _triggerPtzAction('Subir (Pan Up)'),
                           ),
                         ),
-                        // UP
-                        Align(
-                          alignment: Alignment.topCenter,
+                        // Down
+                        Positioned(
+                          bottom: 0,
                           child: IconButton(
-                            style: IconButton.styleFrom(
-                              backgroundColor: GtaColors.bgSurface,
-                              side: const BorderSide(color: GtaColors.borderSubtle),
-                            ),
-                            icon: const Icon(Icons.arrow_upward_rounded, color: Colors.white),
-                            onPressed: () => _triggerPtzAction('PARA CIMA'),
+                            icon: const Icon(FluentIcons.chevron_down, size: 20),
+                            onPressed: () => _triggerPtzAction('Descer (Pan Down)'),
                           ),
                         ),
-                        // DOWN
-                        Align(
-                          alignment: Alignment.bottomCenter,
+                        // Left
+                        Positioned(
+                          left: 0,
                           child: IconButton(
-                            style: IconButton.styleFrom(
-                              backgroundColor: GtaColors.bgSurface,
-                              side: const BorderSide(color: GtaColors.borderSubtle),
-                            ),
-                            icon: const Icon(Icons.arrow_downward_rounded, color: Colors.white),
-                            onPressed: () => _triggerPtzAction('PARA BAIXO'),
+                            icon: const Icon(FluentIcons.chevron_left, size: 20),
+                            onPressed: () => _triggerPtzAction('Esquerda (Pan Left)'),
                           ),
                         ),
-                        // LEFT
-                        Align(
-                          alignment: Alignment.centerLeft,
+                        // Right
+                        Positioned(
+                          right: 0,
                           child: IconButton(
-                            style: IconButton.styleFrom(
-                              backgroundColor: GtaColors.bgSurface,
-                              side: const BorderSide(color: GtaColors.borderSubtle),
-                            ),
-                            icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
-                            onPressed: () => _triggerPtzAction('ESQUERDA'),
+                            icon: const Icon(FluentIcons.chevron_right, size: 20),
+                            onPressed: () => _triggerPtzAction('Direita (Pan Right)'),
                           ),
                         ),
-                        // RIGHT
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: IconButton(
-                            style: IconButton.styleFrom(
-                              backgroundColor: GtaColors.bgSurface,
-                              side: const BorderSide(color: GtaColors.borderSubtle),
-                            ),
-                            icon: const Icon(Icons.arrow_forward_rounded, color: Colors.white),
-                            onPressed: () => _triggerPtzAction('DIREITA'),
-                          ),
+                        // Center Reset
+                        Button(
+                          onPressed: () {
+                            setState(() => _zoomLevel = 1.0);
+                            _triggerPtzAction('Posição Inicial (Home)');
+                          },
+                          child: const Icon(FluentIcons.sync, size: 14),
                         ),
                       ],
                     ),
                   ),
                 ),
-                const SizedBox(height: 12),
-                // Zoom Slider
+                const SizedBox(height: 16),
                 Row(
                   children: [
-                    const Icon(Icons.zoom_out_rounded, color: Colors.white60, size: 18),
+                    const Icon(FluentIcons.remove, size: 16, color: BCamTheme.textSecondary),
+                    const SizedBox(width: 8),
                     Expanded(
                       child: Slider(
                         value: _zoomLevel,
                         min: 1.0,
-                        max: 4.0,
-                        divisions: 6,
-                        activeColor: GtaColors.neonPink,
-                        inactiveColor: GtaColors.bgSurface,
-                        label: '${_zoomLevel.toStringAsFixed(1)}x',
+                        max: 8.0,
                         onChanged: (val) {
                           setState(() => _zoomLevel = val);
                         },
                       ),
                     ),
-                    const Icon(Icons.zoom_in_rounded, color: GtaColors.neonPink, size: 22),
+                    const SizedBox(width: 8),
+                    const Icon(FluentIcons.add, size: 16, color: BCamTheme.textSecondary),
+                    const SizedBox(width: 8),
+                    Text(
+                      '${_zoomLevel.toStringAsFixed(1)}x',
+                      style: GoogleFonts.robotoMono(fontSize: 11, fontWeight: FontWeight.w600),
+                    ),
                   ],
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 16),
+        ),
 
-          // Telemetry & Details
-          GtaNeonCard(
+        // Camera Telemetry Card
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Card(
+            backgroundColor: BCamTheme.darkSurface,
+            borderColor: BCamTheme.darkBorder,
+            padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'TELEMETRIA DA CÂMERA',
-                  style: GoogleFonts.orbitron(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                    color: GtaColors.electricCyan,
-                    letterSpacing: 1.2,
-                  ),
+                  'Telemetria da Câmera',
+                  style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 12),
                 _buildTelemetryRow('Fabricante', _camera.manufacturer.displayName),
                 _buildTelemetryRow('Endereço IP', '${_camera.ip}:${_camera.rtspPort}'),
-                _buildTelemetryRow('Canal / Sub', 'CH${_camera.channel} / ${_camera.subType == 0 ? "Main" : "Sub"}'),
+                _buildTelemetryRow('Canal / Fluxo', 'CH${_camera.channel} / ${_camera.subType == 0 ? "Principal (HD)" : "Sub (Fluente)"}'),
                 _buildTelemetryRow('Localização', _camera.location),
                 if (_camera.macAddress != null)
-                  _buildTelemetryRow('MAC', _camera.macAddress!),
-                const Divider(color: GtaColors.borderSubtle, height: 20),
+                  _buildTelemetryRow('MAC Address', _camera.macAddress!),
+                const SizedBox(height: 8),
                 Text(
-                  'URL RTSP (OFUSCADA):',
-                  style: GoogleFonts.rajdhani(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white60,
-                  ),
+                  'URL RTSP (Ofuscada):',
+                  style: GoogleFonts.inter(fontSize: 11, color: BCamTheme.textSecondary),
                 ),
                 const SizedBox(height: 4),
-                SelectableText(
-                  _camera.maskedStreamUrl,
-                  style: GoogleFonts.robotoMono(fontSize: 11, color: GtaColors.sunsetOrange),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: BCamTheme.darkCard,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: BCamTheme.darkBorder, width: 0.8),
+                  ),
+                  child: Text(
+                    _camera.maskedStreamUrl,
+                    style: GoogleFonts.robotoMono(fontSize: 10, color: BCamTheme.accentLightBlue),
+                  ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 24),
-        ],
-      ),
+        ),
+        const SizedBox(height: 24),
+      ],
+    ),
     );
   }
 
@@ -361,8 +336,8 @@ class _CameraDetailScreenState extends State<CameraDetailScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: GoogleFonts.rajdhani(fontSize: 13, color: Colors.white60)),
-          Text(value, style: GoogleFonts.rajdhani(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white)),
+          Text(label, style: GoogleFonts.inter(fontSize: 12, color: BCamTheme.textSecondary)),
+          Text(value, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: BCamTheme.textPrimary)),
         ],
       ),
     );

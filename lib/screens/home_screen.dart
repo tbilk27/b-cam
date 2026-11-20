@@ -1,12 +1,10 @@
-import 'package:flutter/material.dart';
+import 'package:fluent_ui/fluent_ui.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../models/camera_device.dart';
 import '../services/camera_storage_service.dart';
-import '../theme/gta_colors.dart';
-import '../widgets/gta_button.dart';
-import '../widgets/gta_logo.dart';
-import '../widgets/gta_neon_card.dart';
+import '../theme/fluent_theme.dart';
+import '../widgets/b_cam_logo.dart';
 import '../widgets/live_player_view.dart';
 import 'camera_detail_screen.dart';
 import 'commission_screen.dart';
@@ -39,399 +37,413 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final uniqueLocations = allCameras.map((c) => c.location.toUpperCase()).toSet().toList();
 
-    return Scaffold(
-      body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            // GTA VI Vice City Neon App Bar
-            SliverToBoxAdapter(
-              child: Container(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const GtaLogo(size: 42, showText: true),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: GtaColors.bgCard,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: GtaColors.borderSubtle),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 8,
-                            height: 8,
-                            decoration: const BoxDecoration(
-                              color: GtaColors.statusOnline,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            'WI-FI ONLINE',
-                            style: GoogleFonts.orbitron(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w800,
-                              color: GtaColors.statusOnline,
-                              letterSpacing: 1.0,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+    return SafeArea(
+      child: ScaffoldPage.scrollable(
+      header: PageHeader(
+        title: const BCamLogo(size: 32, showText: true),
+        commandBar: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: BCamTheme.darkSurface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: BCamTheme.darkBorder, width: 0.8),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 7,
+                height: 7,
+                decoration: const BoxDecoration(
+                  color: BCamTheme.statusOnlineGlow,
+                  shape: BoxShape.circle,
                 ),
               ),
-            ),
-
-            // Quick Action Banner
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                child: Row(
-                  children: [
-                    // Radar Scan Action
-                    Expanded(
-                      flex: 3,
-                      child: GtaButton(
-                        height: 48,
-                        label: 'VARREDURA WI-FI',
-                        icon: Icons.radar_rounded,
-                        onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => const ScanScreen()),
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    // Multi-view Grid Action
-                    Expanded(
-                      flex: 2,
-                      child: GtaButton(
-                        height: 48,
-                        label: 'MATRIZ',
-                        icon: Icons.grid_view_rounded,
-                        outlined: true,
-                        onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => const MultiGridScreen()),
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    // Add manual camera action
-                    IconButton(
-                      style: IconButton.styleFrom(
-                        backgroundColor: GtaColors.bgCard,
-                        side: const BorderSide(color: GtaColors.borderSubtle),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        minimumSize: const Size(48, 48),
-                      ),
-                      icon: const Icon(Icons.add_rounded, color: GtaColors.electricCyan),
-                      tooltip: 'Adicionar Manual',
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const CommissionScreen()),
-                        );
-                      },
-                    ),
-                  ],
+              const SizedBox(width: 6),
+              Text(
+                'WI-FI ONLINE',
+                style: GoogleFonts.inter(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  color: BCamTheme.statusOnlineGlow,
+                  letterSpacing: 0.8,
                 ),
               ),
-            ),
-
-            // Filter Tabs
-            SliverToBoxAdapter(
-              child: Container(
-                height: 48,
-                margin: const EdgeInsets.only(top: 8, bottom: 4),
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  children: [
-                    _buildFilterChip('TODAS', allCameras.length),
-                    _buildFilterChip('FAVORITAS', storage.favoriteCameras.length),
-                    ...uniqueLocations.map((loc) {
-                      final count = allCameras.where((c) => c.location.toUpperCase() == loc).length;
-                      return _buildFilterChip(loc, count);
-                    }),
-                  ],
-                ),
-              ),
-            ),
-
-            // Camera List Header
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'CÂMERAS ATIVAS (${filteredCameras.length})',
-                      style: GoogleFonts.orbitron(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 1.5,
-                        color: Colors.white,
-                      ),
-                    ),
-                    Text(
-                      'RTSP / ONVIF STREAM',
-                      style: GoogleFonts.rajdhani(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: GtaColors.electricCyan,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            // Camera Feed Cards
-            if (filteredCameras.isEmpty)
-              SliverToBoxAdapter(
-                child: Container(
-                  margin: const EdgeInsets.all(24),
-                  padding: const EdgeInsets.all(32),
-                  decoration: BoxDecoration(
-                    color: GtaColors.bgCard,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: GtaColors.borderSubtle),
-                  ),
-                  child: Column(
+            ],
+          ),
+        ),
+      ),
+      children: [
+        // Action Toolbar
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          child: Row(
+            children: [
+              Expanded(
+                flex: 3,
+                child: FilledButton(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      FluentPageRoute(builder: (_) => const ScanScreen()),
+                    );
+                  },
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.videocam_off_rounded, size: 54, color: Colors.white24),
-                      const SizedBox(height: 12),
+                      const Icon(FluentIcons.wifi, size: 16),
+                      const SizedBox(width: 8),
                       Text(
-                        allCameras.isEmpty
-                            ? 'Nenhuma câmera comissionada ainda.\nExecute uma varredura para detectar as câmeras ativas da sua rede Wi-Fi!'
-                            : 'Nenhuma câmera nesta categoria.',
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.rajdhani(fontSize: 15, color: Colors.white70),
-                      ),
-                      const SizedBox(height: 18),
-                      GtaButton(
-                        label: 'VARREDURA WI-FI (RADAR)',
-                        icon: Icons.radar_rounded,
-                        onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => const ScanScreen()),
-                          );
-                        },
+                        'Varredura Wi-Fi',
+                        style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600),
                       ),
                     ],
                   ),
                 ),
-              )
-            else
-              SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                sliver: SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      final cam = filteredCameras[index];
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 16),
-                        child: _buildCameraCard(cam, storage),
-                      );
-                    },
-                    childCount: filteredCameras.length,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                flex: 2,
+                child: Button(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      FluentPageRoute(builder: (_) => const MultiGridScreen()),
+                    );
+                  },
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(FluentIcons.view_dashboard, size: 15),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Matriz 2x2',
+                        style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w500),
+                      ),
+                    ],
                   ),
                 ),
               ),
-
-            const SliverToBoxAdapter(
-              child: SizedBox(height: 24),
-            ),
-          ],
+              const SizedBox(width: 8),
+              IconButton(
+                icon: const Icon(FluentIcons.add, size: 15),
+                onPressed: () {
+                  Navigator.of(context).push(
+                    FluentPageRoute(builder: (_) => const CommissionScreen()),
+                  );
+                },
+              ),
+            ],
+          ),
         ),
-      ),
-    );
-  }
 
-  Widget _buildFilterChip(String label, int count) {
-    final isSelected = _selectedFilter == label;
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: ChoiceChip(
-        selected: isSelected,
-        label: Text('$label ($count)'),
-        labelStyle: GoogleFonts.orbitron(
-          fontSize: 10,
-          fontWeight: FontWeight.bold,
-          color: isSelected ? Colors.white : Colors.white60,
+        // Filter Pills
+        Container(
+          height: 38,
+          margin: const EdgeInsets.only(top: 8, bottom: 4),
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            children: [
+              _buildFilterPill('TODAS', allCameras.length),
+              _buildFilterPill('FAVORITAS', storage.favoriteCameras.length),
+              ...uniqueLocations.map((loc) {
+                final count = allCameras.where((c) => c.location.toUpperCase() == loc).length;
+                return _buildFilterPill(loc, count);
+              }),
+            ],
+          ),
         ),
-        selectedColor: GtaColors.neonPink,
-        backgroundColor: GtaColors.bgCard,
-        side: BorderSide(
-          color: isSelected ? GtaColors.neonPink : GtaColors.borderSubtle,
-        ),
-        onSelected: (val) {
-          if (val) setState(() => _selectedFilter = label);
-        },
-      ),
-    );
-  }
 
-  Widget _buildCameraCard(CameraDevice cam, CameraStorageService storage) {
-    return GtaNeonCard(
-      padding: EdgeInsets.zero,
-      borderColor: cam.manufacturer.brandColor.withOpacity(0.5),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Live Video Player Header
-          GestureDetector(
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => CameraDetailScreen(camera: cam)),
-              );
-            },
-            child: SizedBox(
-              height: 210,
-              child: Stack(
+        // Section Title
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Câmeras Comissionadas (${filteredCameras.length})',
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: BCamTheme.textPrimary,
+                ),
+              ),
+              Text(
+                'RTSP / ONVIF',
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: BCamTheme.accentLightBlue,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Camera Feed Cards or Empty State
+        if (filteredCameras.isEmpty)
+          Padding(
+            padding: const EdgeInsets.all(24),
+            child: Card(
+              backgroundColor: BCamTheme.darkSurface,
+              borderColor: BCamTheme.darkBorder,
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Positioned.fill(
-                    child: LivePlayerView(
-                      camera: cam,
-                      autoPlay: true,
-                    ),
+                  const Icon(FluentIcons.video, size: 40, color: BCamTheme.textTertiary),
+                  const SizedBox(height: 12),
+                  Text(
+                    allCameras.isEmpty
+                        ? 'Nenhuma câmera comissionada ainda.\nExecute uma varredura para detectar as câmeras ativas da sua rede Wi-Fi!'
+                        : 'Nenhuma câmera nesta categoria.',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(fontSize: 13, color: BCamTheme.textSecondary),
                   ),
-                  // Fullscreen expand button overlay
-                  Positioned(
-                    top: 10,
-                    right: 48,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.black54,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: IconButton(
-                        icon: const Icon(Icons.fullscreen_rounded, color: Colors.white, size: 20),
-                        onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => CameraDetailScreen(camera: cam)),
-                          );
-                        },
-                      ),
-                    ),
+                  const SizedBox(height: 16),
+                  FilledButton(
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        FluentPageRoute(builder: (_) => const ScanScreen()),
+                      );
+                    },
+                    child: const Text('Iniciar Varredura Wi-Fi'),
                   ),
                 ],
               ),
             ),
-          ),
-
-          // Camera Info & Controls Footer
-          Padding(
-            padding: const EdgeInsets.all(14),
-            child: Row(
-              children: [
-                // Brand pill
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: cam.manufacturer.brandColor.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: cam.manufacturer.brandColor, width: 1),
-                  ),
-                  child: Text(
-                    cam.manufacturer.displayName.toUpperCase(),
-                    style: GoogleFonts.orbitron(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white,
+          )
+        else
+          ...filteredCameras.map((camera) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Card(
+                backgroundColor: BCamTheme.darkSurface,
+                borderColor: BCamTheme.darkBorder,
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Video Player
+                    AspectRatio(
+                      aspectRatio: 16 / 9,
+                      child: GestureDetector(
+                        onTap: () {
+                          Navigator.of(context).push(
+                            FluentPageRoute(
+                              builder: (_) => CameraDetailScreen(camera: camera),
+                            ),
+                          );
+                        },
+                        child: LivePlayerView(camera: camera),
+                      ),
                     ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                // Camera Name and Location
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        cam.name,
-                        style: GoogleFonts.rajdhani(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      Text(
-                        'IP: ${cam.ip}  •  ${cam.location}',
-                        style: GoogleFonts.rajdhani(
-                          fontSize: 12,
-                          color: Colors.white60,
-                        ),
-                      ),
-                      if (cam.macAddress != null)
-                        Text(
-                          'MAC: ${cam.macAddress}',
-                          style: GoogleFonts.robotoMono(
-                            fontSize: 10,
-                            color: GtaColors.electricCyan.withOpacity(0.7),
+                    const SizedBox(height: 12),
+
+                    // Camera Information Row
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Manufacturer Badge
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: camera.manufacturer.brandColor.withValues(alpha: 0.18),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(
+                              color: camera.manufacturer.brandColor.withValues(alpha: 0.6),
+                              width: 0.8,
+                            ),
+                          ),
+                          child: Text(
+                            camera.manufacturer.displayName,
+                            style: GoogleFonts.inter(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
                           ),
                         ),
-                    ],
-                  ),
-                ),
-                // Favorite Star
-                IconButton(
-                  icon: Icon(
-                    cam.isFavorite ? Icons.star_rounded : Icons.star_border_rounded,
-                    color: cam.isFavorite ? GtaColors.sunsetYellow : Colors.white38,
-                  ),
-                  onPressed: () => storage.toggleFavorite(cam.id),
-                ),
-                // More options menu (edit, delete)
-                PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert_rounded, color: Colors.white70),
-                  color: GtaColors.bgCard,
-                  onSelected: (val) {
-                    if (val == 'edit') {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => CommissionScreen(existingCamera: cam)),
-                      );
-                    } else if (val == 'delete') {
-                      storage.removeCamera(cam.id);
-                    }
-                  },
-                  itemBuilder: (context) => [
-                    PopupMenuItem(
-                      value: 'edit',
-                      child: Row(
-                        children: [
-                          const Icon(Icons.edit_rounded, color: GtaColors.electricCyan, size: 18),
-                          const SizedBox(width: 8),
-                          Text('Editar / Recomissionar', style: GoogleFonts.rajdhani(color: Colors.white)),
-                        ],
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: () {
+                              Navigator.of(context).push(
+                                FluentPageRoute(
+                                  builder: (_) => CameraDetailScreen(camera: camera),
+                                ),
+                              );
+                            },
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                              Text(
+                                camera.name,
+                                style: GoogleFonts.inter(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: BCamTheme.textPrimary,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'IP: ${camera.ip}  •  ${camera.location}',
+                                style: GoogleFonts.inter(
+                                  fontSize: 11.5,
+                                  color: BCamTheme.textSecondary,
+                                ),
+                              ),
+                              if (camera.macAddress != null)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 2),
+                                  child: Text(
+                                    'MAC: ${camera.macAddress}',
+                                    style: GoogleFonts.robotoMono(
+                                      fontSize: 10,
+                                      color: BCamTheme.accentLightBlue,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
-                    PopupMenuItem(
-                      value: 'delete',
-                      child: Row(
-                        children: [
-                          const Icon(Icons.delete_forever_rounded, color: GtaColors.statusOffline, size: 18),
-                          const SizedBox(width: 8),
-                          Text('Excluir Câmera', style: GoogleFonts.rajdhani(color: GtaColors.statusOffline)),
-                        ],
-                      ),
+
+                        // Action Buttons
+                        IconButton(
+                          icon: Icon(
+                            camera.isFavorite ? FluentIcons.favorite_star_fill : FluentIcons.favorite_star,
+                            size: 16,
+                            color: camera.isFavorite ? BCamTheme.statusWarning : BCamTheme.textTertiary,
+                          ),
+                          onPressed: () {
+                            storage.toggleFavorite(camera.id);
+                          },
+                        ),
+                        IconButton(
+                          icon: const Icon(FluentIcons.more, size: 16, color: BCamTheme.textSecondary),
+                          onPressed: () {
+                            _showCameraOptions(context, camera);
+                          },
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
+              ),
+            );
+          }),
+        const SizedBox(height: 24),
+      ],
+    ),
+    );
+  }
+
+  Widget _buildFilterPill(String label, int count) {
+    final isSelected = _selectedFilter == label;
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: GestureDetector(
+        onTap: () => setState(() => _selectedFilter = label),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: isSelected ? BCamTheme.accentBlue : BCamTheme.darkSurface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isSelected ? BCamTheme.accentLightBlue : BCamTheme.darkBorder,
+              width: 0.8,
             ),
           ),
-        ],
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label,
+                style: GoogleFonts.inter(
+                  fontSize: 11.5,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                  color: isSelected ? Colors.white : BCamTheme.textSecondary,
+                ),
+              ),
+              const SizedBox(width: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.25),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  count.toString(),
+                  style: GoogleFonts.inter(
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w600,
+                    color: isSelected ? Colors.white : BCamTheme.textTertiary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
+    );
+  }
+
+  void _showCameraOptions(BuildContext context, CameraDevice camera) {
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return ContentDialog(
+          title: Text(camera.name),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('IP: ${camera.ip}:${camera.rtspPort}'),
+              Text('Fabricante: ${camera.manufacturer.displayName}'),
+              if (camera.macAddress != null) Text('MAC: ${camera.macAddress}'),
+              const SizedBox(height: 12),
+              Text(
+                'URL Stream (Ofuscada):\n${camera.maskedStreamUrl}',
+                style: GoogleFonts.robotoMono(fontSize: 10, color: BCamTheme.textSecondary),
+              ),
+            ],
+          ),
+          actions: [
+            Button(
+              onPressed: () {
+                Navigator.of(ctx).pop();
+                Navigator.of(context).push(
+                  FluentPageRoute(builder: (_) => CameraDetailScreen(camera: camera)),
+                );
+              },
+              child: const Text('Abrir Detalhes'),
+            ),
+            Button(
+              onPressed: () {
+                Navigator.of(ctx).pop();
+                Navigator.of(context).push(
+                  FluentPageRoute(builder: (_) => CommissionScreen(existingCamera: camera)),
+                );
+              },
+              child: const Text('Editar'),
+            ),
+            FilledButton(
+              style: ButtonStyle(
+                backgroundColor: WidgetStateProperty.all(BCamTheme.statusOffline),
+              ),
+              onPressed: () {
+                context.read<CameraStorageService>().removeCamera(camera.id);
+                Navigator.of(ctx).pop();
+              },
+              child: const Text('Remover'),
+            ),
+          ],
+        );
+      },
     );
   }
 }

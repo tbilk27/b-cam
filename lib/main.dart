@@ -1,9 +1,9 @@
-import 'package:flutter/material.dart';
+import 'package:fluent_ui/fluent_ui.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:provider/provider.dart';
 import 'screens/home_screen.dart';
 import 'services/camera_storage_service.dart';
-import 'theme/app_theme.dart';
+import 'theme/fluent_theme.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,10 +23,12 @@ class BCamApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => storageService ?? CameraStorageService()),
       ],
-      child: MaterialApp(
+      child: FluentApp(
         title: 'b-cam • Vigilância Inteligente',
         debugShowCheckedModeBanner: false,
-        theme: AppTheme.darkTheme,
+        themeMode: ThemeMode.dark,
+        darkTheme: BCamTheme.darkTheme(),
+        theme: BCamTheme.darkTheme(),
         home: const HomeScreen(),
       ),
     );
