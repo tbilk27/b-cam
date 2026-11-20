@@ -28,8 +28,8 @@ class LivePlayerView extends StatefulWidget {
 
 class _LivePlayerViewState extends State<LivePlayerView>
     with WidgetsBindingObserver, AutomaticKeepAliveClientMixin {
-  late final Player _player;
-  late final VideoController _controller;
+  Player? _player;
+  VideoController? _controller;
   bool _isLoading = true;
   bool _hasError = false;
   String? _errorMessage;
@@ -66,7 +66,7 @@ class _LivePlayerViewState extends State<LivePlayerView>
         'RTSP_PLAYER',
         'App retomado ao primeiro plano. Revalidando status do fluxo para "${widget.camera.name}" (${widget.camera.ip})...',
       );
-      if (_hasError || !_player.state.playing) {
+      if (_hasError || !(_player?.state.playing ?? false)) {
         _cancelAutoReconnect();
         _playStream();
       }
@@ -88,7 +88,7 @@ class _LivePlayerViewState extends State<LivePlayerView>
     _watchdogTimer = Timer.periodic(const Duration(seconds: 12), (_) {
       if (!mounted) return;
       // If autoPlay is enabled, not in error, but not playing and not loading for > 12s, reconnect
-      if (widget.autoPlay && !_hasError && !_isLoading && !_player.state.playing) {
+      if (widget.autoPlay && !_hasError && !_isLoading && !(_player?.state.playing ?? false)) {
         DiagnosticLoggerService.instance.logWarn(
           'RTSP_PLAYER',
           'Watchdog detectou fluxo inativo para "${widget.camera.name}". Forçando reconexão...',
@@ -100,14 +100,15 @@ class _LivePlayerViewState extends State<LivePlayerView>
 
   void _initPlayer() {
     try {
-      _player = Player(
+      final p = Player(
         configuration: const PlayerConfiguration(
           bufferSize: 1024 * 1024 * 4, // 4MB low latency buffer
         ),
       );
-      _controller = VideoController(_player);
+      _player = p;
+      _controller = VideoController(p);
 
-      _errorSub = _player.stream.error.listen((error) {
+      _errorSub = p.stream.error.listen((error) {
         // Filter out benign non-fatal seek/stream notifications from libmpv
         if (error.contains('Cannot seek') ||
             error.contains('force-seekable') ||
@@ -135,7 +136,7 @@ class _LivePlayerViewState extends State<LivePlayerView>
         }
       });
 
-      _completedSub = _player.stream.completed.listen((completed) {
+      _completedSub = p.stream.completed.listen((completed) {
         if (completed && mounted) {
           DiagnosticLoggerService.instance.logWarn(
             'RTSP_PLAYER',
@@ -150,7 +151,7 @@ class _LivePlayerViewState extends State<LivePlayerView>
         }
       });
 
-      _playingSub = _player.stream.playing.listen((playing) {
+      _playingSub = p.stream.playing.listen((playing) {
         if (playing && mounted) {
           _cancelAutoReconnect();
           setState(() {
@@ -162,7 +163,7 @@ class _LivePlayerViewState extends State<LivePlayerView>
         }
       });
 
-      _bufferingSub = _player.stream.buffering.listen((buffering) {
+      _bufferingSub = p.stream.buffering.listen((buffering) {
         if (mounted) {
           setState(() {
             _isLoading = buffering;
@@ -251,24 +252,26 @@ class _LivePlayerViewState extends State<LivePlayerView>
         details: 'Stream URL: ${widget.camera.maskedStreamUrl}',
       );
 
-      await _player.setVolume(widget.isMiniature ? 0 : (_isMuted ? 0 : 100));
+      if (_player != null) {
+        await _player!.setVolume(widget.isMiniature ? 0 : (_isMuted ? 0 : 100));
 
-      try {
-        await (_player.platform as dynamic).setProperty('rtsp-transport', transportStr);
-        await (_player.platform as dynamic).setProperty('demuxer-lavf-o', 'rtsp_transport=$transportStr');
-      } catch (e) {
-        debugPrint('Note: setProperty rtsp-transport: $e');
+        try {
+          await (_player!.platform as dynamic).setProperty('rtsp-transport', transportStr);
+          await (_player!.platform as dynamic).setProperty('demuxer-lavf-o', 'rtsp_transport=$transportStr');
+        } catch (e) {
+          debugPrint('Note: setProperty rtsp-transport: $e');
+        }
+
+        await _player!.open(
+          Media(
+            url,
+            httpHeaders: {
+              'User-Agent': 'b-cam/1.0',
+            },
+          ),
+          play: true,
+        );
       }
-
-      await _player.open(
-        Media(
-          url,
-          httpHeaders: {
-            'User-Agent': 'b-cam/1.0',
-          },
-        ),
-        play: true,
-      );
 
       // Timeout watchdog: if not playing after 5 seconds, ensure loading overlay disappears
       Future.delayed(const Duration(seconds: 3), () {
@@ -316,7 +319,7 @@ class _LivePlayerViewState extends State<LivePlayerView>
     _bufferingSub?.cancel();
     _completedSub?.cancel();
     _playingSub?.cancel();
-    _player.dispose();
+    _player?.dispose();
     super.dispose();
   }
 
@@ -342,11 +345,14 @@ class _LivePlayerViewState extends State<LivePlayerView>
         fit: StackFit.expand,
         children: [
           // 1. Video Canvas
-          Video(
-            controller: _controller,
-            fit: BoxFit.cover,
-            controls: NoVideoControls,
-          ),
+          if (_controller != null)
+            Video(
+              controller: _controller!,
+              fit: BoxFit.cover,
+              controls: NoVideoControls,
+            )
+          else
+            Container(color: Colors.black),
 
           // 2. Subtle Vignette Effect
           IgnorePointer(
@@ -665,7 +671,7 @@ class _LivePlayerViewState extends State<LivePlayerView>
                         onPressed: () {
                           setState(() {
                             _isMuted = !_isMuted;
-                            _player.setVolume(_isMuted ? 0 : 100);
+                            _player?.setVolume(_isMuted ? 0 : 100);
                           });
                         },
                       ),

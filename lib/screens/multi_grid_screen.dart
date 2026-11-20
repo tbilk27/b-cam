@@ -21,6 +21,7 @@ class _MultiGridScreenState extends State<MultiGridScreen> {
   Widget build(BuildContext context) {
     final storage = context.watch<CameraStorageService>();
     final cameras = storage.cameras;
+    final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
 
     return SafeArea(
       child: ScaffoldPage(
@@ -84,7 +85,7 @@ class _MultiGridScreenState extends State<MultiGridScreen> {
                 crossAxisCount: _gridColumns,
                 crossAxisSpacing: 10,
                 mainAxisSpacing: 10,
-                childAspectRatio: _gridColumns == 1 ? 16 / 9 : 16 / 12,
+                childAspectRatio: _gridColumns == 1 ? 16 / 9 : (isLandscape ? 16 / 10 : 16 / 12),
               ),
               itemCount: cameras.length,
               itemBuilder: (context, index) {

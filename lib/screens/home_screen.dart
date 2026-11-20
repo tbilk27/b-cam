@@ -74,11 +74,12 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     final uniqueLocations = allCameras.map((c) => c.location.toUpperCase()).toSet().toList();
+    final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
 
     return SafeArea(
       child: ScaffoldPage.scrollable(
       header: PageHeader(
-        title: const BCamLogo(size: 32, showText: true),
+        title: BCamLogo(size: isLandscape ? 26 : 32, showText: true),
         commandBar: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: () {
@@ -279,147 +280,182 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           )
+        else if (isLandscape)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final itemWidth = (constraints.maxWidth - 12) / 2;
+                return Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: filteredCameras.map((camera) {
+                    return SizedBox(
+                      width: itemWidth,
+                      child: _buildCameraCard(context, camera, storage, isLandscape: true),
+                    );
+                  }).toList(),
+                );
+              },
+            ),
+          )
         else
           ...filteredCameras.map((camera) {
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Card(
-                backgroundColor: BCamTheme.darkSurface,
-                borderColor: BCamTheme.darkBorder,
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Video Player
-                    AspectRatio(
-                      aspectRatio: 16 / 9,
-                      child: GestureDetector(
-                        onTap: () {
-                          Navigator.of(context).push(
-                            FluentPageRoute(
-                              builder: (_) => CameraDetailScreen(camera: camera),
-                            ),
-                          );
-                        },
-                        onDoubleTap: () {
-                          final idx = filteredCameras.indexOf(camera);
-                          Navigator.of(context).push(
-                            FluentPageRoute(
-                              builder: (_) => FullscreenCameraViewer(
-                                cameras: filteredCameras,
-                                initialIndex: idx >= 0 ? idx : 0,
-                              ),
-                            ),
-                          );
-                        },
-                        child: LivePlayerView(
-                          key: ValueKey('${camera.id}_${camera.streamUrl}_$_refreshKey'),
-                          camera: camera,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Camera Information Row
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Manufacturer Badge
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: camera.manufacturer.brandColor.withValues(alpha: 0.18),
-                            borderRadius: BorderRadius.circular(4),
-                            border: Border.all(
-                              color: camera.manufacturer.brandColor.withValues(alpha: 0.6),
-                              width: 0.8,
-                            ),
-                          ),
-                          child: Text(
-                            camera.manufacturer.displayName,
-                            style: GoogleFonts.inter(
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: GestureDetector(
-                            behavior: HitTestBehavior.opaque,
-                            onTap: () {
-                              Navigator.of(context).push(
-                                FluentPageRoute(
-                                  builder: (_) => CameraDetailScreen(camera: camera),
-                                ),
-                              );
-                            },
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                              Text(
-                                camera.name,
-                                style: GoogleFonts.inter(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700,
-                                  color: BCamTheme.textPrimary,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'IP: ${camera.ip}  •  ${camera.location}',
-                                style: GoogleFonts.inter(
-                                  fontSize: 11.5,
-                                  color: BCamTheme.textSecondary,
-                                ),
-                              ),
-                              if (camera.macAddress != null)
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 2),
-                                  child: Text(
-                                    'MAC: ${camera.macAddress}',
-                                    style: GoogleFonts.robotoMono(
-                                      fontSize: 10,
-                                      color: BCamTheme.accentLightBlue,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ),
-
-                        // Action Buttons
-                        IconButton(
-                          icon: Icon(
-                            camera.isFavorite ? FluentIcons.favorite_star_fill : FluentIcons.favorite_star,
-                            size: 16,
-                            color: camera.isFavorite ? BCamTheme.statusWarning : BCamTheme.textTertiary,
-                          ),
-                          onPressed: () {
-                            storage.toggleFavorite(camera.id);
-                          },
-                        ),
-                        IconButton(
-                          icon: const Icon(FluentIcons.more, size: 16, color: BCamTheme.textSecondary),
-                          onPressed: () {
-                            _showCameraOptions(context, camera);
-                          },
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            );
+            return _buildCameraCard(context, camera, storage, isLandscape: false);
           }),
         const SizedBox(height: 24),
       ],
     ),
+    );
+  }
+
+  Widget _buildCameraCard(
+    BuildContext context,
+    CameraDevice camera,
+    CameraStorageService storage, {
+    required bool isLandscape,
+  }) {
+    return Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: isLandscape ? 0 : 16,
+        vertical: isLandscape ? 0 : 8,
+      ),
+      child: Card(
+        backgroundColor: BCamTheme.darkSurface,
+        borderColor: BCamTheme.darkBorder,
+        padding: const EdgeInsets.all(10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Video Player
+            AspectRatio(
+              aspectRatio: 16 / 9,
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.of(context).push(
+                    FluentPageRoute(
+                      builder: (_) => CameraDetailScreen(camera: camera),
+                    ),
+                  );
+                },
+                onDoubleTap: () {
+                  final allCameras = storage.cameras;
+                  final idx = allCameras.indexOf(camera);
+                  Navigator.of(context).push(
+                    FluentPageRoute(
+                      builder: (_) => FullscreenCameraViewer(
+                        cameras: allCameras,
+                        initialIndex: idx >= 0 ? idx : 0,
+                      ),
+                    ),
+                  );
+                },
+                child: LivePlayerView(
+                  key: ValueKey('${camera.id}_${camera.streamUrl}_$_refreshKey'),
+                  camera: camera,
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+
+            // Camera Information Row
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Manufacturer Badge
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                  decoration: BoxDecoration(
+                    color: camera.manufacturer.brandColor.withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(
+                      color: camera.manufacturer.brandColor.withValues(alpha: 0.6),
+                      width: 0.8,
+                    ),
+                  ),
+                  child: Text(
+                    camera.manufacturer.displayName,
+                    style: GoogleFonts.inter(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () {
+                      Navigator.of(context).push(
+                        FluentPageRoute(
+                          builder: (_) => CameraDetailScreen(camera: camera),
+                        ),
+                      );
+                    },
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          camera.name,
+                          style: GoogleFonts.inter(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w700,
+                            color: BCamTheme.textPrimary,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${camera.ip}  •  ${camera.location}',
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            color: BCamTheme.textSecondary,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        if (camera.macAddress != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: Text(
+                              'MAC: ${camera.macAddress}',
+                              style: GoogleFonts.robotoMono(
+                                fontSize: 9.5,
+                                color: BCamTheme.accentLightBlue,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // Action Buttons
+                IconButton(
+                  icon: Icon(
+                    camera.isFavorite ? FluentIcons.favorite_star_fill : FluentIcons.favorite_star,
+                    size: 15,
+                    color: camera.isFavorite ? BCamTheme.statusWarning : BCamTheme.textTertiary,
+                  ),
+                  onPressed: () {
+                    storage.toggleFavorite(camera.id);
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(FluentIcons.more, size: 15, color: BCamTheme.textSecondary),
+                  onPressed: () {
+                    _showCameraOptions(context, camera);
+                  },
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 

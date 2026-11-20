@@ -1,5 +1,7 @@
+import 'dart:math';
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import '../models/camera_device.dart';
 import '../models/camera_event.dart';
 import '../screens/event_detail_screen.dart';
@@ -25,7 +27,122 @@ class VerticalEventTimeline extends StatefulWidget {
 }
 
 class _VerticalEventTimelineState extends State<VerticalEventTimeline> {
+  DateTime _selectedDate = DateTime.now();
   String _selectedFilter = 'TODOS';
+  double _zoomScale = 1.0; // 0.75x, 1.0x, 1.5x, 2.0x
+  String? _activeScrubberTime;
+
+  @override
+  void initState() {
+    super.initState();
+    _activeScrubberTime = DateFormat('HH:mm:ss').format(DateTime.now());
+  }
+
+  void _previousDay() {
+    setState(() {
+      _selectedDate = _selectedDate.subtract(const Duration(days: 1));
+    });
+  }
+
+  void _nextDay() {
+    final now = DateTime.now();
+    if (_selectedDate.year == now.year &&
+        _selectedDate.month == now.month &&
+        _selectedDate.day == now.day) {
+      return; // Já está em Hoje
+    }
+    setState(() {
+      _selectedDate = _selectedDate.add(const Duration(days: 1));
+    });
+  }
+
+  String get _dateLabel {
+    final now = DateTime.now();
+    final yesterday = now.subtract(const Duration(days: 1));
+
+    if (_selectedDate.year == now.year &&
+        _selectedDate.month == now.month &&
+        _selectedDate.day == now.day) {
+      return 'Hoje';
+    } else if (_selectedDate.year == yesterday.year &&
+        _selectedDate.month == yesterday.month &&
+        _selectedDate.day == yesterday.day) {
+      return 'Ontem';
+    } else {
+      return DateFormat('dd/MM/yyyy').format(_selectedDate);
+    }
+  }
+
+  void _zoomIn() {
+    setState(() {
+      _zoomScale = min(2.5, _zoomScale + 0.25);
+    });
+  }
+
+  void _zoomOut() {
+    setState(() {
+      _zoomScale = max(0.6, _zoomScale - 0.25);
+    });
+  }
+
+  void _showFilterFlyout(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => ContentDialog(
+        title: Text(
+          'Filtrar Eventos da Câmera',
+          style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w700),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildFilterRadioItem('TODOS', 'Todos os Eventos', FluentIcons.all_currency),
+            _buildFilterRadioItem('PESSOAS', 'Presença Humana (IA)', FluentIcons.contact),
+            _buildFilterRadioItem('VEÍCULOS', 'Veículos Detectados (IA)', FluentIcons.car),
+            _buildFilterRadioItem('MOVIMENTO', 'Movimento Geral (PIR/VMD)', FluentIcons.running),
+            _buildFilterRadioItem('ALARMES', 'Disparos de Alarme', FluentIcons.alarm_clock),
+          ],
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Aplicar Filtro'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterRadioItem(String key, String label, IconData icon) {
+    final isSelected = _selectedFilter == key;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: ListTile(
+        leading: Icon(
+          icon,
+          size: 16,
+          color: isSelected ? BCamTheme.statusOnlineGlow : BCamTheme.textSecondary,
+        ),
+        title: Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 13,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+            color: isSelected ? Colors.white : BCamTheme.textSecondary,
+          ),
+        ),
+        trailing: isSelected
+            ? const Icon(FluentIcons.check_mark, size: 14, color: BCamTheme.statusOnlineGlow)
+            : null,
+        onPressed: () {
+          setState(() {
+            _selectedFilter = key;
+          });
+          Navigator.of(context).pop();
+        },
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -41,358 +158,411 @@ class _VerticalEventTimelineState extends State<VerticalEventTimeline> {
     }).toList();
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
       children: [
-        // Header with event count and title
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        // 1. Sub-Header Bar (< Hoje > | Funil | Visualização do evento 🔴)
+        _buildSubHeaderBar(context),
+
+        const SizedBox(height: 4),
+
+        // 2. Timeline Body with Ruler, Event Cards, and Floating Zoom Buttons
+        Expanded(
+          child: Stack(
             children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: BCamTheme.accentLightBlue.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(6),
+              // Main scrollable timeline
+              filteredEvents.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(FluentIcons.search_issue, size: 36, color: BCamTheme.textTertiary),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Nenhum evento registrado nesta data.',
+                            style: GoogleFonts.inter(fontSize: 12.5, color: BCamTheme.textSecondary),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'O Agente de IA monitora continuamente o fluxo da câmera.',
+                            style: GoogleFonts.robotoMono(fontSize: 10, color: BCamTheme.textTertiary),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      controller: widget.scrollController,
+                      padding: EdgeInsets.fromLTRB(8, 12, widget.isCompact ? 44 : 56, 24),
+                      itemCount: filteredEvents.length,
+                      itemBuilder: (context, index) {
+                        final event = filteredEvents[index];
+                        final isFirst = index == 0;
+                        final isLast = index == filteredEvents.length - 1;
+                        return _buildTimelineRow(event, isFirst, isLast);
+                      },
                     ),
-                    child: const Icon(FluentIcons.timeline_progress, size: 16, color: BCamTheme.accentLightBlue),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Linha do Tempo de Eventos',
-                    style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: BCamTheme.textPrimary),
-                  ),
-                ],
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: BCamTheme.darkSurface,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: BCamTheme.darkBorder, width: 0.8),
-                ),
-                child: Text(
-                  '${filteredEvents.length} eventos',
-                  style: GoogleFonts.robotoMono(fontSize: 11, fontWeight: FontWeight.w600, color: BCamTheme.textSecondary),
+
+              // Floating Zoom Controls on the Right (+ and - buttons)
+              Positioned(
+                right: widget.isCompact ? 6 : 12,
+                top: 40,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildZoomButton(
+                      icon: FluentIcons.add,
+                      tooltip: 'Aproximar Escala (+)',
+                      onPressed: _zoomIn,
+                    ),
+                    const SizedBox(height: 8),
+                    _buildZoomButton(
+                      icon: FluentIcons.remove,
+                      tooltip: 'Afastar Escala (-)',
+                      onPressed: _zoomOut,
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
         ),
-
-        // Filter Pills
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          child: Row(
-            children: [
-              _buildFilterPill('TODOS', allEvents.length),
-              const SizedBox(width: 6),
-              _buildFilterPill('PESSOAS', allEvents.where((e) => e.type == CameraEventType.person).length),
-              const SizedBox(width: 6),
-              _buildFilterPill('VEÍCULOS', allEvents.where((e) => e.type == CameraEventType.vehicle).length),
-              const SizedBox(width: 6),
-              _buildFilterPill('MOVIMENTO', allEvents.where((e) => e.type == CameraEventType.motion).length),
-              const SizedBox(width: 6),
-              _buildFilterPill('ALARMES', allEvents.where((e) => e.type == CameraEventType.alarm).length),
-            ],
-          ),
-        ),
-
-        const SizedBox(height: 8),
-
-        // Events List or Empty State
-        if (filteredEvents.isEmpty)
-          Padding(
-            padding: const EdgeInsets.all(32),
-            child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(FluentIcons.search_issue, size: 32, color: BCamTheme.textTertiary),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Nenhum evento registrado nesta categoria.',
-                    style: GoogleFonts.inter(fontSize: 12, color: BCamTheme.textSecondary),
-                  ),
-                ],
-              ),
-            ),
-          )
-        else
-          ListView.builder(
-            controller: widget.scrollController,
-            shrinkWrap: true,
-            physics: widget.scrollController != null ? null : const NeverScrollableScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            itemCount: filteredEvents.length,
-            itemBuilder: (context, index) {
-              final event = filteredEvents[index];
-              final isLast = index == filteredEvents.length - 1;
-              return _buildTimelineItem(event, isLast);
-            },
-          ),
       ],
     );
   }
 
-  Widget _buildFilterPill(String filter, int count) {
-    final isSelected = _selectedFilter == filter;
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _selectedFilter = filter;
-        });
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-          color: isSelected ? BCamTheme.accentLightBlue.withValues(alpha: 0.2) : BCamTheme.darkSurface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isSelected ? BCamTheme.accentLightBlue : BCamTheme.darkBorder,
-            width: isSelected ? 1.2 : 0.8,
-          ),
+  Widget _buildSubHeaderBar(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: BCamTheme.darkSurface,
+        border: Border(
+          bottom: BorderSide(color: BCamTheme.darkBorder, width: 0.8),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              filter,
-              style: GoogleFonts.inter(
-                fontSize: 11,
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                color: isSelected ? BCamTheme.accentLightBlue : BCamTheme.textSecondary,
-              ),
-            ),
-            const SizedBox(width: 5),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-              decoration: BoxDecoration(
-                color: isSelected ? BCamTheme.accentLightBlue : const Color(0x1AFFFFFF),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(
-                '$count',
-                style: GoogleFonts.robotoMono(
-                  fontSize: 9.5,
-                  fontWeight: FontWeight.w700,
-                  color: isSelected ? Colors.black : BCamTheme.textTertiary,
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // Left: < Hoje > Date Navigation Pill & Filter Button
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Date Pill Container
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                decoration: BoxDecoration(
+                  color: BCamTheme.darkCard,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: BCamTheme.darkBorder, width: 0.8),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(FluentIcons.chevron_left, size: 12, color: BCamTheme.textSecondary),
+                      onPressed: _previousDay,
+                    ),
+                    const SizedBox(width: 4),
+                    GestureDetector(
+                      onTap: () {
+                        // Quick switch between Hoje and Ontem
+                        if (_dateLabel == 'Hoje') {
+                          _previousDay();
+                        } else {
+                          setState(() => _selectedDate = DateTime.now());
+                        }
+                      },
+                      child: Text(
+                        _dateLabel,
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: BCamTheme.textPrimary,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    IconButton(
+                      icon: const Icon(FluentIcons.chevron_right, size: 12, color: BCamTheme.textSecondary),
+                      onPressed: _dateLabel == 'Hoje' ? null : _nextDay,
+                    ),
+                  ],
                 ),
               ),
+
+              const SizedBox(width: 8),
+
+              // Filter Funnel Button
+              GestureDetector(
+                onTap: () => _showFilterFlyout(context),
+                child: Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: _selectedFilter != 'TODOS'
+                        ? BCamTheme.statusOnlineGlow.withValues(alpha: 0.2)
+                        : BCamTheme.darkCard,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: _selectedFilter != 'TODOS'
+                          ? BCamTheme.statusOnlineGlow
+                          : BCamTheme.darkBorder,
+                      width: 0.8,
+                    ),
+                  ),
+                  child: Center(
+                    child: Icon(
+                      FluentIcons.filter,
+                      size: 13,
+                      color: _selectedFilter != 'TODOS'
+                          ? BCamTheme.statusOnlineGlow
+                          : BCamTheme.textSecondary,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          // Right: Visualização do evento 🔴
+          Flexible(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(
+                  child: Text(
+                    widget.isCompact ? 'Eventos' : 'Visualização do evento',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: BCamTheme.statusOnlineGlow,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Container(
+                  width: 6.5,
+                  height: 6.5,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFFF3B30), // Red dot indicator
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildTimelineItem(CameraEvent event, bool isLast) {
-    return IntrinsicHeight(
+  Widget _buildTimelineRow(CameraEvent event, bool isFirst, bool isLast) {
+    final itemHeight = 90.0 * _zoomScale;
+
+    return SizedBox(
+      height: itemHeight,
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Left Rail (Timestamp & Vertical Line with Node)
+          // 1. Time Label on the Far Left (e.g. 15:48, 14:02)
           SizedBox(
-            width: 72,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  event.timeFormatted,
+            width: 46,
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 6),
+                child: Text(
+                  DateFormat('HH:mm').format(event.timestamp),
                   style: GoogleFonts.robotoMono(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: BCamTheme.textPrimary,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                    color: BCamTheme.textSecondary,
                   ),
                 ),
-                Text(
-                  event.dateFormatted,
-                  style: GoogleFonts.inter(
-                    fontSize: 9.5,
-                    color: BCamTheme.textTertiary,
+              ),
+            ),
+          ),
+
+          // 2. Vertical Ruler Track with Active Green Pill Scrubber
+          SizedBox(
+            width: (isFirst && !widget.isCompact) ? 76 : 28,
+            child: Stack(
+              alignment: Alignment.centerLeft,
+              children: [
+                // Continuous Vertical Ruler Rail
+                Positioned(
+                  top: 0,
+                  bottom: 0,
+                  left: (isFirst && !widget.isCompact) ? 68 : 12,
+                  child: Container(
+                    width: 3.5,
+                    color: const Color(0xFF2C2C34),
                   ),
                 ),
+
+                // Green Event Notch on Ruler
+                Positioned(
+                  top: itemHeight * 0.25,
+                  bottom: itemHeight * 0.25,
+                  left: (isFirst && !widget.isCompact) ? 68 : 12,
+                  child: Container(
+                    width: 3.5,
+                    color: BCamTheme.statusOnlineGlow,
+                  ),
+                ),
+
+                // Horizontal Green Connector Notch
+                Positioned(
+                  top: itemHeight * 0.45,
+                  left: (isFirst && !widget.isCompact) ? 60 : 8,
+                  child: Container(
+                    width: 12,
+                    height: 2,
+                    color: BCamTheme.statusOnlineGlow,
+                  ),
+                ),
+
+                // Active Scrubber Badge on First/Selected Event (16:19:47)
+                if (isFirst && !widget.isCompact && _activeScrubberTime != null)
+                  Positioned(
+                    top: itemHeight * 0.35,
+                    left: 0,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2.5),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF00C853),
+                        borderRadius: BorderRadius.circular(4),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF00C853).withValues(alpha: 0.4),
+                            blurRadius: 6,
+                          ),
+                        ],
+                      ),
+                      child: Text(
+                        _activeScrubberTime!,
+                        style: GoogleFonts.robotoMono(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.black,
+                        ),
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
 
           const SizedBox(width: 8),
 
-          // Central Connector Node & Line
-          Column(
-            children: [
-              Container(
-                width: 14,
-                height: 14,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: event.type.color,
-                  border: Border.all(color: const Color(0xFF0F0F12), width: 2.5),
-                  boxShadow: [
-                    BoxShadow(
-                      color: event.type.color.withValues(alpha: 0.6),
-                      blurRadius: 6,
-                      spreadRadius: 1,
-                    ),
-                  ],
-                ),
-              ),
-              if (!isLast)
-                Expanded(
-                  child: Container(
-                    width: 2,
-                    color: BCamTheme.darkBorder,
-                  ),
-                ),
-            ],
-          ),
-
-          const SizedBox(width: 10),
-
-          // Event Content Card
+          // 3. Event Clip Card (Center / Right)
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.only(bottom: 14),
+              padding: const EdgeInsets.symmetric(vertical: 4),
               child: GestureDetector(
                 onTap: () {
                   if (widget.onEventTap != null) {
                     widget.onEventTap!(event);
                   } else {
-                    _showEventPlaybackDialog(event);
+                    Navigator.of(context).push(
+                      FluentPageRoute(
+                        builder: (_) => EventDetailScreen(event: event),
+                      ),
+                    );
                   }
                 },
-                child: Card(
-                  backgroundColor: BCamTheme.darkSurface,
-                  borderColor: event.isFlagged ? BCamTheme.statusOffline.withValues(alpha: 0.6) : BCamTheme.darkBorder,
-                  padding: const EdgeInsets.all(10),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF202026),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: const Color(0xFF33333E),
+                      width: 0.8,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.25),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  child: Row(
                     children: [
-                      // Badge Row
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Flexible(
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: event.type.color.withValues(alpha: 0.16),
-                                borderRadius: BorderRadius.circular(4),
-                                border: Border.all(color: event.type.color.withValues(alpha: 0.5), width: 0.8),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(event.type.icon, size: 11, color: event.type.color),
-                                  const SizedBox(width: 4),
-                                  Flexible(
-                                    child: Text(
-                                      event.type.label,
-                                      style: GoogleFonts.inter(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w700,
-                                        color: event.type.color,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-                            decoration: BoxDecoration(
-                              color: const Color(0x73000000),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
+                      // Clip Information (Title / Clipes / Duration)
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Row(
                               children: [
-                                const Icon(FluentIcons.stopwatch, size: 10, color: BCamTheme.textTertiary),
-                                const SizedBox(width: 3),
-                                Text(
-                                  event.durationFormatted,
-                                  style: GoogleFonts.robotoMono(
-                                    fontSize: 9.5,
-                                    color: BCamTheme.textSecondary,
-                                    fontWeight: FontWeight.w600,
+                                Expanded(
+                                  child: Text(
+                                    _resolveClipCountLabel(event),
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0x33FFFFFF),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    event.durationFormatted,
+                                    style: GoogleFonts.robotoMono(
+                                      fontSize: 9.5,
+                                      fontWeight: FontWeight.w600,
+                                      color: BCamTheme.textSecondary,
+                                    ),
                                   ),
                                 ),
                               ],
                             ),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 6),
-
-                      // Description
-                      Text(
-                        event.description,
-                        style: GoogleFonts.inter(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w500,
-                          color: BCamTheme.textPrimary,
-                        ),
-                      ),
-
-                      const SizedBox(height: 8),
-
-                      // Simulated Video Clip Snapshot Bar
-                      Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF141418),
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: const Color(0x1AFFFFFF)),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 52,
-                              height: 40,
-                              decoration: BoxDecoration(
-                                color: const Color(0x8A000000),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Center(
-                                child: Stack(
-                                  alignment: Alignment.center,
-                                  children: [
-                                    Icon(event.type.icon, size: 20, color: event.type.color.withValues(alpha: 0.7)),
-                                    const Icon(FluentIcons.play, size: 14, color: Colors.white),
-                                  ],
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                Icon(event.type.icon, size: 12, color: event.type.color),
+                                const SizedBox(width: 4),
+                                Flexible(
+                                  child: Text(
+                                    '${event.type.label} (${(event.confidence * 100).toInt()}%)',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.w500,
+                                      color: event.type.color,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    'Clipe NVR Gravado',
-                                    style: GoogleFonts.inter(fontSize: 10.5, fontWeight: FontWeight.w600, color: Colors.white),
-                                  ),
-                                  Text(
-                                    'IA: ${(event.confidence * 100).toInt()}% • Toque para reproduzir',
-                                    style: GoogleFonts.inter(fontSize: 9.5, color: BCamTheme.textTertiary),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const Padding(
-                              padding: EdgeInsets.only(right: 8),
-                              child: Icon(FluentIcons.chevron_right, size: 12, color: BCamTheme.textTertiary),
+                              ],
                             ),
                           ],
+                        ),
+                      ),
+
+                      const SizedBox(width: 8),
+
+                      // Play Triangle Button Icon
+                      Container(
+                        width: 28,
+                        height: 28,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Center(
+                          child: Icon(
+                            FluentIcons.play,
+                            size: 13,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     ],
@@ -406,81 +576,47 @@ class _VerticalEventTimelineState extends State<VerticalEventTimeline> {
     );
   }
 
-  void _showEventPlaybackDialog(CameraEvent event) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return ContentDialog(
-          title: Row(
-            children: [
-              Icon(event.type.icon, size: 18, color: event.type.color),
-              const SizedBox(width: 8),
-              Text(
-                'Reprodução: ${event.type.label}',
-                style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w700),
+  String _resolveClipCountLabel(CameraEvent event) {
+    if (event.type == CameraEventType.person) {
+      return '5 clipes';
+    } else if (event.type == CameraEventType.vehicle) {
+      return '2 clipes';
+    } else if (event.type == CameraEventType.motion) {
+      return '3 clipes';
+    } else {
+      return '8 clipes';
+    }
+  }
+
+  Widget _buildZoomButton({
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback onPressed,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: GestureDetector(
+        onTap: onPressed,
+        child: Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: BCamTheme.darkSurface,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: BCamTheme.darkBorder, width: 0.9),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.35),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
               ),
             ],
           ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '${event.cameraName} • ${event.timeFormatted} (${event.dateFormatted})',
-                style: GoogleFonts.robotoMono(fontSize: 12, color: BCamTheme.accentLightBlue),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                event.description,
-                style: GoogleFonts.inter(fontSize: 13, color: BCamTheme.textPrimary),
-              ),
-              const SizedBox(height: 12),
-              Container(
-                height: 140,
-                decoration: BoxDecoration(
-                  color: Colors.black,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: BCamTheme.darkBorder),
-                ),
-                child: Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(FluentIcons.play, size: 36, color: BCamTheme.accentLightBlue),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Buffer de gravação de ${event.durationFormatted}',
-                        style: GoogleFonts.inter(fontSize: 11, color: BCamTheme.textSecondary),
-                      ),
-                      Text(
-                        'Origem: NVR Local / Cartão SD',
-                        style: GoogleFonts.robotoMono(fontSize: 10, color: BCamTheme.textTertiary),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
+          child: Center(
+            child: Icon(icon, size: 14, color: BCamTheme.textPrimary),
           ),
-          actions: [
-            Button(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Fechar'),
-            ),
-            FilledButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                Navigator.of(context).push(
-                  FluentPageRoute(
-                    builder: (context) => EventDetailScreen(event: event),
-                  ),
-                );
-              },
-              child: const Text('Iniciar Reprodução'),
-            ),
-          ],
-        );
-      },
+        ),
+      ),
     );
   }
 }
