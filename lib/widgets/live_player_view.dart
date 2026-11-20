@@ -26,7 +26,8 @@ class LivePlayerView extends StatefulWidget {
   State<LivePlayerView> createState() => _LivePlayerViewState();
 }
 
-class _LivePlayerViewState extends State<LivePlayerView> {
+class _LivePlayerViewState extends State<LivePlayerView>
+    with WidgetsBindingObserver, AutomaticKeepAliveClientMixin {
   late final Player _player;
   late final VideoController _controller;
   bool _isLoading = true;
@@ -37,12 +38,39 @@ class _LivePlayerViewState extends State<LivePlayerView> {
   String _currentTime = '';
   StreamSubscription? _errorSub;
   StreamSubscription? _bufferingSub;
+  StreamSubscription? _completedSub;
+  StreamSubscription? _playingSub;
+
+  // Auto-reconnect engine
+  int _reconnectAttempt = 0;
+  int _secondsRemaining = 0;
+  Timer? _countdownTimer;
+  Timer? _watchdogTimer;
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _initPlayer();
     _startHudClock();
+    _startWatchdog();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      DiagnosticLoggerService.instance.logInfo(
+        'RTSP_PLAYER',
+        'App retomado ao primeiro plano. Revalidando status do fluxo para "${widget.camera.name}" (${widget.camera.ip})...',
+      );
+      if (_hasError || !_player.state.playing) {
+        _cancelAutoReconnect();
+        _playStream();
+      }
+    }
   }
 
   void _startHudClock() {
@@ -56,6 +84,20 @@ class _LivePlayerViewState extends State<LivePlayerView> {
     _currentTime = DateFormat('HH:mm:ss').format(DateTime.now());
   }
 
+  void _startWatchdog() {
+    _watchdogTimer = Timer.periodic(const Duration(seconds: 12), (_) {
+      if (!mounted) return;
+      // If autoPlay is enabled, not in error, but not playing and not loading for > 12s, reconnect
+      if (widget.autoPlay && !_hasError && !_isLoading && !_player.state.playing) {
+        DiagnosticLoggerService.instance.logWarn(
+          'RTSP_PLAYER',
+          'Watchdog detectou fluxo inativo para "${widget.camera.name}". Forçando reconexão...',
+        );
+        _playStream();
+      }
+    });
+  }
+
   void _initPlayer() {
     try {
       _player = Player(
@@ -66,6 +108,18 @@ class _LivePlayerViewState extends State<LivePlayerView> {
       _controller = VideoController(_player);
 
       _errorSub = _player.stream.error.listen((error) {
+        // Filter out benign non-fatal seek/stream notifications from libmpv
+        if (error.contains('Cannot seek') ||
+            error.contains('force-seekable') ||
+            error.contains('Seeking is not supported') ||
+            error.contains('demux_rtsp')) {
+          DiagnosticLoggerService.instance.logInfo(
+            'RTSP_PLAYER',
+            'libmpv evento informativo (não-fatal) para "${widget.camera.name}": $error',
+          );
+          return;
+        }
+
         DiagnosticLoggerService.instance.logError(
           'RTSP_PLAYER',
           'Erro de reprodução na câmera "${widget.camera.name}" (${widget.camera.ip})',
@@ -76,6 +130,34 @@ class _LivePlayerViewState extends State<LivePlayerView> {
             _hasError = true;
             _errorMessage = error;
             _isLoading = false;
+          });
+          _scheduleAutoReconnect();
+        }
+      });
+
+      _completedSub = _player.stream.completed.listen((completed) {
+        if (completed && mounted) {
+          DiagnosticLoggerService.instance.logWarn(
+            'RTSP_PLAYER',
+            'Fluxo de vídeo encerrado/desconectado para "${widget.camera.name}" (${widget.camera.ip}). Agendando reconexão...',
+          );
+          setState(() {
+            _hasError = true;
+            _errorMessage = 'Conexão interrompida';
+            _isLoading = false;
+          });
+          _scheduleAutoReconnect();
+        }
+      });
+
+      _playingSub = _player.stream.playing.listen((playing) {
+        if (playing && mounted) {
+          _cancelAutoReconnect();
+          setState(() {
+            _hasError = false;
+            _errorMessage = null;
+            _isLoading = false;
+            _reconnectAttempt = 0;
           });
         }
       });
@@ -97,36 +179,83 @@ class _LivePlayerViewState extends State<LivePlayerView> {
         _errorMessage = e.toString();
         _isLoading = false;
       });
+      _scheduleAutoReconnect();
     }
   }
 
-  Future<void> _playStream() async {
-    setState(() {
-      _isLoading = true;
-      _hasError = false;
-      _errorMessage = null;
+  void _scheduleAutoReconnect() {
+    _cancelAutoReconnect();
+    _reconnectAttempt++;
+
+    // Exponential / stepped backoff: 2s -> 4s -> 7s -> 10s (max)
+    final delay = switch (_reconnectAttempt) {
+      1 => 2,
+      2 => 4,
+      3 => 7,
+      _ => 10,
+    };
+    _secondsRemaining = delay;
+
+    DiagnosticLoggerService.instance.logInfo(
+      'RTSP_PLAYER',
+      'Reconexão automática #$_reconnectAttempt agendada para "${widget.camera.name}" em ${_secondsRemaining}s',
+    );
+
+    if (mounted) {
+      setState(() {});
+    }
+
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      if (_secondsRemaining > 1) {
+        setState(() {
+          _secondsRemaining--;
+        });
+      } else {
+        timer.cancel();
+        _countdownTimer = null;
+        _playStream();
+      }
     });
+  }
+
+  void _cancelAutoReconnect() {
+    _countdownTimer?.cancel();
+    _countdownTimer = null;
+  }
+
+  Future<void> _playStream() async {
+    _cancelAutoReconnect();
+
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+        _hasError = false;
+        _errorMessage = null;
+      });
+    }
 
     try {
       final url = widget.camera.streamUrl;
-      final transportType = widget.camera.manufacturer.id == 'yoosee' ? 'UDP' : 'TCP';
+      final isYoosee = widget.camera.manufacturer.id == 'yoosee';
+      // For Yoosee, alternate UDP and TCP across reconnect attempts for maximum network resilience
+      final useUdp = isYoosee && (_reconnectAttempt % 2 == 0);
+      final transportStr = useUdp ? 'udp' : 'tcp';
 
       DiagnosticLoggerService.instance.logInfo(
         'RTSP_PLAYER',
-        'Conectando a "${widget.camera.name}" (${widget.camera.ip}) via $transportType (Subtype: ${widget.camera.subType})',
+        'Conectando a "${widget.camera.name}" (${widget.camera.ip}) via ${transportStr.toUpperCase()} (Tentativa #$_reconnectAttempt)',
         details: 'Stream URL: ${widget.camera.maskedStreamUrl}',
       );
 
-      await _player.setVolume(widget.isMiniature ? 0 : 100);
+      await _player.setVolume(widget.isMiniature ? 0 : (_isMuted ? 0 : 100));
 
-      // Fine-tune RTSP transport per manufacturer: Yoosee requires UDP, Intelbras/Dahua/Hikvision excel on TCP
       try {
-        if (widget.camera.manufacturer.id == 'yoosee') {
-          await (_player.platform as dynamic).setProperty('rtsp-transport', 'udp');
-          await (_player.platform as dynamic).setProperty('demuxer-lavf-o', 'rtsp_transport=udp');
-        } else {
-          await (_player.platform as dynamic).setProperty('rtsp-transport', 'tcp');
-        }
+        await (_player.platform as dynamic).setProperty('rtsp-transport', transportStr);
+        await (_player.platform as dynamic).setProperty('demuxer-lavf-o', 'rtsp_transport=$transportStr');
       } catch (e) {
         debugPrint('Note: setProperty rtsp-transport: $e');
       }
@@ -141,8 +270,8 @@ class _LivePlayerViewState extends State<LivePlayerView> {
         play: true,
       );
 
-      // Auto resolve loading after delay
-      Future.delayed(const Duration(seconds: 2), () {
+      // Timeout watchdog: if not playing after 5 seconds, ensure loading overlay disappears
+      Future.delayed(const Duration(seconds: 3), () {
         if (mounted && !_hasError) {
           setState(() {
             _isLoading = false;
@@ -163,6 +292,7 @@ class _LivePlayerViewState extends State<LivePlayerView> {
           _errorMessage = e.toString();
           _isLoading = false;
         });
+        _scheduleAutoReconnect();
       }
     }
   }
@@ -171,28 +301,38 @@ class _LivePlayerViewState extends State<LivePlayerView> {
   void didUpdateWidget(covariant LivePlayerView oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.camera.streamUrl != widget.camera.streamUrl) {
+      _reconnectAttempt = 0;
       _playStream();
     }
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _cancelAutoReconnect();
+    _watchdogTimer?.cancel();
     _clockTimer?.cancel();
     _errorSub?.cancel();
     _bufferingSub?.cancel();
+    _completedSub?.cancel();
+    _playingSub?.cancel();
     _player.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
+
     return Container(
       decoration: BoxDecoration(
         color: const Color(0xFF0F0F12),
         borderRadius: BorderRadius.circular(widget.isMiniature ? 8 : 12),
         border: Border.all(
           color: _hasError
-              ? BCamTheme.statusOffline.withValues(alpha: 0.5)
+              ? (_secondsRemaining > 0
+                  ? BCamTheme.accentLightBlue.withValues(alpha: 0.5)
+                  : BCamTheme.statusOffline.withValues(alpha: 0.5))
               : BCamTheme.darkBorder,
           width: 1,
         ),
@@ -260,7 +400,9 @@ class _LivePlayerViewState extends State<LivePlayerView> {
                           ),
                           const SizedBox(height: 12),
                           Text(
-                            'CONECTANDO AO FLUXO...',
+                            _reconnectAttempt > 0
+                                ? 'RECONECTANDO AO FLUXO (TENTATIVA #$_reconnectAttempt)...'
+                                : 'CONECTANDO AO FLUXO...',
                             style: GoogleFonts.inter(
                               fontSize: 11,
                               color: BCamTheme.textSecondary,
@@ -273,34 +415,44 @@ class _LivePlayerViewState extends State<LivePlayerView> {
               ),
             ),
 
-          // 5. Error & Fallback display
+          // 5. Error & Auto-reconnect display
           if (_hasError)
             Container(
               color: const Color(0xFF19161B),
-              padding: EdgeInsets.all(widget.isMiniature ? 6 : 16),
+              padding: EdgeInsets.all(widget.isMiniature ? 4 : 8),
               child: Center(
-                child: widget.isMiniature
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: widget.isMiniature
                     ? Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(
-                            Icons.videocam_off_rounded,
-                            color: BCamTheme.statusOffline,
+                          Icon(
+                            _secondsRemaining > 0
+                                ? Icons.sync_rounded
+                                : Icons.videocam_off_rounded,
+                            color: _secondsRemaining > 0
+                                ? BCamTheme.accentLightBlue
+                                : BCamTheme.statusOffline,
                             size: 20,
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            'OFFLINE',
+                            _secondsRemaining > 0
+                                ? 'RECONECTANDO (${_secondsRemaining}s)'
+                                : 'OFFLINE',
                             style: GoogleFonts.inter(
-                              fontSize: 9,
+                              fontSize: 8.5,
                               fontWeight: FontWeight.w700,
-                              color: BCamTheme.statusOffline,
+                              color: _secondsRemaining > 0
+                                  ? BCamTheme.accentLightBlue
+                                  : BCamTheme.statusOffline,
                             ),
                           ),
                           Text(
-                            '${widget.camera.ip}:${widget.camera.rtspPort}',
+                            '#$_reconnectAttempt • ${widget.camera.ip}',
                             style: GoogleFonts.robotoMono(
-                              fontSize: 8.5,
+                              fontSize: 8,
                               color: BCamTheme.textTertiary,
                             ),
                           ),
@@ -309,18 +461,26 @@ class _LivePlayerViewState extends State<LivePlayerView> {
                     : Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(
-                            Icons.videocam_off_rounded,
-                            color: BCamTheme.statusOffline,
-                            size: 38,
+                          Icon(
+                            _secondsRemaining > 0
+                                ? Icons.sync_rounded
+                                : Icons.videocam_off_rounded,
+                            color: _secondsRemaining > 0
+                                ? BCamTheme.accentLightBlue
+                                : BCamTheme.statusOffline,
+                            size: 34,
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'FLUXO INDISPONÍVEL',
+                            _secondsRemaining > 0
+                                ? 'AGUARDANDO RECONEXÃO'
+                                : 'FLUXO INDISPONÍVEL',
                             style: GoogleFonts.inter(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
-                              color: BCamTheme.statusOffline,
+                              color: _secondsRemaining > 0
+                                  ? BCamTheme.accentLightBlue
+                                  : BCamTheme.statusOffline,
                               letterSpacing: 1,
                             ),
                           ),
@@ -345,6 +505,32 @@ class _LivePlayerViewState extends State<LivePlayerView> {
                             ),
                           ],
                           const SizedBox(height: 10),
+                          if (_secondsRemaining > 0)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const SizedBox(
+                                    width: 12,
+                                    height: 12,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 1.5,
+                                      color: BCamTheme.accentLightBlue,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Tentativa automática em ${_secondsRemaining}s (#$_reconnectAttempt)...',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 11,
+                                      color: BCamTheme.accentLightBlue,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ElevatedButton.icon(
                             style: ElevatedButton.styleFrom(
                               backgroundColor: BCamTheme.darkSurface,
@@ -353,15 +539,19 @@ class _LivePlayerViewState extends State<LivePlayerView> {
                               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
                             ),
-                            onPressed: _playStream,
+                            onPressed: () {
+                              _cancelAutoReconnect();
+                              _playStream();
+                            },
                             icon: const Icon(Icons.refresh, size: 14),
                             label: Text(
-                              'Reconectar',
+                              'Reconectar Agora',
                               style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600),
                             ),
                           ),
                         ],
                       ),
+                ),
               ),
             ),
 
@@ -394,7 +584,9 @@ class _LivePlayerViewState extends State<LivePlayerView> {
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      _hasError ? 'OFFLINE' : 'LIVE',
+                      _hasError
+                          ? (_secondsRemaining > 0 ? 'RETRY' : 'OFFLINE')
+                          : 'LIVE',
                       style: GoogleFonts.inter(
                         fontSize: widget.isMiniature ? 9 : 10.5,
                         fontWeight: FontWeight.w700,
@@ -486,7 +678,10 @@ class _LivePlayerViewState extends State<LivePlayerView> {
                           minimumSize: const Size(28, 28),
                         ),
                         icon: const Icon(Icons.refresh_rounded, color: Colors.white70, size: 15),
-                        onPressed: _playStream,
+                        onPressed: () {
+                          _cancelAutoReconnect();
+                          _playStream();
+                        },
                       ),
                     ],
                   ),

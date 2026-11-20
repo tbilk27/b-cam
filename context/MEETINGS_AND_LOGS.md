@@ -142,6 +142,34 @@ Registro cronológico mantido pelo **Líder de Projeto & Orquestrador Geral**.
 
 ---
 
+## 📅 Sprint 1.7 • Motor de Resiliência, Auto-Reconexão Contínua e Diagnóstico Mibo
+- **Data**: 2026-11-20
+- **Solicitante**: Usuário ("opcao 3; a mibo que está no IP final 22 não conecta; verifica também por que tenho que mandar reconectar nas câmetas quando estou na tela principal, preciso que o app tente se reconectar sempre que possível")
+- **Parecer dos Agentes e Implementações**:
+  - **Arquiteto de Software & Segurança**:
+    - Elaborou a **ADR-011: Motor de Resiliência com Auto-Reconexão Contínua, Filtro Não-Fatal libmpv e Diagnóstico Mibo**.
+    - Inspecionou via telemetria remota (HTTP 8089 do celular físico) e identificou a causa raiz das desconexões na tela inicial: falsos positivos nos logs de seek do `libmpv` em streams de CFTV ao vivo (`Cannot seek in this stream.`).
+    - Diagnosticou o comportamento do RTSP da Intelbras Mibo (`192.168.3.22`): o daemon local da câmera rejeita credenciais de nuvem (`hostemd@gmail.com` / `compras10`) com `401 Unauthorized`, exigindo o usuário fixo `admin` acompanhado do **Safety Code / Código de Verificação** de 6 caracteres impresso na etiqueta da câmera (ou senha local do dispositivo).
+  - **Desenvolvedor Flutter**:
+    - Refatorou `LivePlayerView`:
+      1. Adicionou filtro para ignorar mensagens benignas de seek e demux do `libmpv`.
+      2. Implementou motor de reconexão automática escalonada (2s, 4s, 7s, 10s) com contagem regressiva em tempo real e listeners de queda (`completed`) e reconexão (`playing`).
+      3. Adicionou `WidgetsBindingObserver` para revalidação imediata de fluxos ao retornar do segundo plano (`AppLifecycleState.resumed`).
+      4. Implementou `AutomaticKeepAliveClientMixin` para evitar descarte prematuro do decodificador durante scroll.
+      5. Alternância dinâmica de transporte UDP ↔ TCP em sucessivas tentativas.
+      6. Envelopamento do overlay de erro/retry em `FittedBox(fit: BoxFit.scaleDown)` para 0 pixel overflow.
+    - Atualizou `HomeScreen`:
+      1. Adicionou botão de reconexão geral de todas as câmeras no toolbar.
+      2. Ajustou espaçamentos da barra de ferramentas, eliminando o estouro de 6.5px reportado no logcat.
+  - **Analista QA**:
+    - `flutter analyze`: 0 erros.
+    - `flutter test`: 11/11 testes unitários aprovados com 100% de sucesso.
+    - Validou a telemetria em tempo real direto do Xiaomi Redmi Note 10S na porta 8089.
+  - **Líder de Projeto & Orquestrador**:
+    - Realizou o disparo da instalação remota (Opção 3 via ADB) e atualizou os repositórios e documentações do projeto.
+
+---
+
 ## 🚀 Backlog Priorizado (Próximos Passos)
 
 - [ ] **EPIC-01: Controle PTZ Real via ONVIF SOAP**:

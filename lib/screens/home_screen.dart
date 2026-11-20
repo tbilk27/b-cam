@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../models/camera_device.dart';
 import '../services/camera_storage_service.dart';
+import '../services/diagnostic_logger_service.dart';
 import '../theme/fluent_theme.dart';
 import '../widgets/b_cam_logo.dart';
 import '../widgets/live_player_view.dart';
@@ -21,6 +22,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   String _selectedFilter = 'TODAS';
+  int _refreshKey = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -87,11 +89,11 @@ class _HomeScreenState extends State<HomeScreen> {
       children: [
         // Action Toolbar
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           child: Row(
             children: [
               Expanded(
-                flex: 3,
+                flex: 5,
                 child: FilledButton(
                   onPressed: () {
                     Navigator.of(context).push(
@@ -101,19 +103,22 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(FluentIcons.wifi, size: 16),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Varredura Wi-Fi',
-                        style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600),
+                      const Icon(FluentIcons.wifi, size: 15),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          'Varredura',
+                          style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w600),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ],
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
               Expanded(
-                flex: 2,
+                flex: 4,
                 child: Button(
                   onPressed: () {
                     Navigator.of(context).push(
@@ -123,19 +128,35 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(FluentIcons.view_dashboard, size: 15),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Matriz 2x2',
-                        style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w500),
+                      const Icon(FluentIcons.view_dashboard, size: 14),
+                      const SizedBox(width: 5),
+                      Flexible(
+                        child: Text(
+                          'Matriz 2x2',
+                          style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w500),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ],
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
               IconButton(
-                icon: const Icon(FluentIcons.add, size: 15),
+                icon: const Icon(FluentIcons.refresh, size: 14),
+                onPressed: () {
+                  setState(() {
+                    _refreshKey++;
+                  });
+                  DiagnosticLoggerService.instance.logInfo(
+                    'HOME',
+                    'Reconexão manual geral de todas as câmeras disparada (#$_refreshKey).',
+                  );
+                },
+              ),
+              const SizedBox(width: 4),
+              IconButton(
+                icon: const Icon(FluentIcons.add, size: 14),
                 onPressed: () {
                   Navigator.of(context).push(
                     FluentPageRoute(builder: (_) => const CommissionScreen()),
@@ -245,7 +266,10 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                           );
                         },
-                        child: LivePlayerView(camera: camera),
+                        child: LivePlayerView(
+                          key: ValueKey('${camera.id}_${camera.streamUrl}_$_refreshKey'),
+                          camera: camera,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 12),
