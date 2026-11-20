@@ -209,12 +209,15 @@ class _HomeScreenState extends State<HomeScreen> {
                       const Icon(Icons.videocam_off_rounded, size: 54, color: Colors.white24),
                       const SizedBox(height: 12),
                       Text(
-                        'Nenhuma câmera nesta categoria.',
-                        style: GoogleFonts.rajdhani(fontSize: 16, color: Colors.white70),
+                        allCameras.isEmpty
+                            ? 'Nenhuma câmera comissionada ainda.\nExecute uma varredura para detectar as câmeras ativas da sua rede Wi-Fi!'
+                            : 'Nenhuma câmera nesta categoria.',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.rajdhani(fontSize: 15, color: Colors.white70),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 18),
                       GtaButton(
-                        label: 'BUSCAR NA REDE WI-FI',
+                        label: 'VARREDURA WI-FI (RADAR)',
                         icon: Icons.radar_rounded,
                         onPressed: () {
                           Navigator.of(context).push(

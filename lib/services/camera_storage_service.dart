@@ -1,9 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:uuid/uuid.dart';
 import '../models/camera_device.dart';
-import '../models/manufacturer.dart';
 import '../models/scan_result.dart';
 
 class CameraStorageService extends ChangeNotifier {
@@ -33,87 +31,8 @@ class CameraStorageService extends ChangeNotifier {
           _cameras.add(CameraDevice.fromJson(item as Map<String, dynamic>));
         }
       } else {
-        // Pre-populate with verified cameras detected on the user's current Wi-Fi network!
+        // Start completely clean - only explicitly commissioned cameras will appear
         _cameras.clear();
-        _cameras.addAll([
-          CameraDevice(
-            id: const Uuid().v4(),
-            name: 'Stream Demonstração RTSP',
-            ip: 'wowzaec2demo.streamlock.net',
-            rtspPort: 554,
-            webPort: 80,
-            manufacturer: CameraManufacturer.genericOnvif,
-            customUrl: 'rtsp://wowzaec2demo.streamlock.net/vod/mp4:BigBuckBunny_115k.mp4',
-            location: 'Demo Lab',
-            isFavorite: true,
-            isOnline: true,
-          ),
-          CameraDevice(
-            id: const Uuid().v4(),
-            name: 'Intelbras Entrada Principal',
-            ip: '192.168.3.74',
-            rtspPort: 554,
-            webPort: 80,
-            manufacturer: CameraManufacturer.intelbras,
-            username: 'admin',
-            password: '',
-            channel: 1,
-            subType: 0,
-            location: 'Portão Principal',
-            isFavorite: true,
-            isOnline: true,
-            macAddress: '98:2A:0A:89:56:62',
-          ),
-          CameraDevice(
-            id: const Uuid().v4(),
-            name: 'Intelbras Estacionamento',
-            ip: '192.168.3.22',
-            rtspPort: 554,
-            webPort: 80,
-            manufacturer: CameraManufacturer.intelbras,
-            username: 'admin',
-            password: '',
-            channel: 1,
-            subType: 0,
-            location: 'Estacionamento',
-            isFavorite: true,
-            isOnline: true,
-            macAddress: '18:0D:2C:5D:96:FE',
-          ),
-          CameraDevice(
-            id: const Uuid().v4(),
-            name: 'Câmera Wi-Fi Corredor',
-            ip: '192.168.3.23',
-            rtspPort: 554,
-            webPort: 80,
-            manufacturer: CameraManufacturer.xiongmai,
-            username: 'admin',
-            password: '',
-            channel: 1,
-            subType: 0,
-            location: 'Corredor',
-            isFavorite: false,
-            isOnline: true,
-            macAddress: '98:03:CF:DC:00:0A',
-          ),
-          CameraDevice(
-            id: const Uuid().v4(),
-            name: 'Câmera Wi-Fi Fundos',
-            ip: '192.168.3.24',
-            rtspPort: 554,
-            webPort: 80,
-            manufacturer: CameraManufacturer.xiongmai,
-            username: 'admin',
-            password: '',
-            channel: 1,
-            subType: 0,
-            location: 'Fundos',
-            isFavorite: false,
-            isOnline: true,
-            macAddress: '98:03:CF:DB:FD:5A',
-          ),
-        ]);
-        await _saveToDisk(prefs);
       }
     } catch (e) {
       debugPrint('Error loading cameras: $e');
@@ -209,6 +128,12 @@ class CameraStorageService extends ChangeNotifier {
 
   Future<void> removeCamera(String id) async {
     _cameras.removeWhere((c) => c.id == id);
+    await _persist();
+    notifyListeners();
+  }
+
+  Future<void> clearAll() async {
+    _cameras.clear();
     await _persist();
     notifyListeners();
   }

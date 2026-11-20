@@ -41,6 +41,17 @@ Registro cronológico mantido pelo **Líder de Projeto & Orquestrador Geral**.
 
 ---
 
+## 📅 Sprint 1.2 • Remoção de Câmeras de Exemplo & Estado Pristino na Tela Inicial
+- **Data**: 2026-11-20
+- **Solicitante**: Usuário
+- **Parecer dos Agentes**:
+  - **Líder de Projeto / Orquestrador**: Removeu qualquer mock ou pré-população na inicialização do app. O app inicia 100% limpo, exibindo apenas as câmeras reais que o usuário comissionar.
+  - **Especialista UX/UI**: Redesenhou o Empty State da `HomeScreen`. Em vez de cards fictícios, exibe um painel HUD elegante com mensagem explicativa e CTA direto para abrir o Radar de Varredura Wi-Fi em um toque.
+  - **Desenvolvedor Flutter**: Eliminou o seed mock do `CameraStorageService`, adicionou método `clearAll()`, otimizou a varredura do `NetworkScannerService` com testes de portas simultâneos (`Future.wait`) e injeção em lote da tabela ARP.
+  - **Analista QA**: Validou o estado inicial no emulador Android (`emulator-5554`) após limpeza de dados (`pm clear`), confirmando 0 câmeras no boot e transição fluida para a tela de varredura.
+
+---
+
 ## 🚀 Backlog Priorizado (Próximos Passos)
 
 - [ ] **EPIC-01: Controle PTZ Real via ONVIF SOAP**:

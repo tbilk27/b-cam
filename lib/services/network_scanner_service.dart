@@ -77,6 +77,11 @@ class NetworkScannerService {
 
     // Scan in chunks of 32 concurrent hosts to prevent socket exhaustion
     const chunkSize = 32;
+    Map<String, String> arpTable = {};
+    try {
+      arpTable = await getArpTable();
+    } catch (_) {}
+
     for (int i = startHost; i <= endHost; i += chunkSize) {
       if (!_isScanning) break;
 
@@ -85,7 +90,7 @@ class NetworkScannerService {
 
       for (int h = i; h <= chunkEnd; h++) {
         final targetIp = '$prefix.$h';
-        futures.add(_scanHost(targetIp, portTimeout));
+        futures.add(_scanHost(targetIp, portTimeout, arpTable));
       }
 
       final results = await Future.wait(futures);
@@ -123,19 +128,24 @@ class NetworkScannerService {
     _isScanning = false;
   }
 
-  /// Scan an individual host on candidate ports
-  Future<ScanResult?> _scanHost(String ip, Duration timeout) async {
+  /// Scan an individual host on candidate ports concurrently
+  Future<ScanResult?> _scanHost(String ip, Duration timeout, [Map<String, String>? arpTable]) async {
     final openPorts = <int>[];
 
-    // Check high-priority camera ports first
-    for (final port in cameraPorts) {
+    // Check candidate camera ports in parallel for maximum speed
+    final portFutures = cameraPorts.map((port) async {
       try {
         final socket = await Socket.connect(ip, port, timeout: timeout);
         socket.destroy();
-        openPorts.add(port);
+        return port;
       } catch (_) {
-        // Closed or filtered
+        return null;
       }
+    });
+
+    final results = await Future.wait(portFutures);
+    for (final p in results) {
+      if (p != null) openPorts.add(p);
     }
 
     // If no typical camera port is open, this is not a camera
@@ -213,11 +223,13 @@ class NetworkScannerService {
     final suggestedUrl = manufacturer.buildRtspUrl(ip: ip, port: 554);
 
     // Resolve physical MAC Address for DHCP resilience
-    String? resolvedMac;
-    try {
-      final arp = await getArpTable();
-      resolvedMac = arp[ip];
-    } catch (_) {}
+    String? resolvedMac = arpTable?[ip];
+    if (resolvedMac == null) {
+      try {
+        final arp = await getArpTable();
+        resolvedMac = arp[ip];
+      } catch (_) {}
+    }
 
     // Known testbed hardware fallback when in virtualized emulator networks
     if (resolvedMac == null) {
