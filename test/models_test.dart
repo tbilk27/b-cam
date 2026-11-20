@@ -51,6 +51,18 @@ void main() {
       );
       expect(url, 'rtsp://admin:compras10@192.168.3.22:554/cam/realmonitor?channel=1&subtype=0');
     });
+
+    test('Intelbras iC5 (Hikvision/EZVIZ based) URL generator', () {
+      final url = CameraManufacturer.intelbrasIC.buildRtspUrl(
+        ip: '192.168.3.22',
+        port: 554,
+        user: 'admin',
+        password: 'compras10',
+        channel: 1,
+        subType: 0,
+      );
+      expect(url, 'rtsp://admin:compras10@192.168.3.22:554/h264/ch1/main/av_stream');
+    });
   });
 
   group('CameraDevice security and masking tests', () {

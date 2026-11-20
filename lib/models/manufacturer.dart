@@ -14,7 +14,7 @@ enum CameraManufacturer {
   ),
   intelbrasMibo(
     id: 'intelbras_mibo',
-    displayName: 'Intelbras Mibo',
+    displayName: 'Intelbras Mibo (Linha iM)',
     defaultRtspPort: 554,
     defaultWebPort: 80,
     controlPort: 554,
@@ -22,6 +22,17 @@ enum CameraManufacturer {
     subStreamRtspPath: '/cam/realmonitor?channel=1&subtype=1',
     defaultUser: 'admin',
     brandColor: Color(0xFF00C853), // Mibo Vivid Green
+  ),
+  intelbrasIC(
+    id: 'intelbras_ic',
+    displayName: 'Intelbras Mibo (Linha iC3 / iC5)',
+    defaultRtspPort: 554,
+    defaultWebPort: 80,
+    controlPort: 554,
+    defaultRtspPath: '/h264/ch1/main/av_stream',
+    subStreamRtspPath: '/h264/ch1/sub/av_stream',
+    defaultUser: 'admin',
+    brandColor: Color(0xFF00C853),
   ),
   yoosee(
     id: 'yoosee',
@@ -137,7 +148,9 @@ enum CameraManufacturer {
     var path = customPath;
 
     if (path == null || path.isEmpty) {
-      if (this == CameraManufacturer.intelbras ||
+      if (this == CameraManufacturer.intelbrasIC) {
+        path = subType == 0 ? '/h264/ch$channel/main/av_stream' : '/h264/ch$channel/sub/av_stream';
+      } else if (this == CameraManufacturer.intelbras ||
           this == CameraManufacturer.intelbrasMibo ||
           this == CameraManufacturer.dahua) {
         path = '/cam/realmonitor?channel=$channel&subtype=$subType';

@@ -90,19 +90,19 @@ class CameraStorageService extends ChangeNotifier {
           ),
           CameraDevice(
             id: 'cam-intelbras-mibo-22',
-            name: 'Intelbras Mibo',
+            name: 'Intelbras iC5',
             ip: '192.168.3.22',
             rtspPort: 554,
             webPort: 80,
-            manufacturer: CameraManufacturer.intelbrasMibo,
+            manufacturer: CameraManufacturer.intelbrasIC,
             username: 'admin',
             password: 'compras10',
             channel: 1,
             subType: 0,
-            location: 'Interior / Sala',
+            location: 'Interior / iC5',
             isFavorite: false,
             isOnline: true,
-            macAddress: '18:0D:2C:5D:96:FE',
+            macAddress: '18:0D:2C:5D:96:FD',
           ),
         ]);
         await _saveToDisk(prefs);

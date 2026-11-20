@@ -585,12 +585,13 @@ class _CommissionScreenState extends State<CommissionScreen> {
                         ],
                       ),
                       if (_selectedManufacturer == CameraManufacturer.intelbrasMibo ||
+                          _selectedManufacturer == CameraManufacturer.intelbrasIC ||
                           _ipController.text.endsWith('.22')) ...[
                         const SizedBox(height: 12),
                         const InfoBar(
-                          title: Text('Dica Intelbras Mibo'),
+                          title: Text('Dica Intelbras iC5 (D06533598)'),
                           content: Text(
-                            'O usuário local é "admin". A senha é a da conta Mibo ("compras10") ou o Safety Code (código de verificação) da etiqueta se a criptografia estiver ativa.',
+                            'No app Mibo, desative a opção "Criptografia de imagem" para liberar o RTSP, ou use a senha configurada em "Altere a senha de criptografia" (por padrão é o Código de Verificação da etiqueta).',
                           ),
                           severity: InfoBarSeverity.warning,
                         ),

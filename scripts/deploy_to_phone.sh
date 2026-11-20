@@ -45,13 +45,11 @@ fi
 
 echo "[OTA] Dispositivo conectado: $DEVICE_SERIAL"
 
-# 2. Upload rápido para staging local seguro (/data/local/tmp/app.apk)
-echo "[OTA] Enviando binário otimizado para o dispositivo..."
-adb -s "$DEVICE_SERIAL" push "$APK_PATH" /data/local/tmp/app.apk
+# 2. Instalação com stream nativo ADB
+echo "[OTA] Instalando pacote via adb install -r -d..."
+adb -s "$DEVICE_SERIAL" install -r -d "$APK_PATH"
 
-# 3. Instalação silenciosa sem prompt MIUI
-echo "[OTA] Executando pm install -r autônomo..."
-adb -s "$DEVICE_SERIAL" shell "pm install -r -d /data/local/tmp/app.apk && rm -f /data/local/tmp/app.apk"
+# 3. Inicialização da MainActivity
 
 # 4. Inicialização da MainActivity
 echo "[OTA] Reiniciando aplicativo no primeiro plano..."
