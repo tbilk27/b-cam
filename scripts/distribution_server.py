@@ -2,15 +2,46 @@ import http.server
 import socketserver
 import os
 import sys
+import json
 from datetime import datetime
 
 PORT = 8088
 DIST_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'dist'))
 LOG_FILE = os.path.join(DIST_DIR, 'received_phone_logs.log')
+VERSION_FILE = os.path.join(DIST_DIR, 'version.json')
 
 class DiagnosticAndDistributionHandler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=DIST_DIR, **kwargs)
+
+    def do_GET(self):
+        if self.path == '/api/version':
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            
+            if os.path.exists(VERSION_FILE):
+                with open(VERSION_FILE, 'rb') as f:
+                    self.wfile.write(f.read())
+            else:
+                default_version = {
+                    "versionCode": 3,
+                    "versionName": "1.2.0",
+                    "apkUrl": f"http://192.168.3.62:{PORT}/b-cam-arm64.apk",
+                    "releaseNotes": "Splash screen oficial, IA com Bounding Boxes, Firebase Push com Deeplink e In-App Auto-Update.",
+                    "fileSizeBytes": os.path.getsize(os.path.join(DIST_DIR, 'b-cam-arm64.apk')) if os.path.exists(os.path.join(DIST_DIR, 'b-cam-arm64.apk')) else 0,
+                    "releaseDate": datetime.now().isoformat()
+                }
+                self.wfile.write(json.dumps(default_version).encode('utf-8'))
+        elif self.path == '/api/status':
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(b'{"status":"online","server":"b-cam distribution and telemetry"}')
+        else:
+            super().do_GET()
 
     def do_POST(self):
         if self.path == '/api/logs':
@@ -45,7 +76,6 @@ class DiagnosticAndDistributionHandler(http.server.SimpleHTTPRequestHandler):
 
 if __name__ == '__main__':
     os.chdir(DIST_DIR)
-    # Allow port reuse
     socketserver.TCPServer.allow_reuse_address = True
     with socketserver.TCPServer(("", PORT), DiagnosticAndDistributionHandler) as httpd:
         print(f"Servidor de Distribuição & Coleta de Logs b-cam ativo em http://0.0.0.0:{PORT}")

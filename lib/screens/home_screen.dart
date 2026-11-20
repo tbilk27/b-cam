@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../models/camera_device.dart';
 import '../services/camera_storage_service.dart';
 import '../services/diagnostic_logger_service.dart';
+import '../services/firebase_notification_service.dart';
 import '../theme/fluent_theme.dart';
 import '../widgets/b_cam_logo.dart';
 import '../widgets/live_player_view.dart';
@@ -24,6 +26,38 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   String _selectedFilter = 'TODAS';
   int _refreshKey = 0;
+  StreamSubscription<PushNotificationPayload>? _notificationSub;
+
+  @override
+  void initState() {
+    super.initState();
+    _notificationSub = FirebaseNotificationService.instance.onNotificationReceived.listen((payload) {
+      if (!mounted) return;
+      displayInfoBar(
+        context,
+        duration: const Duration(seconds: 7),
+        builder: (context, close) => InfoBar(
+          title: Text(payload.title),
+          content: Text(payload.body),
+          action: FilledButton(
+            onPressed: () {
+              close();
+              FirebaseNotificationService.instance.onNotificationTapped(payload);
+            },
+            child: const Text('Ver Vídeo'),
+          ),
+          severity: InfoBarSeverity.error,
+          onClose: close,
+        ),
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    _notificationSub?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {

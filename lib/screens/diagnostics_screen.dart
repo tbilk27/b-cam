@@ -1,6 +1,7 @@
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../services/app_update_service.dart';
 import '../services/diagnostic_logger_service.dart';
 import '../theme/fluent_theme.dart';
 
@@ -84,6 +85,109 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
         ),
       );
     }
+  }
+
+  Future<void> _checkAndShowUpdateDialog() async {
+    final updateService = AppUpdateService.instance;
+    final info = await updateService.checkForUpdates();
+
+    if (!mounted) return;
+
+    if (info == null) {
+      displayInfoBar(
+        context,
+        builder: (context, close) => InfoBar(
+          title: const Text('Servidor Indisponível'),
+          content: Text('Não foi possível verificar atualizações no servidor ${updateService.updateServerUrl}.'),
+          severity: InfoBarSeverity.warning,
+          onClose: close,
+        ),
+      );
+      return;
+    }
+
+    if (!info.hasUpdate) {
+      displayInfoBar(
+        context,
+        builder: (context, close) => InfoBar(
+          title: const Text('Aplicativo Atualizado'),
+          content: Text('Você já está na versão mais recente (v${info.currentVersionName} • Build ${info.currentVersionCode}).'),
+          severity: InfoBarSeverity.success,
+          onClose: close,
+        ),
+      );
+      return;
+    }
+
+    // Modal de Atualização In-App
+    showDialog(
+      context: context,
+      builder: (context) {
+        bool downloading = false;
+        double progress = 0.0;
+
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return ContentDialog(
+              title: Row(
+                children: [
+                  const Icon(FluentIcons.cloud_download, color: BCamTheme.accentLightBlue, size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Nova Versão: v${info.remoteVersionName}',
+                    style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+                  ),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Versão Atual: v${info.currentVersionName} (Build ${info.currentVersionCode})\n'
+                    'Nova Versão: v${info.remoteVersionName} (Build ${info.remoteVersionCode})',
+                    style: GoogleFonts.robotoMono(fontSize: 12, color: BCamTheme.accentLightBlue),
+                  ),
+                  const SizedBox(height: 10),
+                  Text('Novidades:', style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 12)),
+                  const SizedBox(height: 4),
+                  Text(info.releaseNotes, style: GoogleFonts.inter(fontSize: 12, height: 1.3)),
+                  const SizedBox(height: 14),
+                  if (downloading) ...[
+                    ProgressBar(value: progress * 100),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Baixando atualização: ${(progress * 100).toInt()}% ${info.fileSizeFormatted}',
+                      style: GoogleFonts.robotoMono(fontSize: 11, color: BCamTheme.accentLightBlue),
+                    ),
+                  ],
+                ],
+              ),
+              actions: [
+                if (!downloading)
+                  Button(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Mais Tarde'),
+                  ),
+                FilledButton(
+                  onPressed: downloading
+                      ? null
+                      : () async {
+                          setModalState(() => downloading = true);
+                          await updateService.downloadAndInstallUpdate(
+                            info,
+                            onProgress: (p) => setModalState(() => progress = p),
+                          );
+                          if (context.mounted) Navigator.of(context).pop();
+                        },
+                  child: Text(downloading ? 'Baixando...' : 'Baixar e Atualizar Agora'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   List<LogEntry> _filterLogs(List<LogEntry> logs) {
@@ -248,6 +352,61 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                               style: GoogleFonts.inter(fontSize: 10.5, fontWeight: FontWeight.w600, color: BCamTheme.textSecondary),
                             ),
                           ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // In-App Auto-Update Card
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  child: Card(
+                    backgroundColor: BCamTheme.darkSurface,
+                    borderColor: BCamTheme.darkBorder,
+                    padding: const EdgeInsets.all(12),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: BCamTheme.accentBlue.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Icon(FluentIcons.cloud_download, size: 16, color: BCamTheme.accentLightBlue),
+                            ),
+                            const SizedBox(width: 10),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Atualização In-App (OTA)',
+                                  style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w600, color: BCamTheme.textPrimary),
+                                ),
+                                Text(
+                                  'Versão atual: v${AppUpdateService.appVersionName} • Build ${AppUpdateService.appVersionCode}',
+                                  style: GoogleFonts.robotoMono(fontSize: 10.5, color: BCamTheme.textSecondary),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        FilledButton(
+                          onPressed: _checkAndShowUpdateDialog,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(FluentIcons.sync, size: 12),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Atualizar App',
+                                style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),

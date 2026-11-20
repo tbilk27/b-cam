@@ -19,6 +19,13 @@ class CameraDevice {
   String location;
   String? macAddress;
 
+  // AI Event Recognition & Notification Parameters
+  bool aiDetectionEnabled;
+  double aiMinConfidence; // 0.0 to 1.0 (default 0.25 = 25%)
+  List<String> aiTargetClasses; // ['person', 'vehicle', 'motion', 'alarm']
+  bool pushNotificationsEnabled;
+  String? aiCustomPrompt;
+
   CameraDevice({
     required this.id,
     required this.name,
@@ -37,7 +44,13 @@ class CameraDevice {
     this.isFavorite = false,
     this.location = 'Geral',
     String? macAddress,
-  }) : macAddress = normalizeMac(macAddress);
+    this.aiDetectionEnabled = true,
+    this.aiMinConfidence = 0.25,
+    List<String>? aiTargetClasses,
+    this.pushNotificationsEnabled = true,
+    this.aiCustomPrompt,
+  }) : macAddress = normalizeMac(macAddress),
+       aiTargetClasses = aiTargetClasses ?? ['person', 'vehicle', 'motion', 'alarm'];
 
   /// Standardizes MAC address into uppercase colon-separated format: AA:BB:CC:DD:EE:FF
   static String? normalizeMac(String? raw) {
@@ -110,6 +123,11 @@ class CameraDevice {
       'isFavorite': isFavorite,
       'location': location,
       'macAddress': macAddress,
+      'aiDetectionEnabled': aiDetectionEnabled,
+      'aiMinConfidence': aiMinConfidence,
+      'aiTargetClasses': aiTargetClasses,
+      'pushNotificationsEnabled': pushNotificationsEnabled,
+      'aiCustomPrompt': aiCustomPrompt,
     };
   }
 
@@ -132,6 +150,11 @@ class CameraDevice {
       isFavorite: json['isFavorite'] as bool? ?? false,
       location: json['location'] as String? ?? 'Geral',
       macAddress: json['macAddress'] as String?,
+      aiDetectionEnabled: json['aiDetectionEnabled'] as bool? ?? true,
+      aiMinConfidence: (json['aiMinConfidence'] as num?)?.toDouble() ?? 0.25,
+      aiTargetClasses: (json['aiTargetClasses'] as List<dynamic>?)?.map((e) => e.toString()).toList(),
+      pushNotificationsEnabled: json['pushNotificationsEnabled'] as bool? ?? true,
+      aiCustomPrompt: json['aiCustomPrompt'] as String?,
     );
   }
 
@@ -153,6 +176,11 @@ class CameraDevice {
     bool? isFavorite,
     String? location,
     String? macAddress,
+    bool? aiDetectionEnabled,
+    double? aiMinConfidence,
+    List<String>? aiTargetClasses,
+    bool? pushNotificationsEnabled,
+    String? aiCustomPrompt,
   }) {
     return CameraDevice(
       id: id ?? this.id,
@@ -172,6 +200,11 @@ class CameraDevice {
       isFavorite: isFavorite ?? this.isFavorite,
       location: location ?? this.location,
       macAddress: macAddress ?? this.macAddress,
+      aiDetectionEnabled: aiDetectionEnabled ?? this.aiDetectionEnabled,
+      aiMinConfidence: aiMinConfidence ?? this.aiMinConfidence,
+      aiTargetClasses: aiTargetClasses ?? this.aiTargetClasses,
+      pushNotificationsEnabled: pushNotificationsEnabled ?? this.pushNotificationsEnabled,
+      aiCustomPrompt: aiCustomPrompt ?? this.aiCustomPrompt,
     );
   }
 }

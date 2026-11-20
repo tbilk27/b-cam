@@ -1,0 +1,9 @@
+{
+  "versionCode": 3,
+  "versionName": "1.2.0",
+  "apkUrl": "http://192.168.3.62:8088/b-cam-arm64.apk",
+  "sha256": "92142fa5a913acc6dd19b8041d166211bfb95b702fa6d78184fdbd063ff4d568",
+  "fileSizeBytes": 110723808,
+  "releaseNotes": "Splash screen oficial Fluent 2, Agente de IA com detecção de cena e Bounding Boxes, Notificações Push Firebase com Deeplink direto para o clipe e In-App Auto-Update.",
+  "releaseDate": "2026-11-20T20:14:30Z"
+}

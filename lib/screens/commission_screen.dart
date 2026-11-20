@@ -3,8 +3,10 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 import '../models/camera_device.dart';
+import '../models/camera_event.dart';
 import '../models/manufacturer.dart';
 import '../models/scan_result.dart';
+import '../services/ai_vision_agent_service.dart';
 import '../services/camera_storage_service.dart';
 import '../theme/fluent_theme.dart';
 import '../widgets/live_player_view.dart';
@@ -40,6 +42,11 @@ class _CommissionScreenState extends State<CommissionScreen> {
   bool _testingStream = false;
   bool _isManualCustomUrl = false;
 
+  // AI Event Recognition & Confidence Threshold Configuration
+  bool _aiDetectionEnabled = true;
+  double _aiMinConfidence = 0.25; // 25% default
+  bool _pushNotificationsEnabled = true;
+
   final List<String> _commonLocations = [
     'Entrada',
     'Portão',
@@ -69,6 +76,9 @@ class _CommissionScreenState extends State<CommissionScreen> {
       _selectedManufacturer = existing.manufacturer;
       _selectedSubType = existing.subType;
       _isManualCustomUrl = existing.customUrl != null && existing.customUrl!.isNotEmpty;
+      _aiDetectionEnabled = existing.aiDetectionEnabled;
+      _aiMinConfidence = existing.aiMinConfidence;
+      _pushNotificationsEnabled = existing.pushNotificationsEnabled;
     } else if (scan != null) {
       _nameController = TextEditingController(text: scan.suggestedName);
       _ipController = TextEditingController(text: scan.ip);
@@ -122,6 +132,9 @@ class _CommissionScreenState extends State<CommissionScreen> {
       customUrl: _isManualCustomUrl ? _customUrlController.text.trim() : null,
       location: _locationController.text.trim(),
       macAddress: widget.scanResult?.macAddress ?? widget.existingCamera?.macAddress,
+      aiDetectionEnabled: _aiDetectionEnabled,
+      aiMinConfidence: _aiMinConfidence,
+      pushNotificationsEnabled: _pushNotificationsEnabled,
     );
   }
 
@@ -644,6 +657,210 @@ class _CommissionScreenState extends State<CommissionScreen> {
                             ),
                           ),
                         ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // 6. Inteligência Artificial, Limiar de Certeza & Notificações Firebase
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                child: Card(
+                  backgroundColor: BCamTheme.darkSurface,
+                  borderColor: BCamTheme.darkBorder,
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: BCamTheme.accentBlue.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Icon(FluentIcons.robot, size: 16, color: BCamTheme.accentLightBlue),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Inteligência Artificial & Alertas',
+                            style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: BCamTheme.textPrimary),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Toggle Habilitar IA
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Mapeamento de Eventos por IA',
+                                style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: BCamTheme.textPrimary),
+                              ),
+                              Text(
+                                'Identifica pessoas, veículos e interpreta a cena',
+                                style: GoogleFonts.inter(fontSize: 10.5, color: BCamTheme.textSecondary),
+                              ),
+                            ],
+                          ),
+                          ToggleSwitch(
+                            checked: _aiDetectionEnabled,
+                            onChanged: (val) => setState(() => _aiDetectionEnabled = val),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Slider de Limiar de Confiança
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Limiar Mínimo de Certeza',
+                                style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: BCamTheme.textPrimary),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: BCamTheme.accentBlue.withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(color: BCamTheme.accentBlue, width: 0.8),
+                                ),
+                                child: Text(
+                                  '${(_aiMinConfidence * 100).toInt()}%',
+                                  style: GoogleFonts.robotoMono(fontSize: 11, fontWeight: FontWeight.w700, color: BCamTheme.accentLightBlue),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Slider(
+                            value: _aiMinConfidence * 100,
+                            min: 10.0,
+                            max: 95.0,
+                            divisions: 17,
+                            onChanged: (val) {
+                              setState(() {
+                                _aiMinConfidence = val / 100;
+                              });
+                            },
+                          ),
+                          Text(
+                            '💡 Regra de Negócio: Detecções com nível de certeza abaixo de ${(_aiMinConfidence * 100).toInt()}% '
+                            '(ex: sombras, ruídos ou dúvidas) não gravam eventos e nem disparam notificações.',
+                            style: GoogleFonts.inter(fontSize: 11, color: BCamTheme.textTertiary, height: 1.3),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Toggle Notificações Push
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Notificações Push (Firebase FCM)',
+                                style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: BCamTheme.textPrimary),
+                              ),
+                              Text(
+                                'Envia aviso imediato com Deeplink para o clipe',
+                                style: GoogleFonts.inter(fontSize: 10.5, color: BCamTheme.textSecondary),
+                              ),
+                            ],
+                          ),
+                          ToggleSwitch(
+                            checked: _pushNotificationsEnabled,
+                            onChanged: (val) => setState(() => _pushNotificationsEnabled = val),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Botões de Simulação Rápida para Testar Limiar
+                      Text(
+                        'Simular Teste de Limiar do Agente de IA:',
+                        style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: BCamTheme.textSecondary),
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Button(
+                              onPressed: () {
+                                final tempCam = _buildTempDevice();
+                                final evt = AiVisionAgentService.instance.testDetectionWithConfidence(
+                                  camera: tempCam,
+                                  simulatedConfidence: 0.92,
+                                  label: 'Pessoa',
+                                  type: CameraEventType.person,
+                                );
+                                displayInfoBar(
+                                  context,
+                                  builder: (context, close) => InfoBar(
+                                    title: const Text('Teste IA: 92% Certeza'),
+                                    content: Text(
+                                      evt != null
+                                          ? 'Evento gerado e notificação push despachada (acima de ${(_aiMinConfidence * 100).toInt()}%).'
+                                          : 'Evento descartado.',
+                                    ),
+                                    severity: InfoBarSeverity.success,
+                                    onClose: close,
+                                  ),
+                                );
+                              },
+                              child: Text(
+                                'Pessoa (92% • Notifica)',
+                                style: GoogleFonts.inter(fontSize: 11, color: BCamTheme.statusOnlineGlow),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Button(
+                              onPressed: () {
+                                final tempCam = _buildTempDevice();
+                                final evt = AiVisionAgentService.instance.testDetectionWithConfidence(
+                                  camera: tempCam,
+                                  simulatedConfidence: 0.18,
+                                  label: 'Ruído Periférico',
+                                  type: CameraEventType.motion,
+                                );
+                                displayInfoBar(
+                                  context,
+                                  builder: (context, close) => InfoBar(
+                                    title: const Text('Teste IA: 18% Certeza'),
+                                    content: Text(
+                                      evt == null
+                                          ? '✔ Descartado pelo limiar de ${(_aiMinConfidence * 100).toInt()}% (nem grava, nem notifica).'
+                                          : 'Evento gerado.',
+                                    ),
+                                    severity: InfoBarSeverity.warning,
+                                    onClose: close,
+                                  ),
+                                );
+                              },
+                              child: Text(
+                                'Ruído (18% • Ignora)',
+                                style: GoogleFonts.inter(fontSize: 11, color: BCamTheme.statusOffline),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),

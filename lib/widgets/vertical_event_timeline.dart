@@ -2,6 +2,7 @@ import 'package:fluent_ui/fluent_ui.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/camera_device.dart';
 import '../models/camera_event.dart';
+import '../screens/event_detail_screen.dart';
 import '../services/camera_event_service.dart';
 import '../theme/fluent_theme.dart';
 
@@ -469,13 +470,9 @@ class _VerticalEventTimelineState extends State<VerticalEventTimeline> {
             FilledButton(
               onPressed: () {
                 Navigator.of(context).pop();
-                displayInfoBar(
-                  context,
-                  builder: (context, close) => InfoBar(
-                    title: const Text('Clipe NVR em Execução'),
-                    content: Text('Reproduzindo trecho gravado às ${event.timeFormatted} (${event.durationFormatted}).'),
-                    severity: InfoBarSeverity.info,
-                    onClose: close,
+                Navigator.of(context).push(
+                  FluentPageRoute(
+                    builder: (context) => EventDetailScreen(event: event),
                   ),
                 );
               },

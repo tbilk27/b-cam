@@ -214,6 +214,38 @@ Registro cronológico mantido pelo **Líder de Projeto & Orquestrador Geral**.
 
 ---
 
+## 📅 Sprint 2.0 • Splash Screen, Agente de IA com Bounding Boxes, Firebase Push & Deeplink, Infra Google 100% Grátis e In-App Auto-Update
+- **Data**: 2026-11-20
+- **Solicitante**: Usuário / Stakeholder Principal
+- **Parecer dos Agentes e Implementações**:
+  - **Especialista em UX/UI**:
+    - Consultou as diretrizes canônicas do ADR-007 e ADR-009 para desenhar a **Splash Screen** sóbria e moderna (`lib/screens/splash_screen.dart`), utilizando o emblema oficial da íris (`assets/images/b_cam_icon.jpg`) com animação de respiração e rim glow azul cobalto.
+    - Configurou `launch_background.xml` nativo do Android em ardósia escura (`#1B1B1F`), eliminando o flash branco no boot do app.
+    - Desenvolveu o componente de sobreposição visual `BoundingBoxOverlay` com contorno fluorescente, cantos de retículo tático e pílula superior (`👤 Pessoa 94%`).
+    - Criou a tela de detalhe e clipe do evento (`lib/screens/event_detail_screen.dart`).
+  - **Arquiteto de Software & Infraestrutura**:
+    - Elaborou a **ADR-014: Splash Screen, Agente de IA com Bounding Boxes, Firebase Push & Deeplink, Infra Google 100% Grátis e In-App Auto-Update**.
+    - Modelou a estrutura completa da infraestrutura em nuvem em `infra/google_cloud/` operando estritamente dentro do **Google Cloud Always Free Tier** e **Firebase Spark Plan** (R$ 0,00 perpétuo):
+      - Google Gemini 1.5 Flash Free Tier (15 RPM / 1M TPM gratuitos).
+      - Cloud Functions e Cloud Run (2M de invocações/mês grátis).
+      - Cloud Firestore (1 GB / 50k leituras/dia grátis).
+      - Firebase Cloud Messaging (FCM) ilimitado e gratuito.
+    - Redigiu o manual de parametrização `context/FIREBASE_SETUP.md`.
+  - **Desenvolvedor Flutter**:
+    - Implementou `BoundingBox`, `AiVisionAgentService`, `FirebaseNotificationService`, `DeepLinkService` e `AppUpdateService`.
+    - Adicionou configuração de IA nas câmeras (`CommissionScreen`), permitindo ajustar o limiar mínimo de confiança (`aiMinConfidence`) de 10% a 95% (padrão 25%).
+    - Garantiu que eventos abaixo do limiar (ex: 18% < 25%) nem gerem eventos e nem disparem notificações.
+    - Adicionou o MethodChannel nativo em `MainActivity.kt` e filtros de intent no `AndroidManifest.xml` para captura e roteamento imediato de deeplinks (`bcam://event/{id}`).
+    - Integrou o sistema de atualização in-app com download em tempo real e acionamento do instalador.
+  - **Analista QA**:
+    - Expandiu a suíte para 21 testes unitários e de widget com 100% de aprovação (`test/ai_vision_test.dart`, `test/deep_link_test.dart`, `test/app_update_test.dart`).
+    - Validou em dispositivo físico real (Xiaomi Redmi Note 10S) o acionamento de deeplink via ADB intent e a renderização das caixas delimitadoras e interpretação semântica.
+  - **Líder de Projeto & Orquestrador**:
+    - Criou a esteira de build e versionamento contínuo `scripts/auto_build_and_release.sh` que faz bump de versão automático, compilação, geração do manifesto `version.json` e deploy OTA.
+    - Publicou a versão `v1.2.0+3` diretamente no celular físico.
+
+---
+
 ## 🚀 Backlog Priorizado (Próximos Passos)
 
 - [ ] **EPIC-01: Controle PTZ Real via ONVIF SOAP**:

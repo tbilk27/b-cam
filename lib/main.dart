@@ -2,9 +2,14 @@ import 'dart:ui';
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:provider/provider.dart';
-import 'screens/home_screen.dart';
+import 'screens/splash_screen.dart';
+import 'services/ai_vision_agent_service.dart';
+import 'services/app_update_service.dart';
+import 'services/camera_event_service.dart';
 import 'services/camera_storage_service.dart';
+import 'services/deep_link_service.dart';
 import 'services/diagnostic_logger_service.dart';
+import 'services/firebase_notification_service.dart';
 import 'theme/fluent_theme.dart';
 
 void main() {
@@ -36,6 +41,9 @@ void main() {
     return true;
   };
 
+  // Initialize DeepLink Router
+  DeepLinkService.instance.initialize();
+
   runApp(const BCamApp());
 }
 
@@ -50,14 +58,19 @@ class BCamApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => storageService ?? CameraStorageService()),
         ChangeNotifierProvider.value(value: DiagnosticLoggerService.instance),
+        ChangeNotifierProvider.value(value: CameraEventService.instance),
+        ChangeNotifierProvider.value(value: FirebaseNotificationService.instance),
+        ChangeNotifierProvider.value(value: AppUpdateService.instance),
+        ChangeNotifierProvider.value(value: AiVisionAgentService.instance),
       ],
       child: FluentApp(
         title: 'b-cam • Vigilância Inteligente',
+        navigatorKey: DeepLinkService.instance.navigatorKey,
         debugShowCheckedModeBanner: false,
         themeMode: ThemeMode.dark,
         darkTheme: BCamTheme.darkTheme(),
         theme: BCamTheme.darkTheme(),
-        home: const HomeScreen(),
+        home: const SplashScreen(),
       ),
     );
   }

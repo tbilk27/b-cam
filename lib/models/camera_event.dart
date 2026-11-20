@@ -1,5 +1,6 @@
 import 'package:fluent_ui/fluent_ui.dart';
 import '../theme/fluent_theme.dart';
+import 'bounding_box.dart';
 
 enum CameraEventType {
   person(
@@ -37,6 +38,14 @@ enum CameraEventType {
     required this.icon,
     required this.color,
   });
+
+  static CameraEventType fromName(String? name) {
+    if (name == null) return CameraEventType.motion;
+    for (final t in CameraEventType.values) {
+      if (t.name.toLowerCase() == name.toLowerCase()) return t;
+    }
+    return CameraEventType.motion;
+  }
 }
 
 class CameraEvent {
@@ -50,6 +59,9 @@ class CameraEvent {
   final String? clipUrl;
   final double confidence; // e.g. 0.94 (94%)
   final bool isFlagged;
+  final List<BoundingBox> boundingBoxes;
+  final String? sceneInterpretation;
+  final String? deepLinkUrl;
 
   const CameraEvent({
     required this.id,
@@ -62,7 +74,10 @@ class CameraEvent {
     this.clipUrl,
     this.confidence = 1.0,
     this.isFlagged = false,
-  });
+    this.boundingBoxes = const [],
+    this.sceneInterpretation,
+    String? deepLinkUrl,
+  }) : deepLinkUrl = deepLinkUrl ?? 'bcam://event/$id';
 
   String get timeFormatted {
     final h = timestamp.hour.toString().padLeft(2, '0');
@@ -98,5 +113,61 @@ class CameraEvent {
     'clipUrl': clipUrl,
     'confidence': confidence,
     'isFlagged': isFlagged,
+    'boundingBoxes': boundingBoxes.map((b) => b.toJson()).toList(),
+    'sceneInterpretation': sceneInterpretation,
+    'deepLinkUrl': deepLinkUrl,
   };
+
+  factory CameraEvent.fromJson(Map<String, dynamic> json) {
+    return CameraEvent(
+      id: json['id'] as String,
+      cameraId: json['cameraId'] as String,
+      cameraName: json['cameraName'] as String,
+      type: CameraEventType.fromName(json['type'] as String?),
+      timestamp: DateTime.parse(json['timestamp'] as String),
+      duration: Duration(seconds: (json['durationSeconds'] as num?)?.toInt() ?? 30),
+      description: json['description'] as String? ?? '',
+      clipUrl: json['clipUrl'] as String?,
+      confidence: (json['confidence'] as num?)?.toDouble() ?? 1.0,
+      isFlagged: json['isFlagged'] as bool? ?? false,
+      boundingBoxes: (json['boundingBoxes'] as List<dynamic>?)
+              ?.map((e) => BoundingBox.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [],
+      sceneInterpretation: json['sceneInterpretation'] as String?,
+      deepLinkUrl: json['deepLinkUrl'] as String?,
+    );
+  }
+
+  CameraEvent copyWith({
+    String? id,
+    String? cameraId,
+    String? cameraName,
+    CameraEventType? type,
+    DateTime? timestamp,
+    Duration? duration,
+    String? description,
+    String? clipUrl,
+    double? confidence,
+    bool? isFlagged,
+    List<BoundingBox>? boundingBoxes,
+    String? sceneInterpretation,
+    String? deepLinkUrl,
+  }) {
+    return CameraEvent(
+      id: id ?? this.id,
+      cameraId: cameraId ?? this.cameraId,
+      cameraName: cameraName ?? this.cameraName,
+      type: type ?? this.type,
+      timestamp: timestamp ?? this.timestamp,
+      duration: duration ?? this.duration,
+      description: description ?? this.description,
+      clipUrl: clipUrl ?? this.clipUrl,
+      confidence: confidence ?? this.confidence,
+      isFlagged: isFlagged ?? this.isFlagged,
+      boundingBoxes: boundingBoxes ?? this.boundingBoxes,
+      sceneInterpretation: sceneInterpretation ?? this.sceneInterpretation,
+      deepLinkUrl: deepLinkUrl ?? this.deepLinkUrl,
+    );
+  }
 }
