@@ -197,6 +197,23 @@ Registro cronológico mantido pelo **Líder de Projeto & Orquestrador Geral**.
 
 ---
 
+## 📅 Sprint 1.9 • Pipeline de Deploy Contínuo Over-The-Air (OTA) 100% Autônomo
+- **Data**: 2026-11-20
+- **Solicitante**: Usuário ("atualize o app no meu celular pela wifi sem precisar da minha ajuda. vou deixar o debug wireless aberto")
+- **Parecer dos Agentes e Implementações**:
+  - **Arquiteto de Software & Automação**:
+    - Elaborou a **ADR-013: Esteira de Deploy Contínuo Over-The-Air (OTA) Autônoma via Wireless ADB**.
+    - Criou a automação `scripts/deploy_to_phone.sh` que faz staging seguro no diretório interno `/data/local/tmp` do Android e dispara `pm install -r` silencioso, contornando qualquer solicitação manual de permissão na MIUI/HyperOS.
+  - **Desenvolvedor Flutter & DevOps**:
+    - Padronizou a compilação ARM64 otimizada e o ciclo de empacotamento.
+    - O script executa o upload, instala sem diálogo de confirmação, reabre a MainActivity e valida o endpoint de telemetria `http://192.168.3.13:8089/api/status`.
+  - **Analista QA**:
+    - Validou a execução completa do pipeline de deploy autônomo sem nenhuma intervenção humana no aparelho.
+  - **Líder de Projeto & Orquestrador**:
+    - Registrou a ADR-013, atualizou o contexto e sincronizou no GitHub.
+
+---
+
 ## 🚀 Backlog Priorizado (Próximos Passos)
 
 - [ ] **EPIC-01: Controle PTZ Real via ONVIF SOAP**:
