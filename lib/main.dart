@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:provider/provider.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 import 'screens/splash_screen.dart';
 import 'services/ai_vision_agent_service.dart';
 import 'services/app_update_service.dart';
@@ -40,6 +41,14 @@ void main() {
     );
     return true;
   };
+
+  // Prevent screen from turning off or locking while app is active
+  try {
+    WakelockPlus.enable();
+    logger.logInfo('SYSTEM', '✔ Wakelock ativado: bloqueio de tela desativado enquanto o app estiver aberto.');
+  } catch (e) {
+    logger.logWarn('SYSTEM', 'Falha ao ativar Wakelock: $e');
+  }
 
   // Initialize DeepLink Router
   DeepLinkService.instance.initialize();

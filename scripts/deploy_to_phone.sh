@@ -51,7 +51,7 @@ adb -s "$DEVICE_SERIAL" push "$APK_PATH" /data/local/tmp/app.apk
 
 # 3. Instalação silenciosa sem prompt MIUI
 echo "[OTA] Executando pm install -r autônomo..."
-adb -s "$DEVICE_SERIAL" shell "pm install -r /data/local/tmp/app.apk && rm /data/local/tmp/app.apk"
+adb -s "$DEVICE_SERIAL" shell "pm install -r -d /data/local/tmp/app.apk && rm -f /data/local/tmp/app.apk"
 
 # 4. Inicialização da MainActivity
 echo "[OTA] Reiniciando aplicativo no primeiro plano..."
