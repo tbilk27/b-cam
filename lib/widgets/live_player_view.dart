@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import '../models/camera_device.dart';
+import '../services/diagnostic_logger_service.dart';
 import '../theme/fluent_theme.dart';
 
 class LivePlayerView extends StatefulWidget {
@@ -65,6 +66,11 @@ class _LivePlayerViewState extends State<LivePlayerView> {
       _controller = VideoController(_player);
 
       _errorSub = _player.stream.error.listen((error) {
+        DiagnosticLoggerService.instance.logError(
+          'RTSP_PLAYER',
+          'Erro de reprodução na câmera "${widget.camera.name}" (${widget.camera.ip})',
+          details: 'libmpv: $error | URL: ${widget.camera.maskedStreamUrl}',
+        );
         if (mounted) {
           setState(() {
             _hasError = true;
@@ -103,6 +109,14 @@ class _LivePlayerViewState extends State<LivePlayerView> {
 
     try {
       final url = widget.camera.streamUrl;
+      final transportType = widget.camera.manufacturer.id == 'yoosee' ? 'UDP' : 'TCP';
+
+      DiagnosticLoggerService.instance.logInfo(
+        'RTSP_PLAYER',
+        'Conectando a "${widget.camera.name}" (${widget.camera.ip}) via $transportType (Subtype: ${widget.camera.subType})',
+        details: 'Stream URL: ${widget.camera.maskedStreamUrl}',
+      );
+
       await _player.setVolume(widget.isMiniature ? 0 : 100);
 
       // Fine-tune RTSP transport per manufacturer: Yoosee requires UDP, Intelbras/Dahua/Hikvision excel on TCP
@@ -135,7 +149,14 @@ class _LivePlayerViewState extends State<LivePlayerView> {
           });
         }
       });
-    } catch (e) {
+    } catch (e, stack) {
+      DiagnosticLoggerService.instance.logError(
+        'RTSP_PLAYER',
+        'Exceção ao inicializar stream de "${widget.camera.name}" (${widget.camera.ip})',
+        error: e,
+        stackTrace: stack,
+        details: 'URL: ${widget.camera.maskedStreamUrl}',
+      );
       if (mounted) {
         setState(() {
           _hasError = true;

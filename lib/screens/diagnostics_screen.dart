@@ -1,0 +1,440 @@
+import 'package:fluent_ui/fluent_ui.dart';
+import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../services/diagnostic_logger_service.dart';
+import '../theme/fluent_theme.dart';
+
+class DiagnosticsScreen extends StatefulWidget {
+  const DiagnosticsScreen({super.key});
+
+  @override
+  State<DiagnosticsScreen> createState() => _DiagnosticsScreenState();
+}
+
+class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
+  final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+  String _selectedFilter = 'TODOS';
+  bool _autoScroll = true;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _scrollToBottom() {
+    if (_autoScroll && _scrollController.hasClients) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+        );
+      });
+    }
+  }
+
+  Future<void> _copyAllLogs(DiagnosticLoggerService logger) async {
+    final text = logger.getFullLogText();
+    await Clipboard.setData(ClipboardData(text: text));
+    if (mounted) {
+      displayInfoBar(
+        context,
+        builder: (context, close) => InfoBar(
+          title: const Text('Logs Copiados'),
+          content: Text('${logger.entries.length} linhas de log copiadas para a área de transferência!'),
+          severity: InfoBarSeverity.success,
+          onClose: close,
+        ),
+      );
+    }
+  }
+
+  Future<void> _clearLogs(DiagnosticLoggerService logger) async {
+    await logger.clearLogs();
+    if (mounted) {
+      displayInfoBar(
+        context,
+        builder: (context, close) => InfoBar(
+          title: const Text('Logs Limpos'),
+          content: const Text('Histórico de diagnóstico reiniciado.'),
+          severity: InfoBarSeverity.warning,
+          onClose: close,
+        ),
+      );
+    }
+  }
+
+  Future<void> _sendToHostMac(DiagnosticLoggerService logger) async {
+    final success = await logger.sendLogsToHostMac();
+    if (mounted) {
+      displayInfoBar(
+        context,
+        builder: (context, close) => InfoBar(
+          title: Text(success ? 'Logs Transmitidos' : 'Falha na Transmissão'),
+          content: Text(
+            success
+                ? 'Os dados de depuração foram entregues ao Mac (192.168.3.62) com sucesso!'
+                : 'Não foi possível alcançar o coletor no Mac em 192.168.3.62:8088. Use "Copiar" ou o endpoint HTTP.',
+          ),
+          severity: success ? InfoBarSeverity.success : InfoBarSeverity.error,
+          onClose: close,
+        ),
+      );
+    }
+  }
+
+  List<LogEntry> _filterLogs(List<LogEntry> logs) {
+    final query = _searchController.text.trim().toLowerCase();
+    return logs.where((entry) {
+      // Category filter
+      if (_selectedFilter == 'ERROS' && entry.level != LogLevel.error) return false;
+      if (_selectedFilter == 'RTSP' && !entry.category.contains('RTSP')) return false;
+      if (_selectedFilter == 'REDE' && !entry.category.contains('SCANNER') && !entry.category.contains('DHCP')) return false;
+
+      // Query filter
+      if (query.isNotEmpty) {
+        final inMsg = entry.message.toLowerCase().contains(query);
+        final inCat = entry.category.toLowerCase().contains(query);
+        final inDet = (entry.details ?? '').toLowerCase().contains(query);
+        if (!inMsg && !inCat && !inDet) return false;
+      }
+
+      return true;
+    }).toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final logger = DiagnosticLoggerService.instance;
+
+    return ListenableBuilder(
+      listenable: logger,
+      builder: (context, _) {
+        final filteredLogs = _filterLogs(logger.entries);
+        _scrollToBottom();
+
+        return SafeArea(
+          child: ScaffoldPage(
+            header: PageHeader(
+              title: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(FluentIcons.back, size: 16),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      'Logs',
+                      style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ],
+              ),
+              commandBar: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(FluentIcons.copy, size: 15),
+                    onPressed: () => _copyAllLogs(logger),
+                  ),
+                  const SizedBox(width: 2),
+                  IconButton(
+                    icon: const Icon(FluentIcons.delete, size: 15),
+                    onPressed: () => _clearLogs(logger),
+                  ),
+                  const SizedBox(width: 4),
+                  FilledButton(
+                    onPressed: () => _sendToHostMac(logger),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(FluentIcons.send, size: 12),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Sync Mac',
+                          style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            content: Column(
+              children: [
+                // Network Endpoint Card
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  child: Card(
+                    backgroundColor: BCamTheme.darkSurface,
+                    borderColor: BCamTheme.darkBorder,
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: const BoxDecoration(
+                                    color: BCamTheme.statusOnlineGlow,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Servidor HTTP de Diagnóstico Ativo',
+                                  style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w600, color: BCamTheme.textPrimary),
+                                ),
+                              ],
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: BCamTheme.accentBlue.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                'Porta ${DiagnosticLoggerService.diagnosticHttpPort}',
+                                style: GoogleFonts.robotoMono(fontSize: 10, fontWeight: FontWeight.w700, color: BCamTheme.accentLightBlue),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Acesse os logs deste celular diretamente pelo seu navegador ou terminal:',
+                          style: GoogleFonts.inter(fontSize: 11, color: BCamTheme.textSecondary),
+                        ),
+                        const SizedBox(height: 4),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: BCamTheme.darkCard,
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: BCamTheme.darkBorderSubtle),
+                          ),
+                          child: SelectableText(
+                            'http://${logger.deviceIp}:${DiagnosticLoggerService.diagnosticHttpPort}/api/logs',
+                            style: GoogleFonts.robotoMono(
+                              fontSize: 11,
+                              color: BCamTheme.accentLightBlue,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Flexible(
+                              child: Text(
+                                'Arquivo: ${logger.logFilePath ?? "Inicializando..."}',
+                                style: GoogleFonts.inter(fontSize: 10, color: BCamTheme.textTertiary),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            Text(
+                              '${logger.entries.length} eventos registrados',
+                              style: GoogleFonts.inter(fontSize: 10.5, fontWeight: FontWeight.w600, color: BCamTheme.textSecondary),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // Search & Filter Row
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextBox(
+                          controller: _searchController,
+                          placeholder: 'Filtrar por texto, IP ou categoria...',
+                          prefix: const Padding(
+                            padding: EdgeInsets.only(left: 8),
+                            child: Icon(FluentIcons.search, size: 14, color: BCamTheme.textTertiary),
+                          ),
+                          onChanged: (_) => setState(() {}),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Button(
+                        onPressed: () => setState(() => _autoScroll = !_autoScroll),
+                        child: Icon(
+                          _autoScroll ? FluentIcons.down : FluentIcons.pause,
+                          size: 14,
+                          color: _autoScroll ? BCamTheme.accentLightBlue : BCamTheme.textTertiary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Category Pills
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: ['TODOS', 'ERROS', 'RTSP', 'REDE'].map((cat) {
+                        final isSel = _selectedFilter == cat;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 6),
+                          child: Button(
+                            style: ButtonStyle(
+                              backgroundColor: WidgetStateProperty.all(
+                                isSel ? BCamTheme.accentBlue : BCamTheme.darkSurface,
+                              ),
+                              shape: WidgetStateProperty.all(
+                                RoundedRectangleBorder(
+                                  side: BorderSide(
+                                    color: isSel ? BCamTheme.accentLightBlue : BCamTheme.darkBorder,
+                                  ),
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                              ),
+                            ),
+                            onPressed: () => setState(() => _selectedFilter = cat),
+                            child: Text(
+                              cat,
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                fontWeight: isSel ? FontWeight.w700 : FontWeight.w400,
+                                color: isSel ? Colors.white : BCamTheme.textSecondary,
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ),
+
+                // Log Records Stream List
+                Expanded(
+                  child: filteredLogs.isEmpty
+                      ? Center(
+                          child: Text(
+                            'Nenhum registro encontrado para o filtro atual.',
+                            style: GoogleFonts.inter(fontSize: 13, color: BCamTheme.textSecondary),
+                          ),
+                        )
+                      : ListView.builder(
+                          controller: _scrollController,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          itemCount: filteredLogs.length,
+                          itemBuilder: (context, index) {
+                            final log = filteredLogs[index];
+                            final Color levelColor = switch (log.level) {
+                              LogLevel.error => BCamTheme.statusOffline,
+                              LogLevel.warn => BCamTheme.statusWarning,
+                              LogLevel.info => BCamTheme.accentLightBlue,
+                              LogLevel.debug => BCamTheme.textSecondary,
+                            };
+
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 6),
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: BCamTheme.darkSurface,
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                  color: log.level == LogLevel.error
+                                      ? BCamTheme.statusOffline.withValues(alpha: 0.5)
+                                      : BCamTheme.darkBorderSubtle,
+                                  width: log.level == LogLevel.error ? 1.0 : 0.6,
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Text(
+                                        log.timeFormatted,
+                                        style: GoogleFonts.robotoMono(
+                                          fontSize: 10,
+                                          color: BCamTheme.textTertiary,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                        decoration: BoxDecoration(
+                                          color: levelColor.withValues(alpha: 0.15),
+                                          borderRadius: BorderRadius.circular(3),
+                                          border: Border.all(color: levelColor.withValues(alpha: 0.5), width: 0.8),
+                                        ),
+                                        child: Text(
+                                          log.level.label,
+                                          style: GoogleFonts.robotoMono(
+                                            fontSize: 9.5,
+                                            fontWeight: FontWeight.w700,
+                                            color: levelColor,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        '[${log.category}]',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 10.5,
+                                          fontWeight: FontWeight.w700,
+                                          color: BCamTheme.textPrimary,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  SelectableText(
+                                    log.message,
+                                    style: GoogleFonts.inter(fontSize: 11.5, color: BCamTheme.textPrimary),
+                                  ),
+                                  if (log.details != null && log.details!.isNotEmpty) ...[
+                                    const SizedBox(height: 4),
+                                    Container(
+                                      width: double.infinity,
+                                      padding: const EdgeInsets.all(6),
+                                      decoration: BoxDecoration(
+                                        color: BCamTheme.darkCard,
+                                        borderRadius: BorderRadius.circular(4),
+                                        border: Border.all(color: BCamTheme.darkBorderSubtle),
+                                      ),
+                                      child: SelectableText(
+                                        log.details!,
+                                        style: GoogleFonts.robotoMono(
+                                          fontSize: 10,
+                                          color: log.level == LogLevel.error
+                                              ? const Color(0xFFFF8888)
+                                              : BCamTheme.accentLightBlue,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}

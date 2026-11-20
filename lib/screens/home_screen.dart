@@ -8,6 +8,7 @@ import '../widgets/b_cam_logo.dart';
 import '../widgets/live_player_view.dart';
 import 'camera_detail_screen.dart';
 import 'commission_screen.dart';
+import 'diagnostics_screen.dart';
 import 'multi_grid_screen.dart';
 import 'scan_screen.dart';
 
@@ -41,35 +42,45 @@ class _HomeScreenState extends State<HomeScreen> {
       child: ScaffoldPage.scrollable(
       header: PageHeader(
         title: const BCamLogo(size: 32, showText: true),
-        commandBar: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          decoration: BoxDecoration(
-            color: BCamTheme.darkSurface,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: BCamTheme.darkBorder, width: 0.8),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 7,
-                height: 7,
-                decoration: const BoxDecoration(
-                  color: BCamTheme.statusOnlineGlow,
-                  shape: BoxShape.circle,
+        commandBar: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () {
+            Navigator.of(context).push(
+              FluentPageRoute(builder: (_) => const DiagnosticsScreen()),
+            );
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: BCamTheme.darkSurface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: BCamTheme.darkBorder, width: 0.8),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(FluentIcons.diagnostic, size: 14, color: BCamTheme.accentLightBlue),
+                const SizedBox(width: 6),
+                Container(
+                  width: 7,
+                  height: 7,
+                  decoration: const BoxDecoration(
+                    color: BCamTheme.statusOnlineGlow,
+                    shape: BoxShape.circle,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                'WI-FI ONLINE',
-                style: GoogleFonts.inter(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
-                  color: BCamTheme.statusOnlineGlow,
-                  letterSpacing: 0.8,
+                const SizedBox(width: 6),
+                Text(
+                  'WI-FI ONLINE',
+                  style: GoogleFonts.inter(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: BCamTheme.statusOnlineGlow,
+                    letterSpacing: 0.8,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

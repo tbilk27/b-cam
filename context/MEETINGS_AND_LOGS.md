@@ -123,6 +123,25 @@ Registro cronológico mantido pelo **Líder de Projeto & Orquestrador Geral**.
 
 ---
 
+## 📅 Sprint 1.6 • Telemetria Contínua, Diagnósticos em Tempo Real e Distribuição Mobile
+- **Data**: 2026-11-20
+- **Solicitante**: Usuário ("pode gerar uma versão e mandar para meu celular p eu testar? já implemente tudo o que precisa de log de depuração pera capturar tudo o que precisa para testes. Depois você pode ler os dados do meu celular para identificar possíveis erros...")
+- **Parecer dos Agentes e Implementações**:
+  - **Arquiteto de Software & Segurança**:
+    - Elaborou a **ADR-010: Sistema de Telemetria, Diagnósticos em Tempo Real e Distribuição Mobile**.
+    - Projetou arquitetura de diagnóstico de 4 vias: buffer em memória, arquivo local persistente rotativo, servidor HTTP embutido no celular (porta 8089) e servidor de distribuição/coleta no Mac (porta 8088).
+  - **Desenvolvedor Flutter**:
+    - Desenvolveu `DiagnosticLoggerService`: captura de ciclo de vida, varreduras de rede, eventos de reprodução RTSP, erros de decodificação e exceções globais.
+    - Criou a tela `DiagnosticsScreen` em Fluent UI com visualização em tempo real, filtros por categoria, busca, cópia e transmissão para o Mac.
+    - Compilou os pacotes APK divididos por arquitetura (`b-cam-arm64.apk` de 105MB e `b-cam.apk` universal).
+  - **Analista QA**:
+    - Criou suite de testes unitários para o serviço de telemetria (`test/diagnostic_logger_test.dart`). Totalizando 11 testes automatizados (100% aprovados).
+    - Validou no emulador Android e no servidor local Mac (`192.168.3.62:8088`), confirmando recepção de logs e download de APKs.
+  - **Líder de Projeto & Orquestrador**:
+    - Iniciou o servidor local de distribuição e recepção de logs, disponibilizando o portal de instalação na rede Wi-Fi.
+
+---
+
 ## 🚀 Backlog Priorizado (Próximos Passos)
 
 - [ ] **EPIC-01: Controle PTZ Real via ONVIF SOAP**:

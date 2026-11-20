@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/camera_device.dart';
 import '../models/manufacturer.dart';
 import '../models/scan_result.dart';
+import 'diagnostic_logger_service.dart';
 
 class CameraStorageService extends ChangeNotifier {
   static const String _storageKey = 'bcam_saved_cameras_v1';
@@ -31,6 +32,10 @@ class CameraStorageService extends ChangeNotifier {
         for (final item in decoded) {
           _cameras.add(CameraDevice.fromJson(item as Map<String, dynamic>));
         }
+        DiagnosticLoggerService.instance.logInfo(
+          'STORAGE',
+          '${_cameras.length} câmeras comissionadas carregadas do armazenamento persistente.',
+        );
       } else {
         // Commissioned physical cameras on the user's local network
         _cameras.clear();
@@ -151,7 +156,10 @@ class CameraStorageService extends ChangeNotifier {
       if (idx != -1) {
         final existing = _cameras[idx];
         if (existing.ip != scan.ip) {
-          debugPrint('[DHCP HEAL] Camera "${existing.name}" (MAC: ${existing.macAddress}) migrated IP from ${existing.ip} to ${scan.ip}');
+          DiagnosticLoggerService.instance.logInfo(
+            'DHCP_RECONCILE',
+            'Câmera "${existing.name}" (MAC: ${existing.macAddress}) atualizou IP de ${existing.ip} para ${scan.ip}',
+          );
           _cameras[idx] = existing.copyWith(
             ip: scan.ip,
             isOnline: true,

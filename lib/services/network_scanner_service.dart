@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import '../models/manufacturer.dart';
 import '../models/scan_result.dart';
+import 'diagnostic_logger_service.dart';
 
 class NetworkScannerService {
   bool _isScanning = false;
@@ -70,6 +71,11 @@ class NetworkScannerService {
     final prefix = subnetPrefix ?? await getLocalSubnetPrefix();
     final List<ScanResult> discovered = [];
 
+    DiagnosticLoggerService.instance.logInfo(
+      'SCANNER',
+      'Iniciando varredura na sub-rede $prefix.$startHost - $prefix.$endHost (Chunk: 32, Timeout: ${portTimeout.inMilliseconds}ms)',
+    );
+
     // Trigger ONVIF probe in parallel
     _sendOnvifWsDiscovery(prefix);
 
@@ -100,6 +106,10 @@ class NetworkScannerService {
       for (final res in results) {
         if (res != null) {
           discovered.add(res);
+          DiagnosticLoggerService.instance.logInfo(
+            'SCANNER',
+            'Câmera identificada em ${res.ip} [${res.detectedManufacturer.displayName}] | Portas: ${res.openPorts} | MAC: ${res.macAddress ?? "desconhecido"} | Origem: ${res.detectionSource}',
+          );
         }
       }
 
@@ -114,6 +124,10 @@ class NetworkScannerService {
     }
 
     _isScanning = false;
+    DiagnosticLoggerService.instance.logInfo(
+      'SCANNER',
+      'Varredura de rede concluída. Total de câmeras encontradas: ${discovered.length}',
+    );
     yield ScanProgress(
       progress: 1.0,
       currentIp: '$prefix.$endHost',
