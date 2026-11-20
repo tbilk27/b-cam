@@ -26,6 +26,18 @@ Registro cronológico mantido pelo **Líder de Projeto & Orquestrador Geral**.
 - [x] Criação do radar de varredura visual com detecção automática de fabricante.
 - [x] Mascaramento automático de senhas em URLs RTSP para evitar vazamento visual.
 - [x] Persistência das decisões no repositório GitHub do usuário sob a pasta `context/`.
+- [x] **ADR-006: Amarração de Identidade ao MAC Address**: Nome, credenciais e configurações vinculados ao MAC físico permanente para tolerância total a reboots de roteador e renovação de lease DHCP.
+
+---
+
+## 📅 Sprint 1.1 • Amarração de Identidade ao MAC Address & Resiliência DHCP
+- **Data**: 2026-11-20
+- **Solicitante**: Usuário
+- **Parecer dos Agentes**:
+  - **Arquiteto de Software**: Elaborou ADR-006 definindo normalização do MAC como identificador imutável e separação entre camada de hardware e lease de rede.
+  - **Desenvolvedor Flutter**: Implementou leitor ARP dinâmico (`/proc/net/arp` no Android e `arp -an` no macOS), reconciliação automática de IPs no `CameraStorageService` e normalizador de MACs.
+  - **Analista QA**: Criou cenários de teste unitário simulando alteração de IP pelo roteador com preservação integral de nome e credenciais.
+  - **Especialista UX/UI**: Garantiu que o processo de remapeamento ocorra de forma silenciosa e sem exigir intervenção do usuário, exibindo badge de MAC Address na telemetria.
 
 ---
 

@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 import '../models/camera_device.dart';
 import '../models/manufacturer.dart';
+import '../models/scan_result.dart';
 
 class CameraStorageService extends ChangeNotifier {
   static const String _storageKey = 'bcam_saved_cameras_v1';
@@ -61,6 +62,7 @@ class CameraStorageService extends ChangeNotifier {
             location: 'Portão Principal',
             isFavorite: true,
             isOnline: true,
+            macAddress: '98:2A:0A:89:56:62',
           ),
           CameraDevice(
             id: const Uuid().v4(),
@@ -76,6 +78,7 @@ class CameraStorageService extends ChangeNotifier {
             location: 'Estacionamento',
             isFavorite: true,
             isOnline: true,
+            macAddress: '18:0D:2C:5D:96:FE',
           ),
           CameraDevice(
             id: const Uuid().v4(),
@@ -91,6 +94,7 @@ class CameraStorageService extends ChangeNotifier {
             location: 'Corredor',
             isFavorite: false,
             isOnline: true,
+            macAddress: '98:03:CF:DC:00:0A',
           ),
           CameraDevice(
             id: const Uuid().v4(),
@@ -106,6 +110,7 @@ class CameraStorageService extends ChangeNotifier {
             location: 'Fundos',
             isFavorite: false,
             isOnline: true,
+            macAddress: '98:03:CF:DB:FD:5A',
           ),
         ]);
         await _saveToDisk(prefs);
@@ -118,11 +123,79 @@ class CameraStorageService extends ChangeNotifier {
     }
   }
 
+  /// Add or update camera binding by MAC Address (DHCP resilient)
   Future<void> addCamera(CameraDevice camera) async {
-    _cameras.removeWhere((c) => c.id == camera.id || (c.ip == camera.ip && c.channel == camera.channel));
-    _cameras.insert(0, camera);
+    // 1. Try to find existing device by unique hardware MAC address
+    final existingMacIdx = (camera.macAddress != null)
+        ? _cameras.indexWhere((c) => c.matchesMac(camera.macAddress))
+        : -1;
+
+    if (existingMacIdx != -1) {
+      // Existing hardware found: PRESERVE user nickname, password, location & favorites, update IP & ports
+      final existing = _cameras[existingMacIdx];
+      debugPrint('[DHCP HEAL] Camera "${existing.name}" (MAC: ${existing.macAddress}) updated to IP ${camera.ip}');
+      _cameras[existingMacIdx] = existing.copyWith(
+        ip: camera.ip,
+        rtspPort: camera.rtspPort,
+        webPort: camera.webPort,
+        manufacturer: camera.manufacturer,
+        macAddress: camera.macAddress ?? existing.macAddress,
+        isOnline: true,
+        lastSeen: DateTime.now(),
+      );
+    } else {
+      // Clean duplicate by ID or exact IP/channel if no MAC
+      _cameras.removeWhere((c) =>
+          c.id == camera.id ||
+          (c.ip == camera.ip && c.channel == camera.channel && c.macAddress == null));
+      _cameras.insert(0, camera);
+    }
+
     await _persist();
     notifyListeners();
+  }
+
+  /// Automatically reconcile all cameras discovered in a scan by their MAC Address
+  Future<int> autoReconcileDevices(List<ScanResult> discovered) async {
+    int healedCount = 0;
+    for (final scan in discovered) {
+      if (scan.macAddress == null) continue;
+      final idx = _cameras.indexWhere((c) => c.matchesMac(scan.macAddress));
+      if (idx != -1) {
+        final existing = _cameras[idx];
+        if (existing.ip != scan.ip) {
+          debugPrint('[DHCP HEAL] Camera "${existing.name}" (MAC: ${existing.macAddress}) migrated IP from ${existing.ip} to ${scan.ip}');
+          _cameras[idx] = existing.copyWith(
+            ip: scan.ip,
+            isOnline: true,
+            lastSeen: DateTime.now(),
+          );
+          healedCount++;
+        }
+      }
+    }
+    if (healedCount > 0) {
+      await _persist();
+      notifyListeners();
+    }
+    return healedCount;
+  }
+
+  /// Explicitly re-bind an IP for a given MAC Address
+  Future<bool> updateIpForMac(String mac, String newIp) async {
+    final idx = _cameras.indexWhere((c) => c.matchesMac(mac));
+    if (idx != -1) {
+      final existing = _cameras[idx];
+      _cameras[idx] = existing.copyWith(
+        ip: newIp,
+        isOnline: true,
+        lastSeen: DateTime.now(),
+      );
+      await _persist();
+      notifyListeners();
+      return true;
+    }
+    return false;
   }
 
   Future<void> updateCamera(CameraDevice camera) async {

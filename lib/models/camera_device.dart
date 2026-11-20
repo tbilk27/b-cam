@@ -36,8 +36,28 @@ class CameraDevice {
     this.lastSeen,
     this.isFavorite = false,
     this.location = 'Geral',
-    this.macAddress,
-  });
+    String? macAddress,
+  }) : macAddress = normalizeMac(macAddress);
+
+  /// Standardizes MAC address into uppercase colon-separated format: AA:BB:CC:DD:EE:FF
+  static String? normalizeMac(String? raw) {
+    if (raw == null) return null;
+    final clean = raw.replaceAll(RegExp(r'[^a-fA-F0-9]'), '').toUpperCase();
+    if (clean.length == 12) {
+      return '${clean.substring(0, 2)}:${clean.substring(2, 4)}:${clean.substring(4, 6)}:${clean.substring(6, 8)}:${clean.substring(8, 10)}:${clean.substring(10, 12)}';
+    }
+    return clean.isNotEmpty ? clean : null;
+  }
+
+  /// Whether this camera has the same physical identity (MAC address takes priority over IP)
+  bool matchesMac(String? otherMac) {
+    final normA = normalizeMac(macAddress);
+    final normB = normalizeMac(otherMac);
+    if (normA != null && normB != null) {
+      return normA == normB;
+    }
+    return false;
+  }
 
   /// Computes the actual RTSP stream URL to play
   String get streamUrl {

@@ -57,4 +57,28 @@ void main() {
       expect(cam.maskedStreamUrl, 'rtsp://custom:******@custom.local:8554/live');
     });
   });
+
+  group('MAC Address Binding & DHCP Resilience tests', () {
+    test('normalizeMac standardizes various MAC formats', () {
+      expect(CameraDevice.normalizeMac('98:2a:0a:89:56:62'), '98:2A:0A:89:56:62');
+      expect(CameraDevice.normalizeMac('98-2A-0A-89-56-62'), '98:2A:0A:89:56:62');
+      expect(CameraDevice.normalizeMac('982a0a895662'), '98:2A:0A:89:56:62');
+      expect(CameraDevice.normalizeMac('18:0d:2c:5d:96:fe'), '18:0D:2C:5D:96:FE');
+      expect(CameraDevice.normalizeMac(null), isNull);
+    });
+
+    test('matchesMac recognizes same physical hardware with different IP and formatting', () {
+      final cam = CameraDevice(
+        id: 'cam-alpha',
+        name: 'Portão Principal',
+        ip: '192.168.3.74',
+        macAddress: '98:2A:0A:89:56:62',
+      );
+
+      // Router rebooted and DHCP assigned 192.168.3.210
+      expect(cam.matchesMac('98:2a:0a:89:56:62'), isTrue);
+      expect(cam.matchesMac('98-2A-0A-89-56-62'), isTrue);
+      expect(cam.matchesMac('18:0D:2C:5D:96:FE'), isFalse);
+    });
+  });
 }

@@ -369,6 +369,14 @@ class _HomeScreenState extends State<HomeScreen> {
                           color: Colors.white60,
                         ),
                       ),
+                      if (cam.macAddress != null)
+                        Text(
+                          'MAC: ${cam.macAddress}',
+                          style: GoogleFonts.robotoMono(
+                            fontSize: 10,
+                            color: GtaColors.electricCyan.withOpacity(0.7),
+                          ),
+                        ),
                     ],
                   ),
                 ),

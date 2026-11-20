@@ -68,12 +68,27 @@ class _ScanScreenState extends State<ScanScreen> {
           });
         }
       },
-      onDone: () {
+      onDone: () async {
         if (mounted) {
-          setState(() {
-            _isScanning = false;
-            _progress = 1.0;
-          });
+          final healedCount = await context.read<CameraStorageService>().autoReconcileDevices(_discoveredCameras);
+          if (mounted) {
+            setState(() {
+              _isScanning = false;
+              _progress = 1.0;
+            });
+            if (healedCount > 0) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  backgroundColor: GtaColors.bgCard,
+                  behavior: SnackBarBehavior.floating,
+                  content: Text(
+                    'Auto-cura DHCP: $healedCount câmera(s) re-vinculadas pelo endereço MAC!',
+                    style: GoogleFonts.rajdhani(color: GtaColors.statusOnline, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              );
+            }
+          }
         }
       },
     );
@@ -396,6 +411,15 @@ class _ScanScreenState extends State<ScanScreen> {
                                             color: GtaColors.electricCyan,
                                           ),
                                         ),
+                                        if (scan.macAddress != null)
+                                          Text(
+                                            'MAC: ${scan.macAddress} (ID Físico Permanente)',
+                                            style: GoogleFonts.robotoMono(
+                                              fontSize: 10,
+                                              color: GtaColors.sunsetYellow,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
                                         Text(
                                           'Detecção: ${scan.detectionSource}',
                                           style: GoogleFonts.rajdhani(
