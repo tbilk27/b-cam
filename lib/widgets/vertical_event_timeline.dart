@@ -275,29 +275,35 @@ class _VerticalEventTimelineState extends State<VerticalEventTimeline> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: event.type.color.withValues(alpha: 0.16),
-                              borderRadius: BorderRadius.circular(4),
-                              border: Border.all(color: event.type.color.withValues(alpha: 0.5), width: 0.8),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(event.type.icon, size: 11, color: event.type.color),
-                                const SizedBox(width: 4),
-                                Text(
-                                  event.type.label,
-                                  style: GoogleFonts.inter(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w700,
-                                    color: event.type.color,
+                          Flexible(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: event.type.color.withValues(alpha: 0.16),
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(color: event.type.color.withValues(alpha: 0.5), width: 0.8),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(event.type.icon, size: 11, color: event.type.color),
+                                  const SizedBox(width: 4),
+                                  Flexible(
+                                    child: Text(
+                                      event.type.label,
+                                      style: GoogleFonts.inter(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w700,
+                                        color: event.type.color,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
+                          const SizedBox(width: 6),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
                             decoration: BoxDecoration(
@@ -339,7 +345,7 @@ class _VerticalEventTimelineState extends State<VerticalEventTimeline> {
 
                       // Simulated Video Clip Snapshot Bar
                       Container(
-                        height: 48,
+                        padding: const EdgeInsets.all(4),
                         decoration: BoxDecoration(
                           color: const Color(0xFF141418),
                           borderRadius: BorderRadius.circular(6),
@@ -348,11 +354,11 @@ class _VerticalEventTimelineState extends State<VerticalEventTimeline> {
                         child: Row(
                           children: [
                             Container(
-                              width: 60,
-                              height: double.infinity,
-                              decoration: const BoxDecoration(
-                                color: Color(0x8A000000),
-                                borderRadius: BorderRadius.horizontal(left: Radius.circular(5)),
+                              width: 52,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: const Color(0x8A000000),
+                                borderRadius: BorderRadius.circular(4),
                               ),
                               child: Center(
                                 child: Stack(
