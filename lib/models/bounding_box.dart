@@ -29,6 +29,12 @@ class BoundingBox {
     );
   }
 
+  /// Confidence expressed as integer percentage (0-100)
+  int get confidencePercent => (confidence * 100).round();
+
+  /// Formatted assertiveness string (e.g., '94%')
+  String get assertivenessFormatted => '$confidencePercent%';
+
   /// Resolved color with fallback based on object class
   Color get displayColor {
     if (colorHex != null && colorHex!.isNotEmpty) {

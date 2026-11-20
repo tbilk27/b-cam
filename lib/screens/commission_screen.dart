@@ -41,6 +41,7 @@ class _CommissionScreenState extends State<CommissionScreen> {
   int _selectedSubType = 0; // 0 = Main, 1 = Sub
   bool _testingStream = false;
   bool _isManualCustomUrl = false;
+  bool _cameraEnabled = true;
 
   // AI Event Recognition & Confidence Threshold Configuration
   bool _aiDetectionEnabled = true;
@@ -76,6 +77,7 @@ class _CommissionScreenState extends State<CommissionScreen> {
       _selectedManufacturer = existing.manufacturer;
       _selectedSubType = existing.subType;
       _isManualCustomUrl = existing.customUrl != null && existing.customUrl!.isNotEmpty;
+      _cameraEnabled = existing.isEnabled;
       _aiDetectionEnabled = existing.aiDetectionEnabled;
       _aiMinConfidence = existing.aiMinConfidence;
       _pushNotificationsEnabled = existing.pushNotificationsEnabled;
@@ -131,6 +133,7 @@ class _CommissionScreenState extends State<CommissionScreen> {
       subType: _selectedSubType,
       customUrl: _isManualCustomUrl ? _customUrlController.text.trim() : null,
       location: _locationController.text.trim(),
+      isEnabled: _cameraEnabled,
       macAddress: widget.scanResult?.macAddress ?? widget.existingCamera?.macAddress,
       aiDetectionEnabled: _aiDetectionEnabled,
       aiMinConfidence: _aiMinConfidence,
@@ -358,6 +361,69 @@ class _CommissionScreenState extends State<CommissionScreen> {
                             child: Text(loc, style: GoogleFonts.inter(fontSize: 11)),
                           );
                         }).toList(),
+                      ),
+                      const SizedBox(height: 14),
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: _cameraEnabled
+                              ? BCamTheme.statusOnlineGlow.withValues(alpha: 0.1)
+                              : BCamTheme.statusWarning.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: _cameraEnabled
+                                ? BCamTheme.statusOnlineGlow.withValues(alpha: 0.3)
+                                : BCamTheme.statusWarning.withValues(alpha: 0.3),
+                            width: 0.8,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        _cameraEnabled
+                                            ? FluentIcons.play_solid
+                                            : FluentIcons.circle_stop_solid,
+                                        size: 13,
+                                        color: _cameraEnabled
+                                            ? BCamTheme.statusOnlineGlow
+                                            : BCamTheme.statusWarning,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        _cameraEnabled ? 'Câmera Ativa / Habilitada' : 'Câmera Desativada (Suspensa)',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 12.5,
+                                          fontWeight: FontWeight.w700,
+                                          color: _cameraEnabled
+                                              ? BCamTheme.statusOnlineGlow
+                                              : BCamTheme.statusWarning,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    _cameraEnabled
+                                        ? 'Conexão e retentativas automáticas habilitadas.'
+                                        : 'Retentativas suspensas (sem consumo de rede ou CPU).',
+                                    style: GoogleFonts.inter(fontSize: 10.5, color: BCamTheme.textSecondary),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            ToggleSwitch(
+                              checked: _cameraEnabled,
+                              onChanged: (val) => setState(() => _cameraEnabled = val),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),

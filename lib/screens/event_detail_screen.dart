@@ -6,7 +6,7 @@ import '../models/camera_device.dart';
 import '../models/camera_event.dart';
 import '../services/camera_storage_service.dart';
 import '../theme/fluent_theme.dart';
-import '../widgets/bounding_box_overlay.dart';
+import '../widgets/event_clip_player_view.dart';
 import 'camera_detail_screen.dart';
 
 class EventDetailScreen extends StatefulWidget {
@@ -19,9 +19,6 @@ class EventDetailScreen extends StatefulWidget {
 }
 
 class _EventDetailScreenState extends State<EventDetailScreen> {
-  bool _showBoundingBoxes = true;
-  bool _isPlaying = false;
-
   @override
   Widget build(BuildContext context) {
     final event = widget.event;
@@ -81,7 +78,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                     // Left Pane: Video and Bounding Box Viewer
                     Expanded(
                       flex: 56,
-                      child: _buildVideoView(event),
+                      child: _buildVideoView(event, camera),
                     ),
                     const SizedBox(width: 14),
                     // Right Pane: AI Interpretation, Detections, Actions
@@ -108,7 +105,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildVideoView(event),
+                    _buildVideoView(event, camera),
                     const SizedBox(height: 16),
                     _buildAiCard(event),
                     const SizedBox(height: 12),
@@ -122,7 +119,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     );
   }
 
-  Widget _buildVideoView(CameraEvent event) {
+  Widget _buildVideoView(CameraEvent event, CameraDevice? camera) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.black,
@@ -139,132 +136,10 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
       clipBehavior: Clip.antiAlias,
       child: AspectRatio(
         aspectRatio: 16 / 9,
-        child: Stack(
-          children: [
-            // Simulated Clip Background with BoundingBoxOverlay
-            Positioned.fill(
-              child: BoundingBoxOverlay(
-                boundingBoxes: _showBoundingBoxes ? event.boundingBoxes : const [],
-                minConfidenceThreshold: 0.25,
-                child: Container(
-                  color: const Color(0xFF141418),
-                  child: Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          _isPlaying ? FluentIcons.pause : FluentIcons.play,
-                          size: 44,
-                          color: BCamTheme.accentLightBlue,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          _isPlaying ? 'Reproduzindo Gravação do Evento' : 'Buffer NVR: ${event.durationFormatted}',
-                          style: GoogleFonts.inter(fontSize: 12, color: BCamTheme.textSecondary),
-                        ),
-                        Text(
-                          'Gravação Local Criptografada',
-                          style: GoogleFonts.robotoMono(fontSize: 10, color: BCamTheme.textTertiary),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-
-            // Overlay Controls Header
-            Positioned(
-              top: 8,
-              left: 8,
-              right: 8,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: const Color(0xD91B1B1F),
-                      borderRadius: BorderRadius.circular(4),
-                      border: Border.all(color: event.type.color.withValues(alpha: 0.6), width: 0.8),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(event.type.icon, size: 12, color: event.type.color),
-                        const SizedBox(width: 4),
-                        Text(
-                          'IA: ${(event.confidence * 100).toInt()}% CERTEZA',
-                          style: GoogleFonts.robotoMono(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
-                            color: event.type.color,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Toggle Bounding Boxes Button
-                  Button(
-                    style: ButtonStyle(
-                      padding: WidgetStateProperty.all(const EdgeInsets.symmetric(horizontal: 8, vertical: 4)),
-                      backgroundColor: WidgetStateProperty.all(
-                        _showBoundingBoxes ? BCamTheme.accentBlue.withValues(alpha: 0.3) : const Color(0xD91B1B1F),
-                      ),
-                    ),
-                    onPressed: () {
-                      setState(() {
-                        _showBoundingBoxes = !_showBoundingBoxes;
-                      });
-                    },
-                    child: Row(
-                      children: [
-                        Icon(
-                          _showBoundingBoxes ? FluentIcons.checkbox_composite : FluentIcons.checkbox,
-                          size: 12,
-                          color: _showBoundingBoxes ? BCamTheme.accentLightBlue : BCamTheme.textSecondary,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Bounding Boxes',
-                          style: GoogleFonts.inter(fontSize: 10, color: Colors.white),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Play/Pause Bottom Bar
-            Positioned(
-              bottom: 8,
-              left: 8,
-              right: 8,
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: Icon(_isPlaying ? FluentIcons.pause : FluentIcons.play, color: Colors.white, size: 16),
-                    onPressed: () {
-                      setState(() {
-                        _isPlaying = !_isPlaying;
-                      });
-                    },
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: ProgressBar(
-                      value: _isPlaying ? 65 : 0,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    event.durationFormatted,
-                    style: GoogleFonts.robotoMono(fontSize: 11, color: Colors.white),
-                  ),
-                ],
-              ),
-            ),
-          ],
+        child: EventClipPlayerView(
+          event: event,
+          camera: camera,
+          autoPlay: true,
         ),
       ),
     );

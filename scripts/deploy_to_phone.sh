@@ -8,8 +8,8 @@ set -e
 
 PHONE_IP="192.168.3.13"
 APK_PATH="dist/b-cam-arm64.apk"
-PACKAGE_NAME="com.bcam.bcam"
-ACTIVITY_NAME="com.bcam.bcam.MainActivity"
+PACKAGE_NAME="com.nexeoo.bcam"
+ACTIVITY_NAME="com.nexeoo.bcam.MainActivity"
 DIAG_PORT=8089
 
 echo "[OTA] ========================================================="

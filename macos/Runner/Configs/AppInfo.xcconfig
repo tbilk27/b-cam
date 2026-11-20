@@ -8,7 +8,7 @@
 PRODUCT_NAME = bcam
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = com.bcam.bcam
+PRODUCT_BUNDLE_IDENTIFIER = com.nexeoo.bcam
 
 // The copyright displayed in application information
 PRODUCT_COPYRIGHT = Copyright © 2026 com.bcam. All rights reserved.

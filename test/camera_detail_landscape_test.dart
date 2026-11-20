@@ -75,7 +75,8 @@ void main() {
       expect(find.text('Gravação'), findsOneWidget);
       expect(find.text('Definição'), findsOneWidget);
       expect(find.text('Suspensão'), findsOneWidget);
-      expect(find.text('PTZ Virtual'), findsOneWidget);
+      expect(find.text('Zona Exclusão'), findsOneWidget);
+      expect(find.text('PTZ Virtual'), findsNothing);
     });
 
     testWidgets('CameraDetailScreen renders responsive dual-pane layout in landscape mode', (tester) async {

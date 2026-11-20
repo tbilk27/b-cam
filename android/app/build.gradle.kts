@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.bcam.bcam"
+    namespace = "com.nexeoo.bcam"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -20,8 +20,8 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.bcam.bcam"
+        // Application ID based on domain nexeoo.com (bcam.nexeoo.com -> com.nexeoo.bcam)
+        applicationId = "com.nexeoo.bcam"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = 24

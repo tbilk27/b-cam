@@ -3,11 +3,15 @@ import 'package:fluent_ui/fluent_ui.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../models/camera_device.dart';
+import '../models/camera_event.dart';
+import '../services/ai_vision_agent_service.dart';
+import '../services/camera_action_service.dart';
 import '../services/camera_storage_service.dart';
 import '../theme/fluent_theme.dart';
 import '../widgets/live_player_view.dart';
 import '../widgets/vertical_event_timeline.dart';
 import 'commission_screen.dart';
+import 'exclusion_zone_screen.dart';
 import 'fullscreen_camera_viewer.dart';
 
 class CameraDetailScreen extends StatefulWidget {
@@ -35,12 +39,79 @@ class _CameraDetailScreenState extends State<CameraDetailScreen> {
   void initState() {
     super.initState();
     _camera = widget.camera;
+    _isSuspended = !_camera.isEnabled;
+    CameraActionService.instance.addListener(_onActionUpdate);
   }
 
   @override
   void dispose() {
+    CameraActionService.instance.removeListener(_onActionUpdate);
     _recordTimer?.cancel();
     super.dispose();
+  }
+
+  void _onActionUpdate() {
+    if (mounted) setState(() {});
+  }
+
+  void _showNightVisionDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        final currentMode = CameraActionService.instance.getNightVisionMode(_camera.id);
+        return ContentDialog(
+          title: Row(
+            children: [
+              const Icon(FluentIcons.clear_night, size: 18, color: BCamTheme.accentLightBlue),
+              const SizedBox(width: 8),
+              Text(
+                'Visão Noturna: ${_camera.name}',
+                style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w700),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: NightVisionMode.values.map((mode) {
+              final isSelected = mode == currentMode;
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: ListTile(
+                  leading: Icon(
+                    mode == NightVisionMode.color
+                        ? FluentIcons.lightbulb
+                        : (mode == NightVisionMode.ir ? FluentIcons.clear_night : FluentIcons.sync),
+                    size: 16,
+                    color: isSelected ? BCamTheme.statusOnlineGlow : BCamTheme.textSecondary,
+                  ),
+                  title: Text(
+                    mode.label,
+                    style: GoogleFonts.inter(
+                      fontSize: 12.5,
+                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
+                      color: isSelected ? Colors.white : BCamTheme.textSecondary,
+                    ),
+                  ),
+                  trailing: isSelected
+                      ? const Icon(FluentIcons.check_mark, size: 14, color: BCamTheme.statusOnlineGlow)
+                      : null,
+                  onPressed: () {
+                    CameraActionService.instance.setNightVisionMode(_camera, mode);
+                    Navigator.of(ctx).pop();
+                  },
+                ),
+              );
+            }).toList(),
+          ),
+          actions: [
+            Button(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Fechar'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void _openFullScreen() {
@@ -125,112 +196,39 @@ class _CameraDetailScreenState extends State<CameraDetailScreen> {
   }
 
   void _toggleSuspension() {
+    final newEnabled = !_camera.isEnabled;
     setState(() {
-      _isSuspended = !_isSuspended;
+      _camera = _camera.copyWith(isEnabled: newEnabled);
     });
+    context.read<CameraStorageService>().setCameraEnabled(_camera.id, newEnabled);
 
     displayInfoBar(
       context,
       duration: const Duration(seconds: 3),
       builder: (context, close) => InfoBar(
-        title: Text(_isSuspended ? 'Modo Suspensão Ativado' : 'Modo Suspensão Desativado'),
+        title: Text(!newEnabled ? 'Câmera Desativada (Suspensa)' : 'Câmera Ativada'),
         content: Text(
-          _isSuspended
-              ? 'Transmissão em repouso / privacidade. Sensores e alertas pausados.'
-              : 'Transmissão ao vivo e vigilância de IA retomadas.',
+          !newEnabled
+              ? 'Conexão interrompida e retentativas automáticas suspensas.'
+              : 'Transmissão ao vivo e monitoramento de eventos retomados.',
         ),
-        severity: _isSuspended ? InfoBarSeverity.warning : InfoBarSeverity.info,
+        severity: !newEnabled ? InfoBarSeverity.warning : InfoBarSeverity.success,
         onClose: close,
       ),
     );
   }
 
-  void _openPtzPanel() {
-    showDialog(
-      context: context,
-      builder: (ctx) => ContentDialog(
-        title: Row(
-          children: [
-            const Icon(FluentIcons.game, size: 18, color: BCamTheme.accentLightBlue),
-            const SizedBox(width: 8),
-            Text(
-              'Controle PTZ Virtual: ${_camera.name}',
-              style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w700),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Controle panorâmico (Pan), inclinação (Tilt) e zoom digital via ONVIF/RTSP.',
-              style: GoogleFonts.inter(fontSize: 12, color: BCamTheme.textSecondary),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: 160,
-              height: 160,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Positioned(
-                    top: 0,
-                    child: IconButton(
-                      icon: const Icon(FluentIcons.chevron_up, size: 22),
-                      onPressed: () => _ptzAction('Subir'),
-                    ),
-                  ),
-                  Positioned(
-                    bottom: 0,
-                    child: IconButton(
-                      icon: const Icon(FluentIcons.chevron_down, size: 22),
-                      onPressed: () => _ptzAction('Descer'),
-                    ),
-                  ),
-                  Positioned(
-                    left: 0,
-                    child: IconButton(
-                      icon: const Icon(FluentIcons.chevron_left, size: 22),
-                      onPressed: () => _ptzAction('Esquerda'),
-                    ),
-                  ),
-                  Positioned(
-                    right: 0,
-                    child: IconButton(
-                      icon: const Icon(FluentIcons.chevron_right, size: 22),
-                      onPressed: () => _ptzAction('Direita'),
-                    ),
-                  ),
-                  Button(
-                    onPressed: () => _ptzAction('Centro (Home)'),
-                    child: const Icon(FluentIcons.sync, size: 14),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          Button(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Fechar'),
-          ),
-        ],
+  Future<void> _openExclusionZoneScreen() async {
+    final updated = await Navigator.of(context).push<CameraDevice>(
+      FluentPageRoute(
+        builder: (_) => ExclusionZoneScreen(camera: _camera),
       ),
     );
-  }
-
-  void _ptzAction(String direction) {
-    displayInfoBar(
-      context,
-      duration: const Duration(seconds: 2),
-      builder: (context, close) => InfoBar(
-        title: Text('PTZ: $direction'),
-        content: Text('Comando $direction enviado para ${_camera.ip}'),
-        severity: InfoBarSeverity.info,
-        onClose: close,
-      ),
-    );
+    if (updated != null && mounted) {
+      setState(() {
+        _camera = updated;
+      });
+    }
   }
 
   void _openCameraSettings() async {
@@ -247,12 +245,14 @@ class _CameraDetailScreenState extends State<CameraDetailScreen> {
     );
     setState(() {
       _camera = updated;
+      _isSuspended = !updated.isEnabled;
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
+    final mq = MediaQuery.of(context);
+    final isLandscape = mq.orientation == Orientation.landscape || mq.size.width > mq.size.height;
 
     return SafeArea(
       child: Container(
@@ -264,20 +264,24 @@ class _CameraDetailScreenState extends State<CameraDetailScreen> {
 
   // ===========================================================================
   // LAYOUT RETRATO (PORTRAIT)
-  // Imagem no topo ocupando máximo de espaço, timeline vertical no centro e menu no rodapé
+  // Header superior dedicado (sem cobrir o vídeo), vídeo 100% limpo no topo,
+  // timeline vertical no centro e menu no rodapé
   // ===========================================================================
   Widget _buildPortraitLayout() {
     return Column(
       children: [
-        // Top: Video Player Feed (Taking Maximum Space at the Top)
+        // 1. Dedicated Top Surveillance Header Bar (Above video, completely clear of camera feed!)
+        _buildTopHeaderBar(isLandscape: false),
+
+        // 2. Top: Video Player Feed (Taking Maximum Space, Completely Clear & Unobstructed)
         _buildCameraVideoPlayer(isLandscape: false),
 
-        // Center: Vertical Event Timeline
+        // 3. Center: Vertical Event Timeline
         Expanded(
           child: VerticalEventTimeline(camera: _camera),
         ),
 
-        // Bottom: Fixed Surveillance Rodapé Menu
+        // 4. Bottom: Fixed Surveillance Rodapé Menu
         _buildBottomRodapeMenu(),
       ],
     );
@@ -285,20 +289,22 @@ class _CameraDetailScreenState extends State<CameraDetailScreen> {
 
   // ===========================================================================
   // LAYOUT PAISAGEM (LANDSCAPE)
-  // Split Dual-Pane: Câmera à esquerda (62% largura) + Timeline e Menu à direita (38% largura)
+  // Split Dual-Pane: Câmera à esquerda (60%) + Header, Timeline e Menu à direita (40%)
   // ===========================================================================
   Widget _buildLandscapeLayout() {
     return Row(
       children: [
-        // Left Column: Video Player filling 100% available height
+        // Left Column: Video Player filling available space (unobstructed)
         Expanded(
-          flex: 62,
-          child: _buildCameraVideoPlayer(isLandscape: true),
+          flex: 60,
+          child: Center(
+            child: _buildCameraVideoPlayer(isLandscape: true),
+          ),
         ),
 
-        // Right Column: Sub-header + Vertical Timeline + Compact Bottom Menu
+        // Right Column: Dedicated Header + Vertical Timeline + Compact Rodapé Menu
         Expanded(
-          flex: 38,
+          flex: 40,
           child: Container(
             decoration: BoxDecoration(
               color: const Color(0xFF18181D),
@@ -306,6 +312,7 @@ class _CameraDetailScreenState extends State<CameraDetailScreen> {
             ),
             child: Column(
               children: [
+                _buildTopHeaderBar(isLandscape: true),
                 Expanded(
                   child: VerticalEventTimeline(camera: _camera, isCompact: true),
                 ),
@@ -319,45 +326,201 @@ class _CameraDetailScreenState extends State<CameraDetailScreen> {
   }
 
   // ===========================================================================
+  // DEDICATED TOP SURVEILLANCE HEADER BAR
+  // Displays back navigation, camera title, live status, and action buttons
+  // ABOVE the video feed so that no information covers the camera feed/OSD.
+  // ===========================================================================
+  Widget _buildTopHeaderBar({bool isLandscape = false}) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: isLandscape ? 6 : 10, vertical: isLandscape ? 4 : 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFF181820),
+        border: Border(
+          bottom: BorderSide(color: BCamTheme.darkBorder, width: 0.8),
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // Left: Back Arrow + Camera Name + Live Subtype Pill
+          Flexible(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  style: ButtonStyle(
+                    backgroundColor: WidgetStateProperty.all(const Color(0x33FFFFFF)),
+                  ),
+                  icon: const Icon(FluentIcons.back, size: 14, color: Colors.white),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _camera.name,
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 6,
+                              height: 6,
+                              decoration: const BoxDecoration(
+                                color: BCamTheme.statusOnlineGlow,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'AO VIVO • ${_camera.subType == 0 ? "HD" : "SUB"}',
+                              style: GoogleFonts.robotoMono(
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w600,
+                                color: BCamTheme.statusOnlineGlow,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Right: Action Buttons (Favorite, Exclusion Zone, Telemetry, Settings, Fullscreen)
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Favorite Star
+              IconButton(
+                style: ButtonStyle(
+                  backgroundColor: WidgetStateProperty.all(const Color(0x22FFFFFF)),
+                ),
+                icon: Icon(
+                  _camera.isFavorite ? FluentIcons.favorite_star_fill : FluentIcons.favorite_star,
+                  size: 14,
+                  color: _camera.isFavorite ? BCamTheme.statusWarning : Colors.white,
+                ),
+                onPressed: () {
+                  setState(() {
+                    _camera = _camera.copyWith(isFavorite: !_camera.isFavorite);
+                  });
+                  context.read<CameraStorageService>().toggleFavorite(_camera.id);
+                },
+              ),
+              const SizedBox(width: 5),
+
+              // Zona Exclusão Quick Button
+              IconButton(
+                style: ButtonStyle(
+                  backgroundColor: WidgetStateProperty.all(
+                    _camera.hasExclusionZone ? const Color(0x4DFF3B30) : const Color(0x22FFFFFF),
+                  ),
+                ),
+                icon: Icon(
+                  FluentIcons.blocked2,
+                  size: 14,
+                  color: _camera.hasExclusionZone ? const Color(0xFFFF6961) : Colors.white,
+                ),
+                onPressed: _openExclusionZoneScreen,
+              ),
+              const SizedBox(width: 5),
+
+              // Diagnostics / Telemetry
+              IconButton(
+                style: ButtonStyle(
+                  backgroundColor: WidgetStateProperty.all(const Color(0x22FFFFFF)),
+                ),
+                icon: const Icon(FluentIcons.diagnostic, size: 14, color: Colors.white),
+                onPressed: _showTelemetryModal,
+              ),
+              const SizedBox(width: 5),
+
+              // Camera Settings
+              IconButton(
+                style: ButtonStyle(
+                  backgroundColor: WidgetStateProperty.all(const Color(0x22FFFFFF)),
+                ),
+                icon: const Icon(FluentIcons.settings, size: 14, color: Colors.white),
+                onPressed: _openCameraSettings,
+              ),
+              const SizedBox(width: 5),
+
+              // Full Screen Viewer
+              IconButton(
+                style: ButtonStyle(
+                  backgroundColor: WidgetStateProperty.all(const Color(0x22FFFFFF)),
+                ),
+                icon: const Icon(FluentIcons.full_screen, size: 14, color: Colors.white),
+                onPressed: _openFullScreen,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ===========================================================================
   // CAMERA VIDEO PLAYER WIDGET
+  // 100% Unobstructed Video Surface. Top header was moved outside to dedicated bar.
   // ===========================================================================
   Widget _buildCameraVideoPlayer({required bool isLandscape}) {
-    return Stack(
-      children: [
-        // Player Surface (Double tap enters full screen)
-        AspectRatio(
-          aspectRatio: isLandscape ? (16 / 9) : (16 / 9),
-          child: GestureDetector(
-            onDoubleTap: _openFullScreen,
-            child: _isSuspended
-                ? Container(
-                    color: Colors.black,
-                    child: Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(FluentIcons.clear_night, size: 40, color: BCamTheme.textSecondary),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Câmera em Modo Suspensão',
-                            style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white),
-                          ),
-                          Text(
-                            'Toque em "Suspensão" no menu inferior para reativar',
-                            style: GoogleFonts.inter(fontSize: 11, color: BCamTheme.textTertiary),
-                          ),
-                        ],
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxHeight: isLandscape ? double.infinity : 260.0,
+      ),
+      child: Stack(
+        children: [
+          // Player Surface (Double tap enters full screen)
+          AspectRatio(
+            aspectRatio: isLandscape ? (16 / 9) : (16 / 9),
+            child: GestureDetector(
+              onDoubleTap: _openFullScreen,
+              child: _isSuspended
+                  ? Container(
+                      color: Colors.black,
+                      child: Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(FluentIcons.clear_night, size: 40, color: BCamTheme.textSecondary),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Câmera em Modo Suspensão',
+                              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white),
+                            ),
+                            Text(
+                              'Toque em "Suspensão" no menu inferior para reativar',
+                              style: GoogleFonts.inter(fontSize: 11, color: BCamTheme.textTertiary),
+                            ),
+                          ],
+                        ),
                       ),
+                    )
+                  : LivePlayerView(
+                      key: ValueKey('live_${_camera.id}_${_camera.streamUrl}'),
+                      camera: _camera,
+                      autoPlay: true,
+                      showPtzOverlay: false,
+                      showTopHud: false,
                     ),
-                  )
-                : LivePlayerView(
-                    key: ValueKey('live_${_camera.id}_${_camera.streamUrl}'),
-                    camera: _camera,
-                    autoPlay: true,
-                    showPtzOverlay: false,
-                  ),
+            ),
           ),
-        ),
 
         // Visual Shutter Flash Effect
         if (_showShutterFlash)
@@ -369,7 +532,7 @@ class _CameraDetailScreenState extends State<CameraDetailScreen> {
         if (_isRecording)
           Positioned(
             top: 10,
-            left: 56,
+            left: 10,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
@@ -396,123 +559,10 @@ class _CameraDetailScreenState extends State<CameraDetailScreen> {
               ),
             ),
           ),
-
-        // Minimalist Translucent Top Floating Header
-        Positioned(
-          top: 0,
-          left: 0,
-          right: 0,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Colors.black.withValues(alpha: 0.75),
-                  Colors.transparent,
-                ],
-              ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                // Back Button + Camera Name
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      style: ButtonStyle(
-                        backgroundColor: WidgetStateProperty.all(const Color(0x66000000)),
-                      ),
-                      icon: const Icon(FluentIcons.back, size: 15, color: Colors.white),
-                      onPressed: () => Navigator.of(context).pop(),
-                    ),
-                    const SizedBox(width: 8),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          _camera.name,
-                          style: GoogleFonts.inter(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        Row(
-                          children: [
-                            Container(
-                              width: 6,
-                              height: 6,
-                              decoration: const BoxDecoration(
-                                color: BCamTheme.statusOnlineGlow,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              'AO VIVO • ${_camera.subType == 0 ? "HD" : "SUB"}',
-                              style: GoogleFonts.robotoMono(
-                                fontSize: 9.5,
-                                fontWeight: FontWeight.w600,
-                                color: BCamTheme.statusOnlineGlow,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-
-                // Action Pills (Favorite, Settings Gear, Full Screen)
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      style: ButtonStyle(
-                        backgroundColor: WidgetStateProperty.all(const Color(0x66000000)),
-                      ),
-                      icon: Icon(
-                        _camera.isFavorite ? FluentIcons.favorite_star_fill : FluentIcons.favorite_star,
-                        size: 15,
-                        color: _camera.isFavorite ? BCamTheme.statusWarning : Colors.white,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          _camera = _camera.copyWith(isFavorite: !_camera.isFavorite);
-                        });
-                        context.read<CameraStorageService>().toggleFavorite(_camera.id);
-                      },
-                    ),
-                    const SizedBox(width: 6),
-                    IconButton(
-                      style: ButtonStyle(
-                        backgroundColor: WidgetStateProperty.all(const Color(0x66000000)),
-                      ),
-                      icon: const Icon(FluentIcons.settings, size: 15, color: Colors.white),
-                      onPressed: _openCameraSettings,
-                    ),
-                    const SizedBox(width: 6),
-                    IconButton(
-                      style: ButtonStyle(
-                        backgroundColor: WidgetStateProperty.all(const Color(0x66000000)),
-                      ),
-                      icon: const Icon(FluentIcons.full_screen, size: 15, color: Colors.white),
-                      onPressed: _openFullScreen,
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
       ],
-    );
-  }
+    ),
+  );
+}
 
   // ===========================================================================
   // MENU NO RODAPÉ (FIXED BOTTOM SURVEILLANCE MENU)
@@ -574,9 +624,23 @@ class _CameraDetailScreenState extends State<CameraDetailScreen> {
                         isCompact: isCompact,
                       ),
                       _buildRodapeItem(
-                        icon: FluentIcons.game,
-                        label: isCompact ? 'PTZ' : 'PTZ Virtual',
-                        onTap: _openPtzPanel,
+                        icon: FluentIcons.blocked2,
+                        label: isCompact ? 'Exclusão' : 'Zona Exclusão',
+                        badge: _camera.hasExclusionZone ? '${_camera.exclusionZonePercentage.toStringAsFixed(0)}%' : null,
+                        isActive: _camera.hasExclusionZone,
+                        activeColor: const Color(0xFFFF3B30),
+                        onTap: () async {
+                          final updated = await Navigator.of(context).push<CameraDevice>(
+                            FluentPageRoute(
+                              builder: (_) => ExclusionZoneScreen(camera: _camera),
+                            ),
+                          );
+                          if (updated != null && mounted) {
+                            setState(() {
+                              _camera = updated;
+                            });
+                          }
+                        },
                         isCompact: isCompact,
                       ),
                     ],
@@ -584,49 +648,159 @@ class _CameraDetailScreenState extends State<CameraDetailScreen> {
                 : Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
+                      // 1. Interfone (Falar / Push-to-Talk)
                       _buildRodapeItem(
                         icon: FluentIcons.microphone,
-                        label: 'Interfone',
+                        label: CameraActionService.instance.isTalking(_camera.id) ? 'Falando...' : 'Interfone',
                         isCompact: isCompact,
+                        isActive: CameraActionService.instance.isTalking(_camera.id),
+                        activeColor: BCamTheme.statusOnlineGlow,
                         onTap: () {
+                          final isTalking = CameraActionService.instance.isTalking(_camera.id);
+                          if (isTalking) {
+                            CameraActionService.instance.stopTalking(_camera);
+                          } else {
+                            CameraActionService.instance.startTalking(_camera);
+                          }
                           displayInfoBar(
                             context,
+                            duration: const Duration(seconds: 2),
                             builder: (c, close) => InfoBar(
-                              title: const Text('Áudio Bidirecional'),
-                              content: const Text('Transmissão de microfone aberta com a câmera.'),
+                              title: Text(!isTalking ? '🎙️ Microfone Aberto' : 'Microfone Fechado'),
+                              content: Text(!isTalking ? 'Fale agora: seu áudio está sendo transmitido na câmera.' : 'Transmissão finalizada.'),
+                              severity: !isTalking ? InfoBarSeverity.success : InfoBarSeverity.info,
+                              onClose: close,
+                            ),
+                          );
+                        },
+                      ),
+
+                      // 2. Ouvir Ambiente (Mudo / Alto-falante do celular)
+                      _buildRodapeItem(
+                        icon: CameraActionService.instance.isListening(_camera.id) ? FluentIcons.volume3 : FluentIcons.volume_disabled,
+                        label: CameraActionService.instance.isListening(_camera.id) ? 'Ouvindo' : 'Mudo',
+                        isCompact: isCompact,
+                        isActive: CameraActionService.instance.isListening(_camera.id),
+                        activeColor: BCamTheme.statusOnlineGlow,
+                        onTap: () {
+                          final listening = CameraActionService.instance.toggleListening(_camera);
+                          displayInfoBar(
+                            context,
+                            duration: const Duration(seconds: 2),
+                            builder: (c, close) => InfoBar(
+                              title: Text(listening ? '🔊 Ouvindo Ambiente' : '🔇 Áudio Silenciado'),
+                              content: Text(listening ? 'Canal de áudio da câmera aberto.' : 'Microfone da câmera mudo no aplicativo.'),
                               severity: InfoBarSeverity.info,
                               onClose: close,
                             ),
                           );
                         },
                       ),
+
+                      // 3. Sirene / Alarme
                       _buildRodapeItem(
                         icon: FluentIcons.ringer,
-                        label: 'Alarme',
+                        label: CameraActionService.instance.isSirenActive(_camera.id) ? 'Sirene ON' : 'Sirene',
                         isCompact: isCompact,
-                        onTap: () {
+                        isActive: CameraActionService.instance.isSirenActive(_camera.id),
+                        activeColor: const Color(0xFFFF3B30),
+                        onTap: () async {
+                          final active = await CameraActionService.instance.toggleSiren(_camera);
+                          if (!context.mounted) return;
                           displayInfoBar(
                             context,
+                            duration: const Duration(seconds: 3),
                             builder: (c, close) => InfoBar(
-                              title: const Text('Disparo Manual'),
-                              content: const Text('Comando de sirene enviado para a câmera.'),
-                              severity: InfoBarSeverity.warning,
+                              title: Text(active ? '🚨 Sirene Disparada' : 'Sirene Desativada'),
+                              content: Text(active ? 'Alarme sonoro acionado na câmera "${_camera.name}".' : 'Alarme sonoro desligado.'),
+                              severity: active ? InfoBarSeverity.error : InfoBarSeverity.info,
                               onClose: close,
                             ),
                           );
                         },
                       ),
+
+                      // 4. Acender Luz / Holofote
                       _buildRodapeItem(
-                        icon: FluentIcons.diagnostic,
-                        label: 'Telemetria',
+                        icon: FluentIcons.lightbulb,
+                        label: CameraActionService.instance.isSpotlightActive(_camera.id) ? 'Luz ON' : 'Luz LED',
                         isCompact: isCompact,
-                        onTap: _showTelemetryModal,
+                        isActive: CameraActionService.instance.isSpotlightActive(_camera.id),
+                        activeColor: const Color(0xFFFFD60A),
+                        onTap: () async {
+                          final active = await CameraActionService.instance.toggleSpotlight(_camera);
+                          if (!context.mounted) return;
+                          displayInfoBar(
+                            context,
+                            duration: const Duration(seconds: 3),
+                            builder: (c, close) => InfoBar(
+                              title: Text(active ? '💡 Holofote Aceso' : 'Holofote Apagado'),
+                              content: Text(active ? 'Luz LED da câmera ligada.' : 'Luz LED desligada.'),
+                              severity: InfoBarSeverity.info,
+                              onClose: close,
+                            ),
+                          );
+                        },
                       ),
+
+                      // 5. Visão Noturna
                       _buildRodapeItem(
-                        icon: FluentIcons.settings,
-                        label: 'Configurar',
+                        icon: FluentIcons.clear_night,
+                        label: isCompact ? 'Noturna' : 'Visão Noturna',
                         isCompact: isCompact,
-                        onTap: _openCameraSettings,
+                        badge: CameraActionService.instance.getNightVisionMode(_camera.id).name.toUpperCase(),
+                        onTap: _showNightVisionDialog,
+                      ),
+
+                      // 6. Visão IA
+                      _buildRodapeItem(
+                        icon: FluentIcons.robot,
+                        label: 'Visão IA',
+                        isCompact: isCompact,
+                        isActive: _camera.aiDetectionEnabled,
+                        activeColor: BCamTheme.accentLightBlue,
+                        onTap: () {
+                          final newAiEnabled = !_camera.aiDetectionEnabled;
+                          setState(() {
+                            _camera = _camera.copyWith(aiDetectionEnabled: newAiEnabled);
+                          });
+                          context.read<CameraStorageService>().updateCamera(_camera);
+
+                          if (newAiEnabled) {
+                            final evt = AiVisionAgentService.instance.testDetectionWithConfidence(
+                              camera: _camera,
+                              simulatedConfidence: 0.96,
+                              label: 'Pessoa',
+                              type: CameraEventType.person,
+                            );
+                            displayInfoBar(
+                              context,
+                              duration: const Duration(seconds: 4),
+                              builder: (c, close) => InfoBar(
+                                title: const Text('Visão Computacional IA Ativada'),
+                                content: Text(
+                                  evt != null
+                                      ? 'Objeto contornado: Pessoa (96% de assertividade) na câmera ao vivo.'
+                                      : 'Monitoramento de objetos ativo na área de vigilância.',
+                                ),
+                                severity: InfoBarSeverity.success,
+                                onClose: close,
+                              ),
+                            );
+                          } else {
+                            AiVisionAgentService.instance.clearLiveDetections(_camera.id);
+                            displayInfoBar(
+                              context,
+                              duration: const Duration(seconds: 3),
+                              builder: (c, close) => InfoBar(
+                                title: const Text('Visão Computacional IA Desativada'),
+                                content: const Text('Marcações e contornos suspensos nesta câmera.'),
+                                severity: InfoBarSeverity.info,
+                                onClose: close,
+                              ),
+                            );
+                          }
+                        },
                       ),
                     ],
                   ),

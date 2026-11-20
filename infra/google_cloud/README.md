@@ -48,7 +48,7 @@ Este documento descreve a arquitetura, configuração e parâmetros para operar 
 3. Certifique-se de selecionar o plano **Spark (Gratuito)**.
 
 ### Passo 2: Registrar o App Android
-1. Adicione um app Android com o pacote: `com.bcam.bcam`.
+1. Adicione um app Android com o pacote: `com.nexeoo.bcam`.
 2. Baixe o arquivo `google-services.json` gerado pelo Firebase.
 3. Copie o arquivo para:
    ```bash

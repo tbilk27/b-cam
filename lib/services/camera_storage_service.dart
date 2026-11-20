@@ -13,6 +13,10 @@ class CameraStorageService extends ChangeNotifier {
   List<CameraDevice> get cameras => List.unmodifiable(_cameras);
   List<CameraDevice> get favoriteCameras =>
       _cameras.where((c) => c.isFavorite).toList();
+  List<CameraDevice> get enabledCameras =>
+      _cameras.where((c) => c.isEnabled).toList();
+  List<CameraDevice> get disabledCameras =>
+      _cameras.where((c) => !c.isEnabled).toList();
 
   bool _isInitialized = false;
   bool get isInitialized => _isInitialized;
@@ -218,6 +222,37 @@ class CameraStorageService extends ChangeNotifier {
     final idx = _cameras.indexWhere((c) => c.id == id);
     if (idx != -1) {
       _cameras[idx] = _cameras[idx].copyWith(isFavorite: !_cameras[idx].isFavorite);
+      await _persist();
+      notifyListeners();
+    }
+  }
+
+  Future<void> toggleCameraEnabled(String id) async {
+    final idx = _cameras.indexWhere((c) => c.id == id);
+    if (idx != -1) {
+      final newStatus = !_cameras[idx].isEnabled;
+      _cameras[idx] = _cameras[idx].copyWith(isEnabled: newStatus);
+      DiagnosticLoggerService.instance.logInfo(
+        'STORAGE',
+        newStatus
+            ? 'Câmera "${_cameras[idx].name}" ativada. Reconexão e fluxo restaurados.'
+            : 'Câmera "${_cameras[idx].name}" desativada pelo usuário. Retentativas de conexão suspensas.',
+      );
+      await _persist();
+      notifyListeners();
+    }
+  }
+
+  Future<void> setCameraEnabled(String id, bool enabled) async {
+    final idx = _cameras.indexWhere((c) => c.id == id);
+    if (idx != -1 && _cameras[idx].isEnabled != enabled) {
+      _cameras[idx] = _cameras[idx].copyWith(isEnabled: enabled);
+      DiagnosticLoggerService.instance.logInfo(
+        'STORAGE',
+        enabled
+            ? 'Câmera "${_cameras[idx].name}" ativada. Reconexão e fluxo restaurados.'
+            : 'Câmera "${_cameras[idx].name}" desativada. Retentativas de conexão suspensas.',
+      );
       await _persist();
       notifyListeners();
     }

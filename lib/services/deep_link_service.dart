@@ -10,7 +10,7 @@ class DeepLinkService {
 
   DeepLinkService._internal();
 
-  static const MethodChannel _channel = MethodChannel('com.bcam.bcam/deeplink');
+  static const MethodChannel _channel = MethodChannel('com.nexeoo.bcam/deeplink');
   final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
   String? _pendingDeepLink;

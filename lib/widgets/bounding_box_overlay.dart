@@ -44,9 +44,11 @@ class BoundingBoxOverlay extends StatelessWidget {
                   top: rect.top.clamp(0.0, canvasHeight - 10),
                   width: rect.width.clamp(10.0, canvasWidth - rect.left),
                   height: rect.height.clamp(10.0, canvasHeight - rect.top),
-                  child: GestureDetector(
-                    onTap: () => onBoxTap?.call(box),
-                    child: Container(
+                  child: IgnorePointer(
+                    ignoring: onBoxTap == null,
+                    child: GestureDetector(
+                      onTap: () => onBoxTap?.call(box),
+                      child: Container(
                       decoration: BoxDecoration(
                         border: Border.all(
                           color: color,
@@ -87,20 +89,21 @@ class BoundingBoxOverlay extends StatelessWidget {
                             child: Container(width: 8, height: 8, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(1))),
                           ),
 
-                          // Header Label Tag Pill
+                          // Header Label Tag Pill with Assertiveness Percentage
                           if (showLabels)
                             Positioned(
-                              top: -22,
-                              left: 0,
+                              top: rect.top < 26 ? 4 : -24,
+                              left: (rect.left + 150 > canvasWidth) ? null : 0,
+                              right: (rect.left + 150 > canvasWidth) ? 0 : null,
                               child: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xE61B1B1F),
+                                  color: const Color(0xF018181D),
                                   borderRadius: BorderRadius.circular(4),
                                   border: Border.all(color: color, width: 1.0),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withValues(alpha: 0.6),
+                                      color: Colors.black.withValues(alpha: 0.7),
                                       blurRadius: 4,
                                       offset: const Offset(0, 1),
                                     ),
@@ -123,17 +126,18 @@ class BoundingBoxOverlay extends StatelessWidget {
                                         color: Colors.white,
                                       ),
                                     ),
-                                    const SizedBox(width: 4),
+                                    const SizedBox(width: 5),
                                     Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 0.5),
+                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                                       decoration: BoxDecoration(
-                                        color: color.withValues(alpha: 0.3),
+                                        color: color.withValues(alpha: 0.28),
                                         borderRadius: BorderRadius.circular(3),
+                                        border: Border.all(color: color.withValues(alpha: 0.5), width: 0.6),
                                       ),
                                       child: Text(
-                                        '${(box.confidence * 100).toInt()}%',
+                                        box.assertivenessFormatted,
                                         style: GoogleFonts.robotoMono(
-                                          fontSize: 9,
+                                          fontSize: 9.5,
                                           fontWeight: FontWeight.w800,
                                           color: color,
                                         ),
@@ -146,6 +150,7 @@ class BoundingBoxOverlay extends StatelessWidget {
                         ],
                       ),
                     ),
+                  ),
                   ),
                 );
               }),

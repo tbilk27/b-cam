@@ -288,9 +288,35 @@ class CameraEventService extends ChangeNotifier {
       return false;
     }
 
-    // Filtra as bounding boxes internas também pelo limiar
+    // Regra da Zona de Exclusão: se o evento ocorrer dentro da área mascarada pelo usuário, descarta imediatamente
+    if (camera.hasExclusionZone) {
+      final isExcluded = event.boundingBoxes.isNotEmpty
+          ? event.boundingBoxes.any((box) => camera.isBoxInExclusionZone(box))
+          : camera.isBoxInExclusionZone(
+              BoundingBox(
+                label: event.type.label,
+                confidence: event.confidence,
+                left: 0.40,
+                top: 0.30,
+                width: 0.20,
+                height: 0.40,
+              ),
+            );
+
+      if (isExcluded) {
+        DiagnosticLoggerService.instance.logWarn(
+          'AI_VISION',
+          '🚫 Evento "${event.type.label}" descartado na câmera "${camera.name}": '
+          'Objeto identificado dentro da Zona de Exclusão (${camera.exclusionZonePercentage.toStringAsFixed(1)}% de área protegida).',
+        );
+        return false;
+      }
+    }
+
+    // Filtra as bounding boxes internas também pelo limiar e remove caixas em área de exclusão
     final validBoxes = event.boundingBoxes
         .where((b) => b.confidence >= camera.aiMinConfidence)
+        .where((b) => !camera.isBoxInExclusionZone(b))
         .toList();
 
     final validatedEvent = event.copyWith(boundingBoxes: validBoxes);

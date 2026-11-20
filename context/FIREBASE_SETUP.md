@@ -16,7 +16,7 @@ Este documento descreve como parametrizar o **Firebase** para notificações pus
 1. No painel do projeto, clique no ícone do **Android**.
 2. Preencha o campo **Nome do pacote Android**:
    ```
-   com.bcam.bcam
+   com.nexeoo.bcam
    ```
 3. Apelido do app: `b-cam Mobile`.
 4. Clique em **Registrar app**.

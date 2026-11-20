@@ -4,9 +4,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../models/camera_device.dart';
 import '../models/camera_event.dart';
-import '../screens/event_detail_screen.dart';
 import '../services/camera_event_service.dart';
 import '../theme/fluent_theme.dart';
+import 'event_playback_dialog.dart';
 
 class VerticalEventTimeline extends StatefulWidget {
   final CameraDevice camera;
@@ -157,17 +157,22 @@ class _VerticalEventTimelineState extends State<VerticalEventTimeline> {
       return true;
     }).toList();
 
-    return Column(
-      children: [
-        // 1. Sub-Header Bar (< Hoje > | Funil | Visualização do evento 🔴)
-        _buildSubHeaderBar(context),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final showSubHeader = constraints.maxHeight >= 70;
 
-        const SizedBox(height: 4),
+        return Column(
+          children: [
+            if (showSubHeader) ...[
+              // 1. Sub-Header Bar (< Hoje > | Funil | Visualização do evento 🔴)
+              _buildSubHeaderBar(context),
+              const SizedBox(height: 4),
+            ],
 
-        // 2. Timeline Body with Ruler, Event Cards, and Floating Zoom Buttons
-        Expanded(
-          child: Stack(
-            children: [
+            // 2. Timeline Body with Ruler, Event Cards, and Floating Zoom Buttons
+            Expanded(
+              child: Stack(
+                children: [
               // Main scrollable timeline
               filteredEvents.isEmpty
                   ? Center(
@@ -226,6 +231,8 @@ class _VerticalEventTimelineState extends State<VerticalEventTimeline> {
         ),
       ],
     );
+  },
+);
   }
 
   Widget _buildSubHeaderBar(BuildContext context) {
@@ -462,11 +469,7 @@ class _VerticalEventTimelineState extends State<VerticalEventTimeline> {
                   if (widget.onEventTap != null) {
                     widget.onEventTap!(event);
                   } else {
-                    Navigator.of(context).push(
-                      FluentPageRoute(
-                        builder: (_) => EventDetailScreen(event: event),
-                      ),
-                    );
+                    EventPlaybackDialog.show(context, event, widget.camera);
                   }
                 },
                 child: Container(

@@ -1,18 +1,27 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:fluent_ui/fluent_ui.dart' as fluent;
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
+import 'package:provider/provider.dart';
+import '../models/bounding_box.dart';
 import '../models/camera_device.dart';
+import '../services/ai_vision_agent_service.dart';
+import '../services/camera_event_service.dart';
+import '../services/camera_storage_service.dart';
 import '../services/diagnostic_logger_service.dart';
 import '../theme/fluent_theme.dart';
+import 'bounding_box_overlay.dart';
+import 'exclusion_mask_painter.dart';
 
 class LivePlayerView extends StatefulWidget {
   final CameraDevice camera;
   final bool autoPlay;
   final bool showPtzOverlay;
   final bool isMiniature;
+  final bool showTopHud;
 
   const LivePlayerView({
     super.key,
@@ -20,6 +29,7 @@ class LivePlayerView extends StatefulWidget {
     this.autoPlay = true,
     this.showPtzOverlay = false,
     this.isMiniature = false,
+    this.showTopHud = true,
   });
 
   @override
@@ -47,6 +57,13 @@ class _LivePlayerViewState extends State<LivePlayerView>
   Timer? _countdownTimer;
   Timer? _watchdogTimer;
 
+  // AI Vision Live Detections
+  bool _showAiOverlay = true;
+
+  void _onAiVisionUpdate() {
+    if (mounted) setState(() {});
+  }
+
   @override
   bool get wantKeepAlive => true;
 
@@ -54,6 +71,8 @@ class _LivePlayerViewState extends State<LivePlayerView>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    AiVisionAgentService.instance.addListener(_onAiVisionUpdate);
+    CameraEventService.instance.addListener(_onAiVisionUpdate);
     _initPlayer();
     _startHudClock();
     _startWatchdog();
@@ -61,7 +80,7 @@ class _LivePlayerViewState extends State<LivePlayerView>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
+    if (state == AppLifecycleState.resumed && widget.camera.isEnabled) {
       DiagnosticLoggerService.instance.logInfo(
         'RTSP_PLAYER',
         'App retomado ao primeiro plano. Revalidando status do fluxo para "${widget.camera.name}" (${widget.camera.ip})...',
@@ -86,7 +105,7 @@ class _LivePlayerViewState extends State<LivePlayerView>
 
   void _startWatchdog() {
     _watchdogTimer = Timer.periodic(const Duration(seconds: 12), (_) {
-      if (!mounted) return;
+      if (!mounted || !widget.camera.isEnabled) return;
       // If autoPlay is enabled, not in error, but not playing and not loading for > 12s, reconnect
       if (widget.autoPlay && !_hasError && !_isLoading && !(_player?.state.playing ?? false)) {
         DiagnosticLoggerService.instance.logWarn(
@@ -171,8 +190,10 @@ class _LivePlayerViewState extends State<LivePlayerView>
         }
       });
 
-      if (widget.autoPlay) {
+      if (widget.autoPlay && widget.camera.isEnabled) {
         _playStream();
+      } else {
+        _isLoading = false;
       }
     } catch (e) {
       setState(() {
@@ -186,6 +207,13 @@ class _LivePlayerViewState extends State<LivePlayerView>
 
   void _scheduleAutoReconnect() {
     _cancelAutoReconnect();
+    if (!widget.camera.isEnabled) {
+      DiagnosticLoggerService.instance.logInfo(
+        'RTSP_PLAYER',
+        'Retentativa de reconexão suspensa: Câmera "${widget.camera.name}" está desativada.',
+      );
+      return;
+    }
     _reconnectAttempt++;
 
     // Exponential / stepped backoff: 2s -> 4s -> 7s -> 10s (max)
@@ -230,6 +258,16 @@ class _LivePlayerViewState extends State<LivePlayerView>
 
   Future<void> _playStream() async {
     _cancelAutoReconnect();
+
+    if (!widget.camera.isEnabled) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _hasError = false;
+        });
+      }
+      return;
+    }
 
     if (mounted) {
       setState(() {
@@ -303,7 +341,23 @@ class _LivePlayerViewState extends State<LivePlayerView>
   @override
   void didUpdateWidget(covariant LivePlayerView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.camera.streamUrl != widget.camera.streamUrl) {
+    if (oldWidget.camera.isEnabled != widget.camera.isEnabled) {
+      if (!widget.camera.isEnabled) {
+        _cancelAutoReconnect();
+        _watchdogTimer?.cancel();
+        _player?.stop();
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+            _hasError = false;
+          });
+        }
+      } else {
+        _startWatchdog();
+        _reconnectAttempt = 0;
+        _playStream();
+      }
+    } else if (widget.camera.isEnabled && oldWidget.camera.streamUrl != widget.camera.streamUrl) {
       _reconnectAttempt = 0;
       _playStream();
     }
@@ -312,6 +366,8 @@ class _LivePlayerViewState extends State<LivePlayerView>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    AiVisionAgentService.instance.removeListener(_onAiVisionUpdate);
+    CameraEventService.instance.removeListener(_onAiVisionUpdate);
     _cancelAutoReconnect();
     _watchdogTimer?.cancel();
     _clockTimer?.cancel();
@@ -326,6 +382,83 @@ class _LivePlayerViewState extends State<LivePlayerView>
   @override
   Widget build(BuildContext context) {
     super.build(context);
+
+    final liveBoxes = (_showAiOverlay && widget.camera.aiDetectionEnabled)
+        ? AiVisionAgentService.instance.getLiveDetectionsForCamera(widget.camera)
+        : const <BoundingBox>[];
+
+    if (!widget.camera.isEnabled) {
+      return Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFF131317),
+          borderRadius: BorderRadius.circular(widget.isMiniature ? 8 : 12),
+          border: Border.all(
+            color: BCamTheme.darkBorder,
+            width: 1,
+          ),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.06),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    fluent.FluentIcons.circle_stop_solid,
+                    size: 24,
+                    color: BCamTheme.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Câmera Desativada',
+                  style: GoogleFonts.inter(
+                    fontSize: widget.isMiniature ? 11.5 : 13.5,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  'Retentativas de conexão suspensas.',
+                  style: GoogleFonts.inter(
+                    fontSize: widget.isMiniature ? 9 : 11,
+                    color: BCamTheme.textTertiary,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                if (!widget.isMiniature) ...[
+                  const SizedBox(height: 10),
+                  fluent.Button(
+                    onPressed: () {
+                      context.read<CameraStorageService>().toggleCameraEnabled(widget.camera.id);
+                    },
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(fluent.FluentIcons.play, size: 11, color: BCamTheme.statusOnlineGlow),
+                        const SizedBox(width: 5),
+                        Text(
+                          'Ativar Câmera',
+                          style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      );
+    }
 
     return Container(
       decoration: BoxDecoration(
@@ -345,14 +478,26 @@ class _LivePlayerViewState extends State<LivePlayerView>
         fit: StackFit.expand,
         children: [
           // 1. Video Canvas
-          if (_controller != null)
-            Video(
-              controller: _controller!,
-              fit: BoxFit.cover,
-              controls: NoVideoControls,
-            )
-          else
-            Container(color: Colors.black),
+          (_controller != null)
+              ? Video(
+                  controller: _controller!,
+                  fit: BoxFit.cover,
+                  controls: NoVideoControls,
+                )
+              : Container(color: Colors.black),
+
+          // 2. Painted Exclusion Zone Mask (if configured on this camera)
+          if (widget.camera.hasExclusionZone && _showAiOverlay)
+            IgnorePointer(
+              child: CustomPaint(
+                painter: ExclusionMaskPainter(
+                  excludedCells: widget.camera.exclusionMask.toSet(),
+                  showGridLines: false,
+                  maskColor: const Color(0x33FF3B30),
+                  borderColor: const Color(0x66FF3B30),
+                ),
+              ),
+            ),
 
           // 2. Subtle Vignette Effect
           IgnorePointer(
@@ -561,16 +706,27 @@ class _LivePlayerViewState extends State<LivePlayerView>
               ),
             ),
 
+          // 5.5 Live AI Bounding Box & Assertiveness Marking (Cleanly overlaid on top of video canvas)
+          if (_showAiOverlay && widget.camera.aiDetectionEnabled && liveBoxes.isNotEmpty)
+            BoundingBoxOverlay(
+              boundingBoxes: liveBoxes,
+              minConfidenceThreshold: widget.camera.aiMinConfidence,
+              showLabels: true,
+              child: const SizedBox.expand(),
+            ),
+
           // 6. Top HUD Bar (REC indicator & Timestamp)
-          Positioned(
-            top: 8,
-            left: 10,
-            right: 10,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                // Live indicator badge
+          if (widget.showTopHud)
+            Positioned(
+              top: 8,
+              left: 10,
+              right: 10,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                // Live indicator and AI Detection Badge
                 Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
                       width: 7,
@@ -600,6 +756,61 @@ class _LivePlayerViewState extends State<LivePlayerView>
                         letterSpacing: 0.8,
                       ),
                     ),
+                    if (widget.camera.hasExclusionZone) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1.5),
+                        decoration: BoxDecoration(
+                          color: const Color(0x33FF3B30),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: const Color(0x80FF3B30), width: 0.8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(fluent.FluentIcons.blocked2, size: 8, color: Color(0xFFFF3B30)),
+                            const SizedBox(width: 3),
+                            Text(
+                              '${widget.camera.exclusionZonePercentage.toStringAsFixed(0)}% EXCLUÍDO',
+                              style: GoogleFonts.robotoMono(
+                                fontSize: widget.isMiniature ? 7.5 : 8.5,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFFFF6961),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    if (_showAiOverlay && widget.camera.aiDetectionEnabled && liveBoxes.isNotEmpty) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                        decoration: BoxDecoration(
+                          color: liveBoxes.first.displayColor.withValues(alpha: 0.22),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(
+                            color: liveBoxes.first.displayColor.withValues(alpha: 0.7),
+                            width: 0.8,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(fluent.FluentIcons.robot, size: 9, color: Colors.white),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${liveBoxes.first.label.toUpperCase()} ${liveBoxes.first.assertivenessFormatted}',
+                              style: GoogleFonts.robotoMono(
+                                fontSize: widget.isMiniature ? 8 : 9,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ],
                 ),
                 // HUD Timestamp
@@ -656,6 +867,31 @@ class _LivePlayerViewState extends State<LivePlayerView>
                 if (!widget.isMiniature)
                   Row(
                     children: [
+                      // AI Vision Bounding Box toggle
+                      if (widget.camera.aiDetectionEnabled)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 4),
+                          child: IconButton(
+                            style: IconButton.styleFrom(
+                              backgroundColor: _showAiOverlay
+                                  ? BCamTheme.accentBlue.withValues(alpha: 0.7)
+                                  : Colors.black54,
+                              padding: const EdgeInsets.all(5),
+                              minimumSize: const Size(28, 28),
+                            ),
+                            icon: Icon(
+                              Icons.smart_toy_outlined,
+                              color: _showAiOverlay ? Colors.white : Colors.white54,
+                              size: 15,
+                            ),
+                            tooltip: _showAiOverlay ? 'Ocultar Contornos IA' : 'Exibir Contornos IA',
+                            onPressed: () {
+                              setState(() {
+                                _showAiOverlay = !_showAiOverlay;
+                              });
+                            },
+                          ),
+                        ),
                       // Audio Mute toggle
                       IconButton(
                         style: IconButton.styleFrom(

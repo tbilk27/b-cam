@@ -1,3 +1,5 @@
+import 'bounding_box.dart';
+import 'exclusion_zone.dart';
 import 'manufacturer.dart';
 
 class CameraDevice {
@@ -14,6 +16,7 @@ class CameraDevice {
   String? customPath;
   String? customUrl; // Full direct URL override (e.g., custom RTSP or HTTP MJPEG)
   bool isOnline;
+  bool isEnabled; // When false, camera is deactivated and reconnection attempts are suspended
   DateTime? lastSeen;
   bool isFavorite;
   String location;
@@ -25,6 +28,10 @@ class CameraDevice {
   List<String> aiTargetClasses; // ['person', 'vehicle', 'motion', 'alarm']
   bool pushNotificationsEnabled;
   String? aiCustomPrompt;
+
+  // Exclusion Zone Mask (Grid cells where AI events should NOT be generated)
+  List<int> exclusionMask;
+  bool exclusionZoneEnabled;
 
   CameraDevice({
     required this.id,
@@ -40,6 +47,7 @@ class CameraDevice {
     this.customPath,
     this.customUrl,
     this.isOnline = true,
+    this.isEnabled = true,
     this.lastSeen,
     this.isFavorite = false,
     this.location = 'Geral',
@@ -49,8 +57,23 @@ class CameraDevice {
     List<String>? aiTargetClasses,
     this.pushNotificationsEnabled = true,
     this.aiCustomPrompt,
+    List<int>? exclusionMask,
+    this.exclusionZoneEnabled = true,
   }) : macAddress = normalizeMac(macAddress),
-       aiTargetClasses = aiTargetClasses ?? ['person', 'vehicle', 'motion', 'alarm'];
+       aiTargetClasses = aiTargetClasses ?? ['person', 'vehicle', 'motion', 'alarm'],
+       exclusionMask = exclusionMask != null ? List.unmodifiable(exclusionMask) : const [];
+
+  /// Whether this camera has an active exclusion zone configured
+  bool get hasExclusionZone => exclusionZoneEnabled && exclusionMask.isNotEmpty;
+
+  /// Percentage of screen covered by the exclusion zone (0.0% to 100.0%)
+  double get exclusionZonePercentage => (exclusionMask.length / ExclusionGrid.totalCells) * 100;
+
+  /// Evaluates if a detected bounding box falls inside or overlaps with the camera's exclusion zone
+  bool isBoxInExclusionZone(BoundingBox box, {double overlapThreshold = 0.20}) {
+    if (!hasExclusionZone) return false;
+    return ExclusionGrid.isBoxExcluded(box, exclusionMask, overlapThreshold: overlapThreshold);
+  }
 
   /// Standardizes MAC address into uppercase colon-separated format: AA:BB:CC:DD:EE:FF
   static String? normalizeMac(String? raw) {
@@ -119,6 +142,7 @@ class CameraDevice {
       'customPath': customPath,
       'customUrl': customUrl,
       'isOnline': isOnline,
+      'isEnabled': isEnabled,
       'lastSeen': lastSeen?.toIso8601String(),
       'isFavorite': isFavorite,
       'location': location,
@@ -128,6 +152,8 @@ class CameraDevice {
       'aiTargetClasses': aiTargetClasses,
       'pushNotificationsEnabled': pushNotificationsEnabled,
       'aiCustomPrompt': aiCustomPrompt,
+      'exclusionMask': exclusionMask,
+      'exclusionZoneEnabled': exclusionZoneEnabled,
     };
   }
 
@@ -146,6 +172,7 @@ class CameraDevice {
       customPath: json['customPath'] as String?,
       customUrl: json['customUrl'] as String?,
       isOnline: json['isOnline'] as bool? ?? true,
+      isEnabled: json['isEnabled'] as bool? ?? true,
       lastSeen: json['lastSeen'] != null ? DateTime.tryParse(json['lastSeen'] as String) : null,
       isFavorite: json['isFavorite'] as bool? ?? false,
       location: json['location'] as String? ?? 'Geral',
@@ -155,6 +182,8 @@ class CameraDevice {
       aiTargetClasses: (json['aiTargetClasses'] as List<dynamic>?)?.map((e) => e.toString()).toList(),
       pushNotificationsEnabled: json['pushNotificationsEnabled'] as bool? ?? true,
       aiCustomPrompt: json['aiCustomPrompt'] as String?,
+      exclusionMask: (json['exclusionMask'] as List<dynamic>?)?.map((e) => (e as num).toInt()).toList(),
+      exclusionZoneEnabled: json['exclusionZoneEnabled'] as bool? ?? true,
     );
   }
 
@@ -172,6 +201,7 @@ class CameraDevice {
     String? customPath,
     String? customUrl,
     bool? isOnline,
+    bool? isEnabled,
     DateTime? lastSeen,
     bool? isFavorite,
     String? location,
@@ -181,6 +211,8 @@ class CameraDevice {
     List<String>? aiTargetClasses,
     bool? pushNotificationsEnabled,
     String? aiCustomPrompt,
+    List<int>? exclusionMask,
+    bool? exclusionZoneEnabled,
   }) {
     return CameraDevice(
       id: id ?? this.id,
@@ -196,6 +228,7 @@ class CameraDevice {
       customPath: customPath ?? this.customPath,
       customUrl: customUrl ?? this.customUrl,
       isOnline: isOnline ?? this.isOnline,
+      isEnabled: isEnabled ?? this.isEnabled,
       lastSeen: lastSeen ?? this.lastSeen,
       isFavorite: isFavorite ?? this.isFavorite,
       location: location ?? this.location,
@@ -205,6 +238,8 @@ class CameraDevice {
       aiTargetClasses: aiTargetClasses ?? this.aiTargetClasses,
       pushNotificationsEnabled: pushNotificationsEnabled ?? this.pushNotificationsEnabled,
       aiCustomPrompt: aiCustomPrompt ?? this.aiCustomPrompt,
+      exclusionMask: exclusionMask ?? this.exclusionMask,
+      exclusionZoneEnabled: exclusionZoneEnabled ?? this.exclusionZoneEnabled,
     );
   }
 }

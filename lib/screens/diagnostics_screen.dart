@@ -270,6 +270,64 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
             ),
             content: Column(
               children: [
+                // Corporate Identity, Domain & Package Card
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  child: Card(
+                    backgroundColor: BCamTheme.darkSurface,
+                    borderColor: BCamTheme.darkBorder,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: BCamTheme.accentBlue.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: BCamTheme.accentBlue.withValues(alpha: 0.5), width: 0.8),
+                          ),
+                          child: const Icon(FluentIcons.shield, size: 18, color: BCamTheme.accentLightBlue),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    'b-cam PRO',
+                                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                    decoration: BoxDecoration(
+                                      color: BCamTheme.accentBlue.withValues(alpha: 0.2),
+                                      borderRadius: BorderRadius.circular(4),
+                                      border: Border.all(color: BCamTheme.accentBlue.withValues(alpha: 0.6), width: 0.8),
+                                    ),
+                                    child: Text(
+                                      'Powered by Bilk Sistemas',
+                                      style: GoogleFonts.inter(fontSize: 8.5, fontWeight: FontWeight.w700, color: BCamTheme.accentLightBlue),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                'Pacote: com.nexeoo.bcam • Domínio: bcam.nexeoo.com',
+                                style: GoogleFonts.robotoMono(fontSize: 9.5, color: BCamTheme.textSecondary),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
                 // Network Endpoint Card
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),

@@ -232,15 +232,43 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
               const Spacer(),
 
-              // Rodapé de Versão e Copyright Corporativo
+              // Rodapé de Versão, Domínio e Copyright Corporativo
               Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: Text(
-                  'v1.2.0 • Build 3 • Inteligência Artificial & Visão Computacional',
-                  style: GoogleFonts.robotoMono(
-                    fontSize: 10,
-                    color: BCamTheme.textTertiary,
-                  ),
+                padding: const EdgeInsets.only(bottom: 18),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'v1.10.0 • Build 11 • Inteligência Artificial & Visão Computacional',
+                      style: GoogleFonts.robotoMono(
+                        fontSize: 10,
+                        color: BCamTheme.textTertiary,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Powered by ',
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: BCamTheme.textSecondary,
+                          ),
+                        ),
+                        Text(
+                          'Bilk Sistemas',
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: BCamTheme.accentLightBlue,
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
             ],

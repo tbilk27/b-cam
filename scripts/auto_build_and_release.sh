@@ -61,7 +61,7 @@ cat <<EOF > dist/version.json
   "apkUrl": "http://192.168.3.62:8088/b-cam-arm64.apk",
   "sha256": "$APK_SHA256",
   "fileSizeBytes": $APK_SIZE,
-  "releaseNotes": "Splash screen oficial Fluent 2, Agente de IA com detecção de cena e Bounding Boxes, Notificações Push Firebase com Deeplink direto para o clipe e In-App Auto-Update.",
+  "releaseNotes": "Pacote oficial com.nexeoo.bcam (domínio bcam.nexeoo.com), Powered by Bilk Sistemas, Layout Instagram, Provisionamento Wi-Fi e Zonas de Exclusão IA.",
   "releaseDate": "$TIMESTAMP"
 }
 EOF

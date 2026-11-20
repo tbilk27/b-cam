@@ -6,12 +6,14 @@ class BCamLogo extends StatelessWidget {
   final double size;
   final bool showText;
   final bool compact;
+  final bool showPoweredBy;
 
   const BCamLogo({
     super.key,
     this.size = 36,
     this.showText = true,
     this.compact = false,
+    this.showPoweredBy = false,
   });
 
   @override
@@ -98,6 +100,16 @@ class BCamLogo extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                   color: BCamTheme.textSecondary,
                   letterSpacing: 1.4,
+                ),
+              ),
+            if (showPoweredBy)
+              Text(
+                'Powered by Bilk Sistemas',
+                style: GoogleFonts.inter(
+                  fontSize: 7.5,
+                  fontWeight: FontWeight.w700,
+                  color: BCamTheme.accentLightBlue,
+                  letterSpacing: 0.3,
                 ),
               ),
           ],

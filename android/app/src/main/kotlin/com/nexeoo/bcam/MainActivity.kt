@@ -1,4 +1,4 @@
-package com.bcam.bcam
+package com.nexeoo.bcam
 
 import android.content.Intent
 import android.os.Bundle
@@ -8,7 +8,7 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
-    private val CHANNEL = "com.bcam.bcam/deeplink"
+    private val CHANNEL = "com.nexeoo.bcam/deeplink"
     private var pendingDeepLink: String? = null
     private var methodChannel: MethodChannel? = null
 

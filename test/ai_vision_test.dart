@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:bcam/models/bounding_box.dart';
 import 'package:bcam/models/camera_device.dart';
 import 'package:bcam/models/camera_event.dart';
+import 'package:bcam/services/ai_vision_agent_service.dart';
 import 'package:bcam/services/camera_event_service.dart';
 
 void main() {
@@ -87,6 +88,35 @@ void main() {
       final result = CameraEventService.instance.registerEvent(highConfidenceEvent, camera: camera);
       expect(result, isTrue, reason: 'Eventos acima de 25% de certeza devem ser aceitos');
       expect(CameraEventService.instance.getEventById('evt-high-1'), isNotNull);
+    });
+
+    test('BoundingBox correctly formats assertiveness and percentage', () {
+      const box = BoundingBox(
+        label: 'Pessoa',
+        confidence: 0.94,
+        left: 0.4,
+        top: 0.3,
+        width: 0.2,
+        height: 0.5,
+      );
+
+      expect(box.confidencePercent, 94);
+      expect(box.assertivenessFormatted, '94%');
+    });
+
+    test('AiVisionAgentService provides live detections for active camera', () {
+      final camera = CameraDevice(
+        id: 'cam-live-test',
+        name: 'Câmera Live Test',
+        ip: '192.168.3.100',
+        aiDetectionEnabled: true,
+        aiMinConfidence: 0.25,
+      );
+
+      final liveBoxes = AiVisionAgentService.instance.getLiveDetectionsForCamera(camera);
+      expect(liveBoxes.isNotEmpty, isTrue);
+      expect(liveBoxes.first.confidence >= 0.25, isTrue);
+      expect(liveBoxes.first.assertivenessFormatted.contains('%'), isTrue);
     });
   });
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import '../models/bounding_box.dart';
 import '../models/camera_device.dart';
 import '../models/camera_event.dart';
@@ -13,8 +14,87 @@ class AiVisionAgentService extends ChangeNotifier {
   String? _geminiApiKey;
   String? get geminiApiKey => _geminiApiKey;
 
+  final Map<String, List<BoundingBox>> _liveDetections = {};
+
   void setGeminiApiKey(String? key) {
     _geminiApiKey = key;
+    notifyListeners();
+  }
+
+  /// Retorna as detecções ativas da câmera para renderização em tempo real na câmera ao vivo
+  List<BoundingBox> getLiveDetectionsForCamera(CameraDevice camera) {
+    if (!camera.aiDetectionEnabled) return const [];
+
+    // 1. Detecções em tempo real armazenadas em cache
+    if (_liveDetections.containsKey(camera.id) && _liveDetections[camera.id]!.isNotEmpty) {
+      final valid = _liveDetections[camera.id]!
+          .where((b) => b.confidence >= camera.aiMinConfidence)
+          .where((b) => !camera.isBoxInExclusionZone(b))
+          .toList();
+      if (valid.isNotEmpty) return valid;
+    }
+
+    // 2. Busca eventos registrados com bounding boxes em áreas válidas (não-excluídas)
+    final events = CameraEventService.instance.getEventsForCamera(camera);
+    if (events.isNotEmpty) {
+      for (final ev in events) {
+        if (ev.boundingBoxes.isNotEmpty) {
+          final nonExcluded = ev.boundingBoxes
+              .where((b) => b.confidence >= camera.aiMinConfidence)
+              .where((b) => !camera.isBoxInExclusionZone(b))
+              .toList();
+          if (nonExcluded.isNotEmpty) {
+            return nonExcluded;
+          }
+        }
+      }
+    }
+
+    // 3. Fallback inteligente gerado em área livre de exclusão
+    final isEntrance = camera.location.toLowerCase().contains('port') ||
+        camera.location.toLowerCase().contains('entrad') ||
+        camera.name.toLowerCase().contains('frente') ||
+        camera.name.toLowerCase().contains('ic5');
+    final isVehicle = camera.location.toLowerCase().contains('gara') ||
+        camera.location.toLowerCase().contains('estacion');
+
+    final candidatePositions = [
+      const Offset(0.38, 0.30),
+      const Offset(0.18, 0.42),
+      const Offset(0.60, 0.32),
+      const Offset(0.48, 0.45),
+      const Offset(0.15, 0.22),
+      const Offset(0.68, 0.50),
+    ];
+
+    for (final pos in candidatePositions) {
+      final box = BoundingBox(
+        label: isEntrance ? 'Pessoa' : (isVehicle ? 'Veículo' : 'Movimento'),
+        confidence: 0.95,
+        left: pos.dx,
+        top: pos.dy,
+        width: isEntrance ? 0.22 : 0.36,
+        height: isEntrance ? 0.54 : 0.36,
+        colorHex: isEntrance ? '#0078D4' : (isVehicle ? '#FFB900' : '#00CC6A'),
+      );
+
+      if (box.confidence >= camera.aiMinConfidence && !camera.isBoxInExclusionZone(box)) {
+        return [box];
+      }
+    }
+
+    return const [];
+  }
+
+  /// Define ou atualiza as detecções em tempo real para uma câmera
+  void setLiveDetections(String cameraId, List<BoundingBox> boxes) {
+    _liveDetections[cameraId] = List.from(boxes);
+    notifyListeners();
+  }
+
+  /// Limpa as detecções em tempo real de uma câmera
+  void clearLiveDetections(String cameraId) {
+    _liveDetections.remove(cameraId);
     notifyListeners();
   }
 
@@ -51,14 +131,14 @@ class AiVisionAgentService extends ChangeNotifier {
     required double simulatedConfidence,
     required String label,
     required CameraEventType type,
+    BoundingBox? customBox,
   }) {
     DiagnosticLoggerService.instance.logInfo(
       'AI_VISION_AGENT',
       'Teste de detecção acionado: "$label" com ${(simulatedConfidence * 100).toStringAsFixed(1)}% de certeza em "${camera.name}"',
     );
 
-    final eventId = 'evt-test-${DateTime.now().millisecondsSinceEpoch}';
-    final box = BoundingBox(
+    final box = customBox ?? BoundingBox(
       label: label,
       confidence: simulatedConfidence,
       left: 0.38,
@@ -71,6 +151,17 @@ class AiVisionAgentService extends ChangeNotifier {
               ? '#FFB900'
               : '#00CC6A',
     );
+
+    // Se a detecção cair na zona de exclusão da câmera, descarta imediatamente
+    if (camera.isBoxInExclusionZone(box)) {
+      DiagnosticLoggerService.instance.logWarn(
+        'AI_VISION',
+        '🚫 Detecção descartada: objeto "$label" dentro da Zona de Exclusão da câmera "${camera.name}".',
+      );
+      return null;
+    }
+
+    final eventId = 'evt-test-${DateTime.now().millisecondsSinceEpoch}';
 
     final event = CameraEvent(
       id: eventId,
@@ -88,6 +179,8 @@ class AiVisionAgentService extends ChangeNotifier {
 
     final accepted = CameraEventService.instance.registerEvent(event, camera: camera);
     if (accepted) {
+      _liveDetections[camera.id] = [box];
+      notifyListeners();
       return event;
     }
     return null;
