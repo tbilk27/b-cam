@@ -27,6 +27,30 @@ void main() {
       );
       expect(url, 'rtsp://admin:password123@192.168.3.50:554/Streaming/Channels/102');
     });
+
+    test('Yoosee URL generator encodes special characters in password', () {
+      final url = CameraManufacturer.yoosee.buildRtspUrl(
+        ip: '192.168.3.23',
+        port: 554,
+        user: 'admin',
+        password: 'Compras10@',
+        channel: 1,
+        subType: 0,
+      );
+      expect(url, 'rtsp://admin:Compras10%40@192.168.3.23:554/onvif1');
+    });
+
+    test('Intelbras Mibo URL generator', () {
+      final url = CameraManufacturer.intelbrasMibo.buildRtspUrl(
+        ip: '192.168.3.22',
+        port: 554,
+        user: 'admin',
+        password: 'compras10',
+        channel: 1,
+        subType: 0,
+      );
+      expect(url, 'rtsp://admin:compras10@192.168.3.22:554/cam/realmonitor?channel=1&subtype=0');
+    });
   });
 
   group('CameraDevice security and masking tests', () {

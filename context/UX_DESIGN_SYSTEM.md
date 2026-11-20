@@ -22,6 +22,7 @@ A identidade visual de **b-cam** é uma releitura de alta fidelidade da estétic
 | **`electricCyan`** | `#00F0FF` | Telemetria, dados técnicos (IP, portas), retículos de mira e acentos |
 | **`sunsetOrange`** | `#FF6A00` | Transição de gradientes e alertas de atenção |
 | **`sunsetYellow`** | `#FFD200` | Destaque de favoritos (estrelas) e ponto alto do gradiente de pôr do sol |
+| **`recRed`** | `#FF0055` | Indicador ativo de gravação e telemetria `REC • LIVE` (LED do ícone) |
 | **`statusOnline`** | `#00FFA3` | Indicador de câmera online e streaming ativo |
 | **`statusOffline`** | `#FF3366` | Falha de sinal ou câmera indisponível |
 | **`bgDark`** | `#090814` | Cor de fundo geral do Scaffold |
@@ -53,3 +54,22 @@ A identidade visual de **b-cam** é uma releitura de alta fidelidade da estétic
 3. **Prevenção de Sobrecarga Cognitiva no Comissionamento**:
    - O usuário não precisa saber sintaxes RTSP complexas como `/cam/realmonitor?channel=1&subtype=0`. A interface infere o template automaticamente ao selecionar o fabricante.
    - Fornecimento de botões pré-fabricados com credenciais comuns (`admin/admin`, `admin/123456`, etc.).
+
+---
+
+## 5. Logotipo e Ícone Oficial do Sistema (Sprint 1.3)
+
+### 5.1 Emblema e Ícone do Aplicativo
+- **Conceito**: Fusão harmônica da letra inicial minúscula **`b`** com uma lente de câmera de segurança e diafragma mecânico (*aperture iris*).
+- **Tratamento de Superfície**: Titânio escuro chanfrado (*beveled matte dark titanium*) em fundo obsidiana ultra-escuro (`#090814`).
+- **Iluminação Neon Vice City**: Bordas iluminadas com dupla iluminação rim-light em Magenta Neon (`#FF2A85`) e Ciano Elétrico (`#00F0FF`), com ótica interna iluminada e ponto LED pulsante `REC • LIVE` em vermelho vibrante (`#FF0055`).
+- **Resoluções e Plataformas**:
+  - **Android**: Mipmaps `mdpi` (48px), `hdpi` (72px), `xhdpi` (96px), `xxhdpi` (144px), `xxxhdpi` (192px).
+  - **iOS**: Resoluções completas no `AppIcon.appiconset` (20x20 até 1024x1024 sem canal alfa).
+  - **macOS**: `AppIcon.appiconset` de 16x16 até 1024x1024.
+  - **Web**: Favicon 32x32, `Icon-192.png`, `Icon-512.png` e variantes maskable.
+  - **Windows**: `app_icon.ico` multi-resolução (16x16 a 256x256).
+
+### 5.2 Logotipo Widescreen de Apresentação
+- **Wordmark**: `b-cam` em tipografia display geométrica estilizada com gradiente de pôr do sol Vice City (Magenta -> Laranja -> Amarelo) e contorno suave de brilho neon ciano.
+- **Subtítulo Militar**: `SURVEILLANCE RADAR` em caixa alta com espaçamento estendido (`letter-spacing: 2.5`) em Ciano Elétrico puro.

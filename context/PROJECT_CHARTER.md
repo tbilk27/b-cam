@@ -6,8 +6,15 @@ O **b-cam** é uma aplicação multiplataforma desenvolvida em Flutter criada pa
 Diferente de softwares de CFTV tradicionais (pesados, complexos e visualmente desatualizados), o **b-cam** combina:
 1. **Varredura Ativa Multiestratégia**: Descoberta automática de câmeras de múltiplos fabricantes na mesma sub-rede (Intelbras, Dahua, Hikvision, TP-Link Tapo, Xiongmai/Tuya, Reolink e ONVIF genérico).
 2. **Comissionamento em 1 Toque**: Dedução inteligente de modelos, resolução de templates de URL RTSP e atalhos para credenciais de fábrica.
-3. **Identidade Visual Inspirada em GTA VI (Vice City)**: Estética moderna com gradientes neon, superfícies de vidro escurecido (*glassmorphism*), elementos HUD de mira digital e radar animado.
+3. **Identidade Visual Inspirada em GTA VI (Vice City)**: Marca oficial aprovada (ADR-007) com logotipo widescreen `b-cam SURVEILLANCE RADAR`, ícone em titânio e neon, gradientes Vice City Sunset (`#FF2A85`, `#FF6A00`, `#FFD200`), ciano elétrico de telemetria (`#00F0FF`), superfícies de vidro escurecido (*glassmorphism* em `#090814`/`#1B1834`), elementos HUD de mira digital e radar animado.
 4. **Desempenho Nativo em Baixa Latência**: Decodificação de vídeo RTSP H.264/H.265 acelerada por hardware via `media_kit`.
+
+---
+
+## 1.1 Diretriz Institucional de Marca (ADR-007)
+- **Logotipo Oficial**: Símbolo da letra minúscula `b` integrada a uma lente objetiva com diafragma animado, ponto `REC` ativo e tipografia display futurista com gradiente pôr do sol.
+- **Paleta Canônica**: Magenta Neon (`#FF2A85`), Ciano Elétrico (`#00F0FF`), Laranja Pôr do Sol (`#FF6A00`), Amarelo Solar (`#FFD200`), Vermelho REC (`#FF0055`) e Fundo Obsidiana (`#090814`).
+- **Preservação**: Aplicação obrigatória em todas as telas, artefatos de documentação, lojas de aplicativos e compilações multiplataforma.
 
 ---
 

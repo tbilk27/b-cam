@@ -1,7 +1,7 @@
 # 🎥 b-cam • Vigilância Inteligente em Redes Wi-Fi
 
 <p align="center">
-  <img src="assets/images/b_cam_logo.jpg" alt="b-cam Logo" width="320"/>
+  <img src="assets/images/b_cam_logo.jpg" alt="b-cam Logo" width="480"/>
 </p>
 
 <p align="center">

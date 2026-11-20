@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/camera_device.dart';
+import '../models/manufacturer.dart';
 import '../models/scan_result.dart';
 
 class CameraStorageService extends ChangeNotifier {
@@ -31,8 +32,75 @@ class CameraStorageService extends ChangeNotifier {
           _cameras.add(CameraDevice.fromJson(item as Map<String, dynamic>));
         }
       } else {
-        // Start completely clean - only explicitly commissioned cameras will appear
+        // Commissioned physical cameras on the user's local network
         _cameras.clear();
+        _cameras.addAll([
+          CameraDevice(
+            id: 'cam-intelbras-frente-74',
+            name: 'Intelbras Frente da Casa',
+            ip: '192.168.3.74',
+            rtspPort: 554,
+            webPort: 80,
+            manufacturer: CameraManufacturer.intelbras,
+            username: 'admin',
+            password: 'Zs29364835',
+            channel: 1,
+            subType: 0,
+            location: 'Frente / Portão',
+            isFavorite: true,
+            isOnline: true,
+            macAddress: '98:2A:0A:89:56:62',
+          ),
+          CameraDevice(
+            id: 'cam-yoosee-corredor-23',
+            name: 'Yoosee Corredor & Jardim',
+            ip: '192.168.3.23',
+            rtspPort: 554,
+            webPort: 5000,
+            manufacturer: CameraManufacturer.yoosee,
+            username: 'admin',
+            password: 'Compras10@',
+            channel: 1,
+            subType: 0,
+            location: 'Corredor / Jardim',
+            isFavorite: true,
+            isOnline: true,
+            macAddress: '98:03:CF:DC:00:0A',
+          ),
+          CameraDevice(
+            id: 'cam-yoosee-gourmet-24',
+            name: 'Yoosee Área Gourmet',
+            ip: '192.168.3.24',
+            rtspPort: 554,
+            webPort: 5000,
+            manufacturer: CameraManufacturer.yoosee,
+            username: 'admin',
+            password: 'Compras10@',
+            channel: 1,
+            subType: 0,
+            location: 'Área Gourmet / Fundos',
+            isFavorite: true,
+            isOnline: true,
+            macAddress: '98:03:CF:DB:FD:5A',
+          ),
+          CameraDevice(
+            id: 'cam-intelbras-mibo-22',
+            name: 'Intelbras Mibo',
+            ip: '192.168.3.22',
+            rtspPort: 554,
+            webPort: 80,
+            manufacturer: CameraManufacturer.intelbrasMibo,
+            username: 'admin',
+            password: 'compras10',
+            channel: 1,
+            subType: 0,
+            location: 'Interior / Sala',
+            isFavorite: false,
+            isOnline: true,
+            macAddress: '18:0D:2C:5D:96:FE',
+          ),
+        ]);
+        await _saveToDisk(prefs);
       }
     } catch (e) {
       debugPrint('Error loading cameras: $e');

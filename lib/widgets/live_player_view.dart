@@ -104,6 +104,19 @@ class _LivePlayerViewState extends State<LivePlayerView> {
     try {
       final url = widget.camera.streamUrl;
       await _player.setVolume(widget.isMiniature ? 0 : 100);
+
+      // Fine-tune RTSP transport per manufacturer: Yoosee requires UDP, Intelbras/Dahua/Hikvision excel on TCP
+      try {
+        if (widget.camera.manufacturer.id == 'yoosee') {
+          await (_player.platform as dynamic).setProperty('rtsp-transport', 'udp');
+          await (_player.platform as dynamic).setProperty('demuxer-lavf-o', 'rtsp_transport=udp');
+        } else {
+          await (_player.platform as dynamic).setProperty('rtsp-transport', 'tcp');
+        }
+      } catch (e) {
+        debugPrint('Note: setProperty rtsp-transport: $e');
+      }
+
       await _player.open(
         Media(
           url,
@@ -210,30 +223,39 @@ class _LivePlayerViewState extends State<LivePlayerView> {
             Container(
               color: Colors.black.withOpacity(0.65),
               child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const SizedBox(
-                      width: 38,
-                      height: 38,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.8,
-                        color: GtaColors.neonPink,
-                        backgroundColor: GtaColors.bgSurface,
+                child: widget.isMiniature
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.2,
+                          color: GtaColors.neonPink,
+                        ),
+                      )
+                    : Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const SizedBox(
+                            width: 38,
+                            height: 38,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.8,
+                              color: GtaColors.neonPink,
+                              backgroundColor: GtaColors.bgSurface,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'CONECTANDO AO FLUXO...',
+                            style: GoogleFonts.orbitron(
+                              fontSize: 11,
+                              color: GtaColors.electricCyan,
+                              letterSpacing: 2,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'CONECTANDO AO FLUXO...',
-                      style: GoogleFonts.orbitron(
-                        fontSize: 11,
-                        color: GtaColors.electricCyan,
-                        letterSpacing: 2,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
               ),
             ),
 
@@ -241,63 +263,90 @@ class _LivePlayerViewState extends State<LivePlayerView> {
           if (_hasError)
             Container(
               color: const Color(0xEE120A16),
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(widget.isMiniature ? 6 : 16),
               child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.videocam_off_rounded,
-                      color: GtaColors.statusOffline,
-                      size: 40,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'FLUXO INDISPONÍVEL',
-                      style: GoogleFonts.orbitron(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                        color: GtaColors.statusOffline,
-                        letterSpacing: 1.5,
+                child: widget.isMiniature
+                    ? Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.videocam_off_rounded,
+                            color: GtaColors.statusOffline,
+                            size: 22,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'OFFLINE',
+                            style: GoogleFonts.orbitron(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w800,
+                              color: GtaColors.statusOffline,
+                            ),
+                          ),
+                          Text(
+                            '${widget.camera.ip}:${widget.camera.rtspPort}',
+                            style: GoogleFonts.rajdhani(
+                              fontSize: 9,
+                              color: Colors.white54,
+                            ),
+                          ),
+                        ],
+                      )
+                    : Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.videocam_off_rounded,
+                            color: GtaColors.statusOffline,
+                            size: 40,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'FLUXO INDISPONÍVEL',
+                            style: GoogleFonts.orbitron(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                              color: GtaColors.statusOffline,
+                              letterSpacing: 1.5,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'IP: ${widget.camera.ip}:${widget.camera.rtspPort}',
+                            style: GoogleFonts.rajdhani(
+                              fontSize: 12,
+                              color: Colors.white70,
+                            ),
+                          ),
+                          if (_errorMessage != null) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              _errorMessage!,
+                              style: GoogleFonts.rajdhani(
+                                fontSize: 10,
+                                color: Colors.white38,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                          const SizedBox(height: 10),
+                          ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: GtaColors.neonPink.withOpacity(0.2),
+                              foregroundColor: GtaColors.neonPink,
+                              side: const BorderSide(color: GtaColors.neonPink),
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                            ),
+                            onPressed: _playStream,
+                            icon: const Icon(Icons.refresh, size: 16),
+                            label: Text(
+                              'RECONECTAR',
+                              style: GoogleFonts.orbitron(fontSize: 10, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'IP: ${widget.camera.ip}:${widget.camera.rtspPort}',
-                      style: GoogleFonts.rajdhani(
-                        fontSize: 12,
-                        color: Colors.white70,
-                      ),
-                    ),
-                    if (_errorMessage != null) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        _errorMessage!,
-                        style: GoogleFonts.rajdhani(
-                          fontSize: 10,
-                          color: Colors.white38,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                    const SizedBox(height: 10),
-                    ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: GtaColors.neonPink.withOpacity(0.2),
-                        foregroundColor: GtaColors.neonPink,
-                        side: const BorderSide(color: GtaColors.neonPink),
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                      ),
-                      onPressed: _playStream,
-                      icon: const Icon(Icons.refresh, size: 16),
-                      label: Text(
-                        'RECONECTAR',
-                        style: GoogleFonts.orbitron(fontSize: 10, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ],
-                ),
               ),
             ),
 

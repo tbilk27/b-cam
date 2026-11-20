@@ -23,7 +23,11 @@ class _MultiGridScreenState extends State<MultiGridScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('MATRIZ DE MONITORAMENTO'),
+        title: FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: const Text('MATRIZ DE MONITORAMENTO'),
+        ),
         actions: [
           IconButton(
             tooltip: '1 Coluna',
@@ -55,7 +59,7 @@ class _MultiGridScreenState extends State<MultiGridScreen> {
                 crossAxisCount: _gridColumns,
                 crossAxisSpacing: 8,
                 mainAxisSpacing: 8,
-                childAspectRatio: 16 / 10,
+                childAspectRatio: _gridColumns == 1 ? 16 / 9 : 16 / 12,
               ),
               itemCount: cameras.length,
               itemBuilder: (context, index) {

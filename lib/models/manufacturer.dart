@@ -13,6 +13,28 @@ enum CameraManufacturer {
     defaultUser: 'admin',
     brandColor: Color(0xFF00AA13), // Intelbras Green
   ),
+  intelbrasMibo(
+    id: 'intelbras_mibo',
+    displayName: 'Intelbras Mibo',
+    defaultRtspPort: 554,
+    defaultWebPort: 80,
+    controlPort: 554,
+    defaultRtspPath: '/cam/realmonitor?channel=1&subtype=0',
+    subStreamRtspPath: '/cam/realmonitor?channel=1&subtype=1',
+    defaultUser: 'admin',
+    brandColor: Color(0xFF00C853), // Mibo Vivid Green
+  ),
+  yoosee(
+    id: 'yoosee',
+    displayName: 'Yoosee',
+    defaultRtspPort: 554,
+    defaultWebPort: 5000,
+    controlPort: 5000,
+    defaultRtspPath: '/onvif1',
+    subStreamRtspPath: '/onvif2',
+    defaultUser: 'admin',
+    brandColor: Color(0xFF00E5FF), // Yoosee Cyan
+  ),
   dahua(
     id: 'dahua',
     displayName: 'Dahua',
@@ -102,7 +124,7 @@ enum CameraManufacturer {
     required this.brandColor,
   });
 
-  /// Build complete RTSP URL
+  /// Build complete RTSP URL with URL-encoded credentials
   String buildRtspUrl({
     required String ip,
     int? port,
@@ -116,8 +138,12 @@ enum CameraManufacturer {
     var path = customPath;
 
     if (path == null || path.isEmpty) {
-      if (this == CameraManufacturer.intelbras || this == CameraManufacturer.dahua) {
+      if (this == CameraManufacturer.intelbras ||
+          this == CameraManufacturer.intelbrasMibo ||
+          this == CameraManufacturer.dahua) {
         path = '/cam/realmonitor?channel=$channel&subtype=$subType';
+      } else if (this == CameraManufacturer.yoosee) {
+        path = subType == 0 ? '/onvif1' : '/onvif2';
       } else if (this == CameraManufacturer.hikvision) {
         path = '/Streaming/Channels/${channel}0${subType == 0 ? 1 : 2}';
       } else if (this == CameraManufacturer.tapo) {
@@ -136,8 +162,14 @@ enum CameraManufacturer {
     }
 
     if (user != null && user.isNotEmpty) {
-      final safePass = password ?? '';
-      return 'rtsp://$user:$safePass@$ip:$effectivePort$path';
+      final encodedUser = Uri.encodeComponent(user);
+      final encodedPass = password != null && password.isNotEmpty
+          ? Uri.encodeComponent(password)
+          : '';
+      final authPart = encodedPass.isNotEmpty
+          ? '$encodedUser:$encodedPass@'
+          : '$encodedUser@';
+      return 'rtsp://$authPart$ip:$effectivePort$path';
     } else {
       return 'rtsp://$ip:$effectivePort$path';
     }
@@ -145,8 +177,9 @@ enum CameraManufacturer {
 
   static CameraManufacturer fromId(String? id) {
     if (id == null) return CameraManufacturer.genericOnvif;
+    final cleanId = id.toLowerCase().replaceAll('_', '');
     return CameraManufacturer.values.firstWhere(
-      (m) => m.id.toLowerCase() == id.toLowerCase(),
+      (m) => m.id.toLowerCase().replaceAll('_', '') == cleanId,
       orElse: () => CameraManufacturer.genericOnvif,
     );
   }

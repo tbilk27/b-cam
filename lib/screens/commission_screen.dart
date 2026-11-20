@@ -459,7 +459,7 @@ class _CommissionScreenState extends State<CommissionScreen> {
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    'Credenciais comuns do fabricante:',
+                    'Credenciais sugeridas e atalhos rápidos:',
                     style: GoogleFonts.rajdhani(
                       fontSize: 12,
                       color: Colors.white60,
@@ -469,7 +469,37 @@ class _CommissionScreenState extends State<CommissionScreen> {
                   const SizedBox(height: 6),
                   Wrap(
                     spacing: 6,
+                    runSpacing: 6,
                     children: [
+                      // User environment presets
+                      if (_selectedManufacturer == CameraManufacturer.intelbras ||
+                          _ipController.text.endsWith('.74'))
+                        ActionChip(
+                          label: Text('admin / Zs29364835 (Frente)',
+                              style: GoogleFonts.rajdhani(fontSize: 11, fontWeight: FontWeight.bold, color: GtaColors.electricCyan)),
+                          backgroundColor: GtaColors.bgSurface,
+                          side: const BorderSide(color: GtaColors.electricCyan),
+                          onPressed: () => _applyQuickCredential('admin', 'Zs29364835'),
+                        ),
+                      if (_selectedManufacturer == CameraManufacturer.yoosee ||
+                          _ipController.text.endsWith('.23') ||
+                          _ipController.text.endsWith('.24'))
+                        ActionChip(
+                          label: Text('admin / Compras10@ (Yoosee)',
+                              style: GoogleFonts.rajdhani(fontSize: 11, fontWeight: FontWeight.bold, color: GtaColors.electricCyan)),
+                          backgroundColor: GtaColors.bgSurface,
+                          side: const BorderSide(color: GtaColors.electricCyan),
+                          onPressed: () => _applyQuickCredential('admin', 'Compras10@'),
+                        ),
+                      if (_selectedManufacturer == CameraManufacturer.intelbrasMibo ||
+                          _ipController.text.endsWith('.22'))
+                        ActionChip(
+                          label: Text('admin / compras10 (Mibo)',
+                              style: GoogleFonts.rajdhani(fontSize: 11, fontWeight: FontWeight.bold, color: GtaColors.electricCyan)),
+                          backgroundColor: GtaColors.bgSurface,
+                          side: const BorderSide(color: GtaColors.electricCyan),
+                          onPressed: () => _applyQuickCredential('admin', 'compras10'),
+                        ),
                       ActionChip(
                         label: Text('admin / admin', style: GoogleFonts.rajdhani(fontSize: 11)),
                         backgroundColor: GtaColors.bgSurface,
@@ -483,12 +513,6 @@ class _CommissionScreenState extends State<CommissionScreen> {
                         onPressed: () => _applyQuickCredential('admin', '123456'),
                       ),
                       ActionChip(
-                        label: Text('admin / admin123', style: GoogleFonts.rajdhani(fontSize: 11)),
-                        backgroundColor: GtaColors.bgSurface,
-                        side: const BorderSide(color: GtaColors.borderSubtle),
-                        onPressed: () => _applyQuickCredential('admin', 'admin123'),
-                      ),
-                      ActionChip(
                         label: Text('admin / (sem senha)', style: GoogleFonts.rajdhani(fontSize: 11)),
                         backgroundColor: GtaColors.bgSurface,
                         side: const BorderSide(color: GtaColors.borderSubtle),
@@ -496,6 +520,31 @@ class _CommissionScreenState extends State<CommissionScreen> {
                       ),
                     ],
                   ),
+                  if (_selectedManufacturer == CameraManufacturer.intelbrasMibo ||
+                      _ipController.text.endsWith('.22')) ...[
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.amber.withValues(alpha: 0.4)),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(Icons.info_outline_rounded, size: 16, color: Colors.amber),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Dica Intelbras Mibo: O usuário local é "admin". A senha é a senha da sua conta Mibo ("compras10") ou o Código de Verificação de 6 dígitos impresso na etiqueta adesiva (Safety Code) caso a Criptografia esteja ativa no app Mibo.',
+                              style: GoogleFonts.rajdhani(fontSize: 11, color: Colors.white70),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),

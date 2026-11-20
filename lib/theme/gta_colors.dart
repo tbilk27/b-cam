@@ -25,6 +25,7 @@ class GtaColors {
   static const Color statusConnecting = Color(0xFFFFB800);
   static const Color statusOffline = Color(0xFFFF3366);
   static const Color statusWarning = Color(0xFFFF7700);
+  static const Color recRed = Color(0xFFFF0055);
 
   // Gradients
   static const LinearGradient viceSunsetGradient = LinearGradient(

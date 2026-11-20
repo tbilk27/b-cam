@@ -220,9 +220,28 @@ class _GtaLogoPainter extends CustomPainter {
       ..style = PaintingStyle.fill;
     canvas.drawCircle(lensCenter, lensRadius * 0.55, irisPaint);
 
-    // Center recording red/pink blink dot
+    // Concentric aperture iris blades
+    final bladePaint = Paint()
+      ..color = GtaColors.electricCyan.withOpacity(0.45)
+      ..strokeWidth = 1.0
+      ..style = PaintingStyle.stroke;
+    for (int b = 0; b < 6; b++) {
+      final bAngle = (rotation * 0.5) + (b * math.pi / 3);
+      final pStart = Offset(
+        lensCenter.dx + lensRadius * 0.22 * math.cos(bAngle),
+        lensCenter.dy + lensRadius * 0.22 * math.sin(bAngle),
+      );
+      final pEnd = Offset(
+        lensCenter.dx + lensRadius * 0.52 * math.cos(bAngle + 0.35),
+        lensCenter.dy + lensRadius * 0.52 * math.sin(bAngle + 0.35),
+      );
+      canvas.drawLine(pStart, pEnd, bladePaint);
+    }
+
+    // Center recording red/pink blink dot with live pulse
+    final blinkOpacity = (0.55 + 0.45 * math.sin(rotation * 3)).clamp(0.2, 1.0);
     final dotPaint = Paint()
-      ..color = const Color(0xFFFF0055)
+      ..color = GtaColors.recRed.withOpacity(blinkOpacity)
       ..style = PaintingStyle.fill;
     canvas.drawCircle(lensCenter, lensRadius * 0.22, dotPaint);
 

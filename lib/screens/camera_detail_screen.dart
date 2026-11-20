@@ -75,7 +75,14 @@ class _CameraDetailScreenState extends State<CameraDetailScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_camera.name.toUpperCase()),
+        title: FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            _camera.name.toUpperCase(),
+            style: GoogleFonts.orbitron(fontSize: 15, fontWeight: FontWeight.w800),
+          ),
+        ),
         actions: [
           IconButton(
             icon: Icon(
