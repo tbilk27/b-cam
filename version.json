@@ -1,0 +1,9 @@
+{
+  "versionCode": 11,
+  "versionName": "1.10.0",
+  "apkUrl": "http://192.168.3.62:8088/b-cam-arm64.apk",
+  "sha256": "fc30a1eaf81e422915e9492e8cebe943b649a83355aa6afd6fcc8952739bb584",
+  "fileSizeBytes": 110931488,
+  "releaseNotes": "Pacote oficial com.nexeoo.bcam (domínio bcam.nexeoo.com), Powered by Bilk Sistemas, Layout Instagram, Provisionamento Wi-Fi e Zonas de Exclusão IA.",
+  "releaseDate": "2026-11-20T23:31:41Z"
+}
