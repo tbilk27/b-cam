@@ -7,6 +7,7 @@ import '../models/camera_event.dart';
 import '../services/ai_vision_agent_service.dart';
 import '../services/camera_action_service.dart';
 import '../services/camera_storage_service.dart';
+import '../services/diagnostic_logger_service.dart';
 import '../theme/fluent_theme.dart';
 import '../widgets/live_player_view.dart';
 import '../widgets/vertical_event_timeline.dart';
@@ -997,6 +998,23 @@ class _CameraDetailScreenState extends State<CameraDetailScreen> {
         ),
         actions: [
           Button(onPressed: () => Navigator.of(ctx).pop(), child: const Text('OK')),
+          FilledButton(
+            style: ButtonStyle(
+              backgroundColor: WidgetStateProperty.all(const Color(0xFF25D366)),
+            ),
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              DiagnosticLoggerService.instance.sendLogViaWhatsApp(phone: '5547988366727');
+            },
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: const [
+                Icon(FluentIcons.send, size: 11, color: Colors.white),
+                SizedBox(width: 4),
+                Text('Enviar Log via WhatsApp', style: TextStyle(color: Colors.white, fontSize: 11)),
+              ],
+            ),
+          ),
         ],
       ),
     );

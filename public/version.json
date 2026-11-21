@@ -1,9 +1,9 @@
 {
-  "versionCode": 19,
-  "versionName": "1.18.0",
+  "versionCode": 20,
+  "versionName": "1.19.0",
   "apkUrl": "http://192.168.3.62:8088/b-cam-arm64.apk",
-  "sha256": "76e72054aa03f5891eb95afbcd4a81c1cb8489068bcc6348d0a6838dfae45b34",
-  "fileSizeBytes": 63375044,
-  "releaseNotes": "Versão 1.18.0: Correção no cadastro de câmeras (solicitação de senha RTSP com atalhos rápidos), suporte nativo a UDP para câmeras Yoosee, correção de falso-positivo de scanner e resolução de overflow de tela.",
-  "releaseDate": "2026-11-21T10:51:30Z"
+  "sha256": "e9e881b86193d1cd1cc11d335ca5474bf53dcaddacc6bfabb64bcb680dc99218",
+  "fileSizeBytes": 63392260,
+  "releaseNotes": "Versão 1.19.0: Envio direto do arquivo de log de diagnóstico via WhatsApp para 47 98836-6727, integração nativa via FileProvider e botão dedicado de envio na tela de Sistema.",
+  "releaseDate": "2026-11-21T11:04:30Z"
 }

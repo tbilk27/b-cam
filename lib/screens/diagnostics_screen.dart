@@ -68,6 +68,25 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
     }
   }
 
+  Future<void> _sendToWhatsApp(DiagnosticLoggerService logger) async {
+    final success = await logger.sendLogViaWhatsApp(phone: '5547988366727');
+    if (mounted) {
+      displayInfoBar(
+        context,
+        builder: (context, close) => InfoBar(
+          title: Text(success ? 'WhatsApp Acionado' : 'Aviso'),
+          content: Text(
+            success
+                ? 'Abrindo o WhatsApp com o arquivo de log para 47 98836-6727...'
+                : 'Não foi possível acionar o WhatsApp diretamente no aparelho.',
+          ),
+          severity: success ? InfoBarSeverity.success : InfoBarSeverity.warning,
+          onClose: close,
+        ),
+      );
+    }
+  }
+
   Future<void> _sendToHostMac(DiagnosticLoggerService logger) async {
     final success = await logger.sendLogsToHostMac();
     if (mounted) {
@@ -252,14 +271,32 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                   ),
                   const SizedBox(width: 4),
                   FilledButton(
+                    style: ButtonStyle(
+                      backgroundColor: WidgetStateProperty.all(const Color(0xFF25D366)),
+                    ),
+                    onPressed: () => _sendToWhatsApp(logger),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(FluentIcons.send, size: 12, color: Colors.white),
+                        const SizedBox(width: 4),
+                        Text(
+                          'WhatsApp',
+                          style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Button(
                     onPressed: () => _sendToHostMac(logger),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(FluentIcons.send, size: 12),
+                        const Icon(FluentIcons.sync, size: 12),
                         const SizedBox(width: 4),
                         Text(
-                          'Sync Mac',
+                          'Mac',
                           style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600),
                         ),
                       ],
@@ -410,6 +447,74 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                               style: GoogleFonts.inter(fontSize: 10.5, fontWeight: FontWeight.w600, color: BCamTheme.textSecondary),
                             ),
                           ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // WhatsApp Log Delivery Card (Suporte 47 98836-6727)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  child: Card(
+                    backgroundColor: const Color(0xFF132018),
+                    borderColor: const Color(0xFF1B4D2E),
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color: const Color(0x3325D366),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: const Color(0xFF25D366), width: 0.8),
+                              ),
+                              child: const Icon(FluentIcons.chat, size: 16, color: Color(0xFF25D366)),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Enviar Log via WhatsApp',
+                                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white),
+                                  ),
+                                  Text(
+                                    'Destinatário: 47 98836-6727 (Suporte Técnico)',
+                                    style: GoogleFonts.robotoMono(fontSize: 10.5, color: const Color(0xFF25D366), fontWeight: FontWeight.w600),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Anexa o arquivo b_cam_diagnostic.log e abre o WhatsApp do aparelho com a conversa pronta para envio:',
+                          style: GoogleFonts.inter(fontSize: 11, color: BCamTheme.textSecondary),
+                        ),
+                        const SizedBox(height: 10),
+                        FilledButton(
+                          style: ButtonStyle(
+                            backgroundColor: WidgetStateProperty.all(const Color(0xFF25D366)),
+                          ),
+                          onPressed: () => _sendToWhatsApp(logger),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(FluentIcons.send, size: 13, color: Colors.white),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Enviar Arquivo de Log para 47 98836-6727',
+                                style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w700, color: Colors.white),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),

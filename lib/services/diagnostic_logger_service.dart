@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 
 enum LogLevel {
@@ -296,6 +298,33 @@ class DiagnosticLoggerService extends ChangeNotifier {
         );
       }
     } catch (_) {}
+  }
+
+  static const MethodChannel _platformChannel = MethodChannel('com.nexeoo.bcam/deeplink');
+
+  /// Envia o arquivo de log para o WhatsApp do suporte (47 98836-6727)
+  Future<bool> sendLogViaWhatsApp({
+    String phone = '5547988366727',
+    String? customMessage,
+  }) async {
+    try {
+      final path = _logFile?.path;
+      final timeStr = DateFormat('dd/MM/yyyy HH:mm:ss').format(DateTime.now());
+      final msg = customMessage ??
+          'Olá! Segue em anexo o arquivo de log de diagnóstico do app b-cam (${_entries.length} eventos registrados em $timeStr).';
+
+      final res = await _platformChannel.invokeMethod<bool>('shareLogViaWhatsApp', {
+        'filePath': path,
+        'phone': phone,
+        'message': msg,
+      });
+
+      logInfo('TELEMETRY', 'Solicitação de envio do arquivo de log via WhatsApp para $phone concluída.');
+      return res ?? true;
+    } catch (e) {
+      logError('TELEMETRY', 'Erro ao enviar arquivo de log via WhatsApp: $e');
+      return false;
+    }
   }
 
   /// Sends collected logs to host Mac development environment if reachable
