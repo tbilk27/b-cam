@@ -385,9 +385,8 @@ class _CameraDetailScreenState extends State<CameraDetailScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           // Left: Back Arrow + Camera Name + Live Subtype Pill
-          Flexible(
+          Expanded(
             child: Row(
-              mainAxisSize: MainAxisSize.min,
               children: [
                 IconButton(
                   style: ButtonStyle(
@@ -400,23 +399,25 @@ class _CameraDetailScreenState extends State<CameraDetailScreen> {
                     Navigator.of(context).pop();
                   },
                 ),
-                const SizedBox(width: 8),
-                Flexible(
+                const SizedBox(width: 6),
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
                         _camera.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.inter(
-                          fontSize: 14,
+                          fontSize: 13.5,
                           fontWeight: FontWeight.w700,
                           color: Colors.white,
                         ),
-                        overflow: TextOverflow.ellipsis,
                       ),
                       FittedBox(
                         fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -447,6 +448,8 @@ class _CameraDetailScreenState extends State<CameraDetailScreen> {
             ),
           ),
 
+          const SizedBox(width: 4),
+
           // Right: Action Buttons (Favorite, Exclusion Zone, Telemetry, Settings, Fullscreen)
           Row(
             mainAxisSize: MainAxisSize.min,
@@ -468,7 +471,7 @@ class _CameraDetailScreenState extends State<CameraDetailScreen> {
                   context.read<CameraStorageService>().toggleFavorite(_camera.id);
                 },
               ),
-              const SizedBox(width: 5),
+              const SizedBox(width: 3),
 
               // Zona Exclusão Quick Button
               IconButton(
@@ -484,7 +487,7 @@ class _CameraDetailScreenState extends State<CameraDetailScreen> {
                 ),
                 onPressed: _openExclusionZoneScreen,
               ),
-              const SizedBox(width: 5),
+              const SizedBox(width: 3),
 
               // Diagnostics / Telemetry
               IconButton(
@@ -494,7 +497,7 @@ class _CameraDetailScreenState extends State<CameraDetailScreen> {
                 icon: const Icon(FluentIcons.diagnostic, size: 14, color: Colors.white),
                 onPressed: _showTelemetryModal,
               ),
-              const SizedBox(width: 5),
+              const SizedBox(width: 3),
 
               // Camera Settings
               IconButton(
@@ -504,7 +507,7 @@ class _CameraDetailScreenState extends State<CameraDetailScreen> {
                 icon: const Icon(FluentIcons.settings, size: 14, color: Colors.white),
                 onPressed: _openCameraSettings,
               ),
-              const SizedBox(width: 5),
+              const SizedBox(width: 3),
 
               // Full Screen Viewer
               IconButton(

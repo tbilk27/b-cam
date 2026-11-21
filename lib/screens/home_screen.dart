@@ -888,33 +888,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                   FilledButton(
-                    onPressed: () {
-                      final newCamera = CameraDevice(
-                        id: 'cam_${DateTime.now().millisecondsSinceEpoch}',
-                        name: '${res.detectedManufacturer.displayName} (${res.ip.split(".").last})',
-                        ip: res.ip,
-                        rtspPort: 554,
-                        username: 'admin',
-                        password: 'admin',
-                        channel: 1,
-                        manufacturer: res.detectedManufacturer,
-                        location: 'Geral',
-                        isEnabled: true,
-                        aiDetectionEnabled: true,
-                        aiMinConfidence: 0.65,
-                      );
-                      context.read<CameraStorageService>().addCamera(newCamera);
-                      displayInfoBar(
-                        context,
-                        builder: (c, close) => InfoBar(
-                          title: const Text('Câmera Adicionada'),
-                          content: Text('"${newCamera.name}" adicionada com sucesso.'),
-                          severity: InfoBarSeverity.success,
-                          onClose: close,
-                        ),
-                      );
-                      setState(() => _currentTabIndex = 0);
-                    },
+                    onPressed: () => _showQuickAddCameraDialog(res),
                     child: const Text('Adicionar'),
                   ),
                 ],
@@ -922,6 +896,203 @@ class _HomeScreenState extends State<HomeScreen> {
             );
           }),
       ],
+    );
+  }
+
+  void _showQuickAddCameraDialog(ScanResult res) {
+    final nameCtrl = TextEditingController(text: '${res.detectedManufacturer.displayName} (${res.ip.split(".").last})');
+    final userCtrl = TextEditingController(text: 'admin');
+    final passCtrl = TextEditingController(
+      text: res.detectedManufacturer == CameraManufacturer.intelbras ? 'Zs29364835' : (res.detectedManufacturer == CameraManufacturer.yoosee ? 'Compras10@' : ''),
+    );
+    bool obscure = true;
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (dialogCtx, setDialogState) {
+            return ContentDialog(
+              title: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: res.detectedManufacturer.brandColor.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(FluentIcons.security_camera, size: 18, color: res.detectedManufacturer.brandColor),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Adicionar: ${res.detectedManufacturer.displayName}',
+                      style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w700),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'IP: ${res.ip} • Portas: ${res.openPorts.join(", ")}',
+                    style: GoogleFonts.robotoMono(fontSize: 11, color: BCamTheme.textSecondary),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Nome da Câmera',
+                    style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w600, color: BCamTheme.textSecondary),
+                  ),
+                  const SizedBox(height: 4),
+                  TextBox(
+                    controller: nameCtrl,
+                    placeholder: 'Ex: Câmera Frente, Corredor...',
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        flex: 40,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Usuário',
+                              style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w600, color: BCamTheme.textSecondary),
+                            ),
+                            const SizedBox(height: 4),
+                            TextBox(
+                              controller: userCtrl,
+                              placeholder: 'admin',
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        flex: 60,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Senha RTSP',
+                              style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w600, color: BCamTheme.textSecondary),
+                            ),
+                            const SizedBox(height: 4),
+                            TextBox(
+                              controller: passCtrl,
+                              obscureText: obscure,
+                              placeholder: 'Senha da câmera',
+                              suffix: IconButton(
+                                icon: Icon(obscure ? FluentIcons.view : FluentIcons.hide, size: 14),
+                                onPressed: () => setDialogState(() => obscure = !obscure),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'Atalhos rápidos da rede local:',
+                    style: GoogleFonts.inter(fontSize: 10.5, color: BCamTheme.textTertiary),
+                  ),
+                  const SizedBox(height: 4),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      Button(
+                        onPressed: () => setDialogState(() => passCtrl.text = 'Zs29364835'),
+                        child: Text('Zs29364835', style: GoogleFonts.robotoMono(fontSize: 10.5)),
+                      ),
+                      Button(
+                        onPressed: () => setDialogState(() => passCtrl.text = 'Compras10@'),
+                        child: Text('Compras10@', style: GoogleFonts.robotoMono(fontSize: 10.5)),
+                      ),
+                      Button(
+                        onPressed: () => setDialogState(() => passCtrl.text = 'compras10'),
+                        child: Text('compras10', style: GoogleFonts.robotoMono(fontSize: 10.5)),
+                      ),
+                      Button(
+                        onPressed: () => setDialogState(() => passCtrl.text = 'admin'),
+                        child: Text('admin', style: GoogleFonts.robotoMono(fontSize: 10.5)),
+                      ),
+                      Button(
+                        onPressed: () => setDialogState(() => passCtrl.text = '123456'),
+                        child: Text('123456', style: GoogleFonts.robotoMono(fontSize: 10.5)),
+                      ),
+                      Button(
+                        onPressed: () => setDialogState(() => passCtrl.text = ''),
+                        child: Text('(sem senha)', style: GoogleFonts.robotoMono(fontSize: 10.5)),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              actions: [
+                Button(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: const Text('Cancelar'),
+                ),
+                Button(
+                  onPressed: () {
+                    Navigator.of(ctx).pop();
+                    Navigator.of(context).push(
+                      FluentPageRoute(builder: (_) => CommissionScreen(scanResult: res)),
+                    );
+                  },
+                  child: const Text('Avançado...'),
+                ),
+                FilledButton(
+                  onPressed: () async {
+                    final camName = nameCtrl.text.trim().isNotEmpty ? nameCtrl.text.trim() : res.suggestedName;
+                    final username = userCtrl.text.trim().isNotEmpty ? userCtrl.text.trim() : 'admin';
+                    final password = passCtrl.text.trim();
+
+                    final newCamera = CameraDevice(
+                      id: 'cam_${DateTime.now().millisecondsSinceEpoch}',
+                      name: camName,
+                      ip: res.ip,
+                      rtspPort: 554,
+                      username: username,
+                      password: password,
+                      channel: 1,
+                      manufacturer: res.detectedManufacturer,
+                      location: 'Geral',
+                      isEnabled: true,
+                      aiDetectionEnabled: true,
+                      aiMinConfidence: 0.65,
+                      macAddress: res.macAddress,
+                    );
+
+                    Navigator.of(ctx).pop();
+                    await context.read<CameraStorageService>().addCamera(newCamera);
+
+                    if (mounted) {
+                      displayInfoBar(
+                        context,
+                        builder: (c, close) => InfoBar(
+                          title: const Text('Câmera Adicionada'),
+                          content: Text('"$camName" adicionada com sucesso.'),
+                          severity: InfoBarSeverity.success,
+                          onClose: close,
+                        ),
+                      );
+                      setState(() => _currentTabIndex = 0);
+                    }
+                  },
+                  child: const Text('Salvar e Conectar'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 

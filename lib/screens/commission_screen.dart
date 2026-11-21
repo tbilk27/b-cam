@@ -718,6 +718,18 @@ class _CommissionScreenState extends State<CommissionScreen> {
                         runSpacing: 6,
                         children: [
                           Button(
+                            onPressed: () => _applyQuickCredential('admin', 'Zs29364835'),
+                            child: Text('admin / Zs29364835', style: GoogleFonts.inter(fontSize: 11)),
+                          ),
+                          Button(
+                            onPressed: () => _applyQuickCredential('admin', 'Compras10@'),
+                            child: Text('admin / Compras10@', style: GoogleFonts.inter(fontSize: 11)),
+                          ),
+                          Button(
+                            onPressed: () => _applyQuickCredential('admin', 'compras10'),
+                            child: Text('admin / compras10', style: GoogleFonts.inter(fontSize: 11)),
+                          ),
+                          Button(
                             onPressed: () => _applyQuickCredential('admin', 'admin'),
                             child: Text('admin / admin', style: GoogleFonts.inter(fontSize: 11)),
                           ),

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/camera_device.dart';
+import '../models/manufacturer.dart';
 import '../models/scan_result.dart';
 import 'diagnostic_logger_service.dart';
 
@@ -32,8 +33,43 @@ class CameraStorageService extends ChangeNotifier {
       if (rawJson != null && rawJson.isNotEmpty) {
         final List<dynamic> decoded = jsonDecode(rawJson);
         _cameras.clear();
+        bool needsSave = false;
         for (final item in decoded) {
-          _cameras.add(CameraDevice.fromJson(item as Map<String, dynamic>));
+          final cam = CameraDevice.fromJson(item as Map<String, dynamic>);
+          // Filter out false positive Mac computer (192.168.3.62 AirPlay port 5000)
+          if (cam.ip == '192.168.3.62' && cam.manufacturer == CameraManufacturer.yoosee) {
+            needsSave = true;
+            continue;
+          }
+          // Self-heal known local cameras configured with default 'admin' password
+          if (cam.ip == '192.168.3.74' && (cam.password == 'admin' || cam.password.isEmpty)) {
+            _cameras.add(cam.copyWith(
+              password: 'Zs29364835',
+              manufacturer: CameraManufacturer.intelbras,
+            ));
+            needsSave = true;
+            continue;
+          }
+          if (cam.ip == '192.168.3.23' && (cam.password == 'admin' || cam.password.isEmpty)) {
+            _cameras.add(cam.copyWith(
+              password: 'Compras10@',
+              manufacturer: CameraManufacturer.yoosee,
+            ));
+            needsSave = true;
+            continue;
+          }
+          if (cam.ip == '192.168.3.24' && (cam.password == 'admin' || cam.password.isEmpty)) {
+            _cameras.add(cam.copyWith(
+              password: 'Compras10@',
+              manufacturer: CameraManufacturer.yoosee,
+            ));
+            needsSave = true;
+            continue;
+          }
+          _cameras.add(cam);
+        }
+        if (needsSave) {
+          await _saveToDisk(prefs);
         }
         DiagnosticLoggerService.instance.logInfo(
           'STORAGE',

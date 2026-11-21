@@ -89,8 +89,21 @@ class LivePlayerViewState extends State<LivePlayerView>
   Timer? _countdownTimer;
   Timer? _watchdogTimer;
 
+  // Camera state & local copy for immediate credential healing
+  late CameraDevice _effectiveCamera;
+
   // AI Vision Live Detections
   bool _showAiOverlay = true;
+
+  bool get _isLikelyAuthError {
+    final msg = _errorMessage?.toLowerCase() ?? '';
+    return msg.contains('failed to recognize file format') ||
+        msg.contains('unauthorized') ||
+        msg.contains('401') ||
+        msg.contains('authentication') ||
+        _effectiveCamera.password == 'admin' ||
+        _effectiveCamera.password.isEmpty;
+  }
 
   void _onAiVisionUpdate() {
     if (mounted) setState(() {});
@@ -102,6 +115,7 @@ class LivePlayerViewState extends State<LivePlayerView>
   @override
   void initState() {
     super.initState();
+    _effectiveCamera = widget.camera;
     WidgetsBinding.instance.addObserver(this);
     AiVisionAgentService.instance.addListener(_onAiVisionUpdate);
     CameraEventService.instance.addListener(_onAiVisionUpdate);
@@ -305,6 +319,112 @@ class LivePlayerViewState extends State<LivePlayerView>
     _countdownTimer = null;
   }
 
+  void _showQuickPasswordDialog() {
+    _cancelAutoReconnect();
+    final passCtrl = TextEditingController(text: _effectiveCamera.password);
+    bool obscure = true;
+
+    fluent.showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (dialogCtx, setDialogState) {
+            return fluent.ContentDialog(
+              title: Row(
+                children: [
+                  const Icon(fluent.FluentIcons.password_field, size: 18, color: Color(0xFFFF9500)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Credenciais: ${_effectiveCamera.name}',
+                      style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'A câmera (${_effectiveCamera.ip}) recusou o acesso. Informe a senha configurada no dispositivo:',
+                    style: GoogleFonts.inter(fontSize: 12, color: BCamTheme.textSecondary),
+                  ),
+                  const SizedBox(height: 12),
+                  fluent.TextBox(
+                    controller: passCtrl,
+                    obscureText: obscure,
+                    placeholder: 'Senha da câmera (ex: Zs29364835 ou Compras10@)',
+                    suffix: fluent.IconButton(
+                      icon: Icon(obscure ? fluent.FluentIcons.view : fluent.FluentIcons.hide, size: 14),
+                      onPressed: () => setDialogState(() => obscure = !obscure),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'Atalhos rápidos da rede:',
+                    style: GoogleFonts.inter(fontSize: 10.5, color: BCamTheme.textTertiary),
+                  ),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      fluent.Button(
+                        onPressed: () => setDialogState(() => passCtrl.text = 'Zs29364835'),
+                        child: Text('Zs29364835', style: GoogleFonts.robotoMono(fontSize: 10.5)),
+                      ),
+                      fluent.Button(
+                        onPressed: () => setDialogState(() => passCtrl.text = 'Compras10@'),
+                        child: Text('Compras10@', style: GoogleFonts.robotoMono(fontSize: 10.5)),
+                      ),
+                      fluent.Button(
+                        onPressed: () => setDialogState(() => passCtrl.text = 'compras10'),
+                        child: Text('compras10', style: GoogleFonts.robotoMono(fontSize: 10.5)),
+                      ),
+                      fluent.Button(
+                        onPressed: () => setDialogState(() => passCtrl.text = 'admin'),
+                        child: Text('admin', style: GoogleFonts.robotoMono(fontSize: 10.5)),
+                      ),
+                      fluent.Button(
+                        onPressed: () => setDialogState(() => passCtrl.text = '123456'),
+                        child: Text('123456', style: GoogleFonts.robotoMono(fontSize: 10.5)),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              actions: [
+                fluent.Button(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: const Text('Cancelar'),
+                ),
+                fluent.FilledButton(
+                  onPressed: () async {
+                    final newPass = passCtrl.text.trim();
+                    Navigator.of(ctx).pop();
+                    final storage = context.read<CameraStorageService>();
+                    final updated = _effectiveCamera.copyWith(password: newPass);
+                    setState(() {
+                      _effectiveCamera = updated;
+                      _hasError = false;
+                      _errorMessage = null;
+                      _isLoading = true;
+                    });
+                    await storage.updateCamera(updated);
+                    _playStream();
+                  },
+                  child: const Text('Salvar e Conectar'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   Future<void> _playStream() async {
     _cancelAutoReconnect();
 
@@ -327,16 +447,15 @@ class LivePlayerViewState extends State<LivePlayerView>
     }
 
     try {
-      final url = widget.camera.streamUrl;
-      final isYoosee = widget.camera.manufacturer.id == 'yoosee';
-      // For Yoosee, alternate UDP and TCP across reconnect attempts for maximum network resilience
-      final useUdp = isYoosee && (_reconnectAttempt % 2 == 0);
-      final transportStr = useUdp ? 'udp' : 'tcp';
+      final url = _effectiveCamera.streamUrl;
+      final isYoosee = _effectiveCamera.manufacturer.id == 'yoosee';
+      // Yoosee cameras exclusively support UDP transport for RTSP streaming; TCP returns 'Nonmatching transport'
+      final transportStr = isYoosee ? 'udp' : 'tcp';
 
       DiagnosticLoggerService.instance.logInfo(
         'RTSP_PLAYER',
-        'Conectando a "${widget.camera.name}" (${widget.camera.ip}) via ${transportStr.toUpperCase()} (Tentativa #$_reconnectAttempt)',
-        details: 'Stream URL: ${widget.camera.maskedStreamUrl}',
+        'Conectando a "${_effectiveCamera.name}" (${_effectiveCamera.ip}) via ${transportStr.toUpperCase()} (Tentativa #$_reconnectAttempt)',
+        details: 'Stream URL: ${_effectiveCamera.maskedStreamUrl}',
       );
 
       if (_player != null) {
@@ -390,6 +509,7 @@ class LivePlayerViewState extends State<LivePlayerView>
   @override
   void didUpdateWidget(covariant LivePlayerView oldWidget) {
     super.didUpdateWidget(oldWidget);
+    _effectiveCamera = widget.camera;
     if (oldWidget.camera.isEnabled != widget.camera.isEnabled) {
       if (!widget.camera.isEnabled) {
         _cancelAutoReconnect();
@@ -628,29 +748,29 @@ class LivePlayerViewState extends State<LivePlayerView>
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
-                            _secondsRemaining > 0
-                                ? Icons.sync_rounded
-                                : Icons.videocam_off_rounded,
-                            color: _secondsRemaining > 0
-                                ? BCamTheme.accentLightBlue
-                                : BCamTheme.statusOffline,
+                            _isLikelyAuthError
+                                ? Icons.lock_outline_rounded
+                                : (_secondsRemaining > 0 ? Icons.sync_rounded : Icons.videocam_off_rounded),
+                            color: _isLikelyAuthError
+                                ? const Color(0xFFFF9500)
+                                : (_secondsRemaining > 0 ? BCamTheme.accentLightBlue : BCamTheme.statusOffline),
                             size: 20,
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            _secondsRemaining > 0
-                                ? 'RECONECTANDO (${_secondsRemaining}s)'
-                                : 'OFFLINE',
+                            _isLikelyAuthError
+                                ? 'SENHA INCORRETA'
+                                : (_secondsRemaining > 0 ? 'RECONECTANDO (${_secondsRemaining}s)' : 'OFFLINE'),
                             style: GoogleFonts.inter(
                               fontSize: 8.5,
                               fontWeight: FontWeight.w700,
-                              color: _secondsRemaining > 0
-                                  ? BCamTheme.accentLightBlue
-                                  : BCamTheme.statusOffline,
+                              color: _isLikelyAuthError
+                                  ? const Color(0xFFFF9500)
+                                  : (_secondsRemaining > 0 ? BCamTheme.accentLightBlue : BCamTheme.statusOffline),
                             ),
                           ),
                           Text(
-                            '#$_reconnectAttempt • ${widget.camera.ip}',
+                            '#$_reconnectAttempt • ${_effectiveCamera.ip}',
                             style: GoogleFonts.robotoMono(
                               fontSize: 8,
                               color: BCamTheme.textTertiary,
@@ -662,50 +782,55 @@ class LivePlayerViewState extends State<LivePlayerView>
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
-                            _secondsRemaining > 0
-                                ? Icons.sync_rounded
-                                : Icons.videocam_off_rounded,
-                            color: _secondsRemaining > 0
-                                ? BCamTheme.accentLightBlue
-                                : BCamTheme.statusOffline,
+                            _isLikelyAuthError
+                                ? Icons.lock_rounded
+                                : (_secondsRemaining > 0 ? Icons.sync_rounded : Icons.videocam_off_rounded),
+                            color: _isLikelyAuthError
+                                ? const Color(0xFFFF9500)
+                                : (_secondsRemaining > 0 ? BCamTheme.accentLightBlue : BCamTheme.statusOffline),
                             size: 34,
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            _secondsRemaining > 0
-                                ? 'AGUARDANDO RECONEXÃO'
-                                : 'FLUXO INDISPONÍVEL',
+                            _isLikelyAuthError
+                                ? 'FALHA DE AUTENTICAÇÃO (401)'
+                                : (_secondsRemaining > 0 ? 'AGUARDANDO RECONEXÃO' : 'FLUXO INDISPONÍVEL'),
                             style: GoogleFonts.inter(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
-                              color: _secondsRemaining > 0
-                                  ? BCamTheme.accentLightBlue
-                                  : BCamTheme.statusOffline,
+                              color: _isLikelyAuthError
+                                  ? const Color(0xFFFF9500)
+                                  : (_secondsRemaining > 0 ? BCamTheme.accentLightBlue : BCamTheme.statusOffline),
                               letterSpacing: 1,
                             ),
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'IP: ${widget.camera.ip}:${widget.camera.rtspPort}',
-                            style: GoogleFonts.robotoMono(
+                            _isLikelyAuthError
+                                ? 'A câmera recusou o usuário ou senha configurados'
+                                : 'IP: ${_effectiveCamera.ip}:${_effectiveCamera.rtspPort}',
+                            style: GoogleFonts.inter(
                               fontSize: 11,
-                              color: BCamTheme.textSecondary,
+                              color: _isLikelyAuthError ? Colors.white70 : BCamTheme.textSecondary,
                             ),
+                            textAlign: TextAlign.center,
                           ),
                           if (_errorMessage != null) ...[
                             const SizedBox(height: 2),
                             Text(
-                              _errorMessage!,
+                              _isLikelyAuthError
+                                  ? 'Dica: clique em "Alterar Senha" para atualizar a senha da câmera.'
+                                  : _errorMessage!,
                               style: GoogleFonts.inter(
                                 fontSize: 10,
-                                color: BCamTheme.textTertiary,
+                                color: _isLikelyAuthError ? const Color(0xFFFFB74D) : BCamTheme.textTertiary,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
                           ],
-                          const SizedBox(height: 10),
-                          if (_secondsRemaining > 0)
+                          const SizedBox(height: 12),
+                          if (_secondsRemaining > 0 && !_isLikelyAuthError)
                             Padding(
                               padding: const EdgeInsets.only(bottom: 8),
                               child: Row(
@@ -731,23 +856,45 @@ class LivePlayerViewState extends State<LivePlayerView>
                                 ],
                               ),
                             ),
-                          ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: BCamTheme.darkSurface,
-                              foregroundColor: BCamTheme.textPrimary,
-                              side: const BorderSide(color: BCamTheme.darkBorder),
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                            ),
-                            onPressed: () {
-                              _cancelAutoReconnect();
-                              _playStream();
-                            },
-                            icon: const Icon(Icons.refresh, size: 14),
-                            label: Text(
-                              'Reconectar Agora',
-                              style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600),
-                            ),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            alignment: WrapAlignment.center,
+                            children: [
+                              if (_isLikelyAuthError)
+                                ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFFFF9500),
+                                    foregroundColor: Colors.black,
+                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                                  ),
+                                  onPressed: _showQuickPasswordDialog,
+                                  icon: const Icon(Icons.key, size: 14, color: Colors.black),
+                                  label: Text(
+                                    'Alterar Senha da Câmera',
+                                    style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700),
+                                  ),
+                                ),
+                              ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: BCamTheme.darkSurface,
+                                  foregroundColor: BCamTheme.textPrimary,
+                                  side: const BorderSide(color: BCamTheme.darkBorder),
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                                ),
+                                onPressed: () {
+                                  _cancelAutoReconnect();
+                                  _playStream();
+                                },
+                                icon: const Icon(Icons.refresh, size: 14),
+                                label: Text(
+                                  'Reconectar Agora',
+                                  style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),

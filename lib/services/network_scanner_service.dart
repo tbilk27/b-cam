@@ -166,21 +166,6 @@ class NetworkScannerService {
     // If no typical camera port is open, this is not a camera
     if (openPorts.isEmpty) return null;
 
-    // Any device with RTSP (554), Dahua/Intelbras (37777), Hikvision (8000), XM (34567), Yoosee (5000)
-    final isCameraCandidate = openPorts.contains(554) ||
-        openPorts.contains(8554) ||
-        openPorts.contains(37777) ||
-        openPorts.contains(8000) ||
-        openPorts.contains(34567) ||
-        openPorts.contains(5000) ||
-        openPorts.contains(9000) ||
-        openPorts.contains(2020);
-
-    if (!isCameraCandidate) {
-      // If only port 80 is open, it might just be a router or printer
-      return null;
-    }
-
     // Resolve physical MAC Address for DHCP resilience first to aid heuristic
     String? resolvedMac = arpTable?[ip];
     if (resolvedMac == null) {
@@ -198,6 +183,21 @@ class NetworkScannerService {
       if (ip == '192.168.3.24') resolvedMac = '98:03:CF:DB:FD:5A';
     }
 
+    // Any device with RTSP (554), Dahua/Intelbras (37777), Hikvision (8000), XM (34567), Yoosee (5000 + 554 ou MAC Yoosee)
+    final isCameraCandidate = openPorts.contains(554) ||
+        openPorts.contains(8554) ||
+        openPorts.contains(37777) ||
+        openPorts.contains(8000) ||
+        openPorts.contains(34567) ||
+        (openPorts.contains(5000) && (openPorts.contains(554) || (resolvedMac != null && resolvedMac.toUpperCase().startsWith('98:03:CF')))) ||
+        openPorts.contains(9000) ||
+        openPorts.contains(2020);
+
+    if (!isCameraCandidate) {
+      // If only port 80 is open, it might just be a router or printer
+      return null;
+    }
+
     // Heuristic manufacturer identification
     CameraManufacturer manufacturer = CameraManufacturer.genericOnvif;
     String detectionSource = 'Porta RTSP 554 Aberta';
@@ -208,7 +208,7 @@ class NetworkScannerService {
       manufacturer = CameraManufacturer.intelbras;
       detectionSource = 'Porta Dahua/Intelbras 37777';
       confidence = 0.95;
-    } else if (openPorts.contains(5000) || (resolvedMac != null && resolvedMac.startsWith('98:03:CF'))) {
+    } else if ((openPorts.contains(5000) && openPorts.contains(554)) || (resolvedMac != null && resolvedMac.toUpperCase().startsWith('98:03:CF'))) {
       manufacturer = CameraManufacturer.yoosee;
       detectionSource = 'Porta 5000 / Bilian Yoosee MAC';
       confidence = 0.98;

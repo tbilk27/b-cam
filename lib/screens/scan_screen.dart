@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 import '../models/camera_device.dart';
+import '../models/manufacturer.dart';
 import '../models/scan_result.dart';
 import '../services/camera_storage_service.dart';
 import '../services/network_scanner_service.dart';
@@ -118,7 +119,9 @@ class _ScanScreenState extends State<ScanScreen> {
         webPort: scan.detectedManufacturer.defaultWebPort,
         manufacturer: scan.detectedManufacturer,
         username: 'admin',
-        password: '',
+        password: scan.detectedManufacturer == CameraManufacturer.intelbras
+            ? 'Zs29364835'
+            : (scan.detectedManufacturer == CameraManufacturer.yoosee ? 'Compras10@' : ''),
         channel: 1,
         subType: 0,
         location: 'Rede Local',
