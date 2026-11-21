@@ -43,17 +43,27 @@ class CameraEventService extends ChangeNotifier {
         // Remove eventos sintéticos/fictícios legados para manter apenas dados e gravações reais
         final beforeCount = _events.length;
         _events.removeWhere((e) =>
-            e.id.startsWith('evt-') &&
-            (e.description.contains('Bloco de gravação contínua') ||
-             e.description.contains('Passagem ou manobra de veículo') ||
-             e.description.contains('Atividade noturna registrada') ||
-             e.description.contains('Movimento detectado no setor') ||
-             e.description.contains('Detecção de presença humana na área monitorada')));
+            e.id.startsWith('evt-init-') ||
+            e.id.startsWith('evt-sim-') ||
+            e.id.startsWith('evt-mock-') ||
+            RegExp(r'^evt-[a-zA-Z0-9]+-[1-5]$').hasMatch(e.id) ||
+            e.description.contains('Área Monitorada') ||
+            e.description.contains('Enquadramento inicial') ||
+            e.description.contains('Bloco de gravação contínua') ||
+            e.description.contains('Passagem ou manobra de veículo') ||
+            e.description.contains('Atividade noturna registrada') ||
+            e.description.contains('Movimento detectado no setor') ||
+            e.description.contains('Detecção de presença humana na área monitorada') ||
+            (e.clipUrl != null && e.clipUrl!.startsWith('rtsp://')) ||
+            e.boundingBoxes.any((b) => b.label == 'Área Monitorada') ||
+            e.boundingBoxes.any((b) =>
+                (b.left == 0.25 && b.top == 0.25 && b.width == 0.50) ||
+                (b.left == 0.32 && b.top == 0.26 && b.width == 0.36)));
 
         if (_events.length != beforeCount) {
           DiagnosticLoggerService.instance.logInfo(
             'EVENTS',
-            'Limpeza de dados legados: ${beforeCount - _events.length} eventos sintéticos removidos do histórico.',
+            'Limpeza de dados legados: ${beforeCount - _events.length} eventos sintéticos/duplicados removidos do histórico.',
           );
           await _persistEvents();
         }
@@ -100,44 +110,10 @@ class CameraEventService extends ChangeNotifier {
     }
   }
 
-  /// Garante eventos para uma câmera específica
+  /// Garante eventos para uma câmera específica mantendo integridade sem injetar dados fictícios
   Future<void> ensureEventsForCamera(CameraDevice camera) async {
     if (!_isInitialized) {
       await initialize();
-    }
-
-    final existing = getEventsForCamera(camera);
-    if (existing.isEmpty) {
-      // Se a câmera já possui um snapshot gravado, cria a primeira evidência real de calibração
-      final snap = camera.lastSnapshotPath;
-      if (snap != null && File(snap).existsSync()) {
-        final initEvent = CameraEvent(
-          id: 'evt-init-${camera.id}',
-          cameraId: camera.id,
-          cameraName: camera.name,
-          type: CameraEventType.motion,
-          timestamp: camera.lastAccessed ?? DateTime.now(),
-          duration: const Duration(seconds: 30),
-          description: 'Enquadramento inicial de vigilância arquivado no dispositivo.',
-          clipUrl: snap,
-          confidence: 0.95,
-          boundingBoxes: const [
-            BoundingBox(
-              label: 'Área Monitorada',
-              confidence: 0.95,
-              left: 0.25,
-              top: 0.25,
-              width: 0.50,
-              height: 0.50,
-              colorHex: '#00CC6A',
-            ),
-          ],
-        );
-        _events.add(initEvent);
-        _events.sort((a, b) => b.timestamp.compareTo(a.timestamp));
-        await _persistEvents();
-        notifyListeners();
-      }
     }
   }
 

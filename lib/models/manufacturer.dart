@@ -187,8 +187,16 @@ enum CameraManufacturer {
     }
   }
 
+  /// True if manufacturer supports standard RTSP VCR/playback endpoints
+  bool get supportsRtspPlayback =>
+      this == CameraManufacturer.intelbras ||
+      this == CameraManufacturer.intelbrasMibo ||
+      this == CameraManufacturer.intelbrasIC ||
+      this == CameraManufacturer.dahua ||
+      this == CameraManufacturer.hikvision;
+
   /// Build complete RTSP Playback URL for NVR/DVR/SD card recorded video range
-  String buildPlaybackRtspUrl({
+  String? buildPlaybackRtspUrl({
     required String ip,
     int? port,
     String? user,
@@ -198,6 +206,10 @@ enum CameraManufacturer {
     required DateTime endTime,
     String? fallbackPath,
   }) {
+    if (!supportsRtspPlayback) {
+      return null;
+    }
+
     final effectivePort = port ?? defaultRtspPort;
     String path;
 
@@ -219,8 +231,7 @@ enum CameraManufacturer {
       final endStr = '${eUtc.year}${pad(eUtc.month)}${pad(eUtc.day)}T${pad(eUtc.hour)}${pad(eUtc.minute)}${pad(eUtc.second)}Z';
       path = '/Streaming/tracks/${channel}01/?starttime=$startStr&endtime=$endStr';
     } else {
-      // Fallback: If device has a custom path or live path
-      path = fallbackPath ?? defaultRtspPath;
+      return null;
     }
 
     if (!path.startsWith('/')) {

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import '../models/bounding_box.dart';
 import '../models/camera_device.dart';
@@ -17,6 +18,8 @@ class AiVisionAgentService extends ChangeNotifier {
 
   final Map<String, List<BoundingBox>> _liveDetections = {};
   final Map<String, Timer> _liveDetectionExpiryTimers = {};
+  final Map<String, List<int>> _baselineLuminanceGrids = {};
+  final Map<String, DateTime> _lastRecordedEventPerCamera = {};
 
   void setGeminiApiKey(String? key) {
     _geminiApiKey = key;
@@ -67,7 +70,103 @@ class AiVisionAgentService extends ChangeNotifier {
     notifyListeners();
   }
 
-  final Map<String, DateTime> _lastRecordedEventPerCamera = {};
+  /// Extrai uma matriz de luminância em baixa resolução (48x27) de forma ultra rápida
+  Future<List<int>?> _extractLuminanceGrid(File file, {int width = 48, int height = 27}) async {
+    try {
+      final bytes = await file.readAsBytes();
+      if (bytes.length < 100) return null;
+      final codec = await ui.instantiateImageCodec(bytes, targetWidth: width, targetHeight: height);
+      final frame = await codec.getNextFrame();
+      final byteData = await frame.image.toByteData(format: ui.ImageByteFormat.rawRgba);
+      if (byteData == null) return null;
+
+      final totalPixels = width * height;
+      final luminance = List<int>.filled(totalPixels, 0);
+      for (int i = 0; i < totalPixels; i++) {
+        final offset = i * 4;
+        final r = byteData.getUint8(offset);
+        final g = byteData.getUint8(offset + 1);
+        final b = byteData.getUint8(offset + 2);
+        luminance[i] = ((299 * r + 587 * g + 114 * b) ~/ 1000);
+      }
+      return luminance;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Detecta variações de movimento real comparando a matriz do frame atual com o frame anterior
+  BoundingBox? _detectMotionFromGrids({
+    required List<int> currentGrid,
+    required List<int> previousGrid,
+    int width = 48,
+    int height = 27,
+    int diffThreshold = 24,
+  }) {
+    int minX = width;
+    int maxX = 0;
+    int minY = height;
+    int maxY = 0;
+    int changedPixels = 0;
+
+    for (int y = 0; y < height; y++) {
+      for (int x = 0; x < width; x++) {
+        final idx = y * width + x;
+        final diff = (currentGrid[idx] - previousGrid[idx]).abs();
+        if (diff >= diffThreshold) {
+          changedPixels++;
+          if (x < minX) minX = x;
+          if (x > maxX) maxX = x;
+          if (y < minY) minY = y;
+          if (y > maxY) maxY = y;
+        }
+      }
+    }
+
+    // Se a alteração de pixels for menor que 12 pixels (~0.9% da cena), considera ruído ou cena estática
+    if (changedPixels < 12) {
+      return null; // NENHUM MOVIMENTO: não inventa caixas nem marca a tela
+    }
+
+    // Calcula coordenadas normalizadas 0.0 a 1.0 com padding suave
+    double left = (minX / width).clamp(0.0, 1.0);
+    double top = (minY / height).clamp(0.0, 1.0);
+    double right = ((maxX + 1) / width).clamp(0.0, 1.0);
+    double bottom = ((maxY + 1) / height).clamp(0.0, 1.0);
+
+    left = (left - 0.03).clamp(0.0, 1.0);
+    top = (top - 0.03).clamp(0.0, 1.0);
+    right = (right + 0.03).clamp(0.0, 1.0);
+    bottom = (bottom + 0.03).clamp(0.0, 1.0);
+
+    final boxW = (right - left).clamp(0.06, 1.0);
+    final boxH = (bottom - top).clamp(0.06, 1.0);
+
+    // Confiança dinâmica proporcional à intensidade do movimento real
+    final motionRatio = changedPixels / (width * height);
+    final confidence = (0.72 + (motionRatio * 1.8)).clamp(0.72, 0.98);
+
+    // Classificação morfológica
+    String label = 'Movimento Detectado';
+    String colorHex = '#00CC6A';
+    if (boxH / boxW > 1.35 && boxH >= 0.25) {
+      label = 'Pessoa';
+      colorHex = '#0078D4';
+    } else if (boxW / boxH > 1.30 && boxW >= 0.28) {
+      label = 'Veículo';
+      colorHex = '#FFB900';
+    }
+
+    return BoundingBox(
+      label: label,
+      confidence: confidence,
+      left: left,
+      top: top,
+      width: boxW,
+      height: boxH,
+      colorHex: colorHex,
+    );
+  }
 
   /// Processa um frame/snapshot capturado ao vivo da câmera e registra evento de segurança com evidência real
   Future<CameraEvent?> processLiveSnapshot(
@@ -79,63 +178,65 @@ class AiVisionAgentService extends ChangeNotifier {
       final file = File(snapshotPath);
       if (!await file.exists()) return null;
 
-      // Cooldown de 30 segundos por câmera para evitar duplicidade excessiva
+      // Cooldown de 30 segundos por câmera para evitar duplicidade excessiva de eventos gravados
       final now = DateTime.now();
       final lastRecorded = _lastRecordedEventPerCamera[camera.id];
       if (!forceRegister && lastRecorded != null && now.difference(lastRecorded).inSeconds < 30) {
         return null;
       }
 
-      final eventId = 'evt-${camera.id}-${now.millisecondsSinceEpoch}';
+      // Detecção de movimento ótico real nos pixels do frame
+      BoundingBox? detectedBox;
+      final currentGrid = await _extractLuminanceGrid(file);
+      if (currentGrid != null) {
+        final previousGrid = _baselineLuminanceGrids[camera.id];
+        _baselineLuminanceGrids[camera.id] = currentGrid;
 
-      // Análise contextual da câmera para definir objeto e rótulo
-      CameraEventType type = CameraEventType.motion;
-      double confidence = 0.93;
-      String label = 'Movimento';
-      String desc = 'Movimentação detectada no enquadramento de ${camera.location}.';
-
-      final nameLower = camera.name.toLowerCase();
-      final locLower = camera.location.toLowerCase();
-
-      if (nameLower.contains('portão') || nameLower.contains('frente') || locLower.contains('entrada')) {
-        type = CameraEventType.person;
-        confidence = 0.95;
-        label = 'Pessoa';
-        desc = 'Presença humana identificada na entrada principal.';
-      } else if (nameLower.contains('garagem') || locLower.contains('rua') || locLower.contains('estacionamento')) {
-        type = CameraEventType.vehicle;
-        confidence = 0.92;
-        label = 'Veículo';
-        desc = 'Movimentação veicular registrada pelo sensor de visão.';
-      } else if (nameLower.contains('festa') || nameLower.contains('gourmet') || nameLower.contains('corredor')) {
-        type = CameraEventType.person;
-        confidence = 0.91;
-        label = 'Pessoa Detectada';
-        desc = 'Atividade e variação ótica detectada na área monitorada.';
+        if (previousGrid != null && previousGrid.length == currentGrid.length) {
+          detectedBox = _detectMotionFromGrids(
+            currentGrid: currentGrid,
+            previousGrid: previousGrid,
+          );
+        }
       }
 
-      final box = BoundingBox(
-        label: label,
-        confidence: confidence,
-        left: 0.32,
-        top: 0.26,
-        width: 0.36,
-        height: 0.50,
-        colorHex: type == CameraEventType.person
-            ? '#0078D4'
-            : type == CameraEventType.vehicle
-                ? '#FFB900'
-                : '#00CC6A',
-      );
+      // Se a cena estiver estática (sem movimento real) e não for um teste forçado:
+      // Não cria eventos fictícios nem desenha caixas falsas no centro da tela!
+      if (detectedBox == null && !forceRegister) {
+        clearLiveDetections(camera.id);
+        return null;
+      }
+
+      final box = detectedBox ??
+          const BoundingBox(
+            label: 'Movimento Detectado',
+            confidence: 0.85,
+            left: 0.25,
+            top: 0.25,
+            width: 0.50,
+            height: 0.50,
+            colorHex: '#00CC6A',
+          );
+
+      CameraEventType type = CameraEventType.motion;
+      if (box.label.contains('Pessoa')) {
+        type = CameraEventType.person;
+      } else if (box.label.contains('Veículo')) {
+        type = CameraEventType.vehicle;
+      }
 
       // Verificação da Zona de Exclusão da Câmera
       if (!forceRegister && camera.isBoxInExclusionZone(box)) {
         DiagnosticLoggerService.instance.logWarn(
           'AI_VISION',
-          '🚫 Evidência descartada: objeto dentro da Zona de Exclusão da câmera "${camera.name}".',
+          '🚫 Evidência descartada: movimento dentro da Zona de Exclusão da câmera "${camera.name}".',
         );
+        clearLiveDetections(camera.id);
         return null;
       }
+
+      final eventId = 'evt-${camera.id}-${now.millisecondsSinceEpoch}';
+      final desc = '${box.label} detectado no setor ${camera.location}.';
 
       final event = CameraEvent(
         id: eventId,
@@ -145,10 +246,10 @@ class AiVisionAgentService extends ChangeNotifier {
         timestamp: now,
         duration: const Duration(seconds: 30),
         description: desc,
-        confidence: confidence,
+        confidence: box.confidence,
         clipUrl: snapshotPath, // Salva o caminho real da evidência de imagem
         boundingBoxes: [box],
-        sceneInterpretation: 'IA Edge: $label identificado com ${(confidence * 100).toInt()}% de assertividade.',
+        sceneInterpretation: 'IA Ótica: ${box.label} identificado com ${(box.confidence * 100).toInt()}% de assertividade.',
         deepLinkUrl: 'bcam://event/$eventId',
       );
 
@@ -163,7 +264,7 @@ class AiVisionAgentService extends ChangeNotifier {
         setLiveDetections(camera.id, [box], duration: const Duration(seconds: 8));
         DiagnosticLoggerService.instance.logInfo(
           'AI_VISION',
-          '🎯 Evidência de evento gravada com sucesso para "${camera.name}": $snapshotPath',
+          '🎯 Evidência de movimento real registrada para "${camera.name}": $snapshotPath [${box.label} ${(box.confidence * 100).toInt()}%]',
         );
         return event;
       }

@@ -365,29 +365,26 @@ class _VerticalEventTimelineState extends State<VerticalEventTimeline> {
             ],
           ),
 
-          // Right: Visualização do evento 🔴
+          // Right: Histórico de Gravações
           Flexible(
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
+                const Icon(
+                  FluentIcons.history,
+                  size: 13,
+                  color: BCamTheme.textSecondary,
+                ),
+                const SizedBox(width: 5),
                 Flexible(
                   child: Text(
-                    widget.isCompact ? 'Eventos' : 'Visualização do evento',
+                    widget.isCompact ? 'Histórico' : 'Histórico de Gravações',
                     style: GoogleFonts.inter(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: BCamTheme.statusOnlineGlow,
+                      color: BCamTheme.textSecondary,
                     ),
                     overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Container(
-                  width: 6.5,
-                  height: 6.5,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFFF3B30), // Red dot indicator
-                    shape: BoxShape.circle,
                   ),
                 ),
               ],
@@ -579,7 +576,7 @@ class _VerticalEventTimelineState extends State<VerticalEventTimeline> {
                                 const SizedBox(width: 4),
                                 Flexible(
                                   child: Text(
-                                    '${event.type.label} (${(event.confidence * 100).toInt()}%)',
+                                    '${DateFormat('HH:mm:ss').format(event.timestamp)} • Certeza ${(event.confidence * 100).toInt()}%',
                                     style: GoogleFonts.inter(
                                       fontSize: 10.5,
                                       fontWeight: FontWeight.w500,
@@ -636,7 +633,10 @@ class _VerticalEventTimelineState extends State<VerticalEventTimeline> {
   }
 
   String _resolveClipCountLabel(CameraEvent event, {int count = 1}) {
-    return '$count ${count == 1 ? "clipe" : "clipes"}';
+    if (count > 1) {
+      return '$count clipes detectados';
+    }
+    return event.type.label;
   }
 
   List<CameraEvent> _resolveClipsForCluster(CameraEvent primaryEvent, List<CameraEvent> allEvents) {

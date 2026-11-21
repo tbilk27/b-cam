@@ -125,6 +125,41 @@ void main() {
       final events = service.getEventsForCamera(camEmpty);
       expect(events, isEmpty);
     });
+
+    test('Yoosee playbackUrlForEvent returns null without recorded clip (never plays live feed)', () {
+      final camYoosee = CameraDevice(
+        id: 'cam-yoosee-test',
+        name: 'Área de Festas',
+        ip: '192.168.3.24',
+        manufacturer: CameraManufacturer.yoosee,
+      );
+      final event = CameraEvent(
+        id: 'evt-test-yoosee',
+        cameraId: camYoosee.id,
+        cameraName: camYoosee.name,
+        type: CameraEventType.motion,
+        timestamp: DateTime(2026, 11, 21, 8, 27),
+        duration: const Duration(seconds: 45),
+        description: 'Movimento detectado',
+      );
+
+      final pbUrl = camYoosee.playbackUrlForEvent(event);
+      expect(pbUrl, isNull, reason: 'Câmeras sem RTSP VCR não devem retornar streamUrl como playback');
+    });
+
+    test('ensureEventsForCamera does not inject synthetic initial events', () async {
+      final camEmpty = CameraDevice(
+        id: 'cam-empty-no-init',
+        name: 'Portão Lateral',
+        ip: '192.168.3.99',
+        manufacturer: CameraManufacturer.genericOnvif,
+      );
+
+      final service = CameraEventService.instance;
+      await service.ensureEventsForCamera(camEmpty);
+      final events = service.getEventsForCamera(camEmpty);
+      expect(events, isEmpty);
+    });
   });
 
   group('Cloud Relay & Outside Network Routing Tests', () {

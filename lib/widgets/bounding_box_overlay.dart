@@ -54,15 +54,8 @@ class BoundingBoxOverlay extends StatelessWidget {
                           color: color,
                           width: 2.0,
                         ),
-                        color: color.withValues(alpha: 0.12),
+                        color: Colors.transparent, // Apenas contorno: interior 100% transparente e desobstruído
                         borderRadius: BorderRadius.circular(4),
-                        boxShadow: [
-                          BoxShadow(
-                            color: color.withValues(alpha: 0.4),
-                            blurRadius: 6,
-                            spreadRadius: 1,
-                          ),
-                        ],
                       ),
                       child: Stack(
                         clipBehavior: Clip.none,

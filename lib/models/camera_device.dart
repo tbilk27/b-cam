@@ -106,11 +106,15 @@ class CameraDevice {
   }
 
   /// Computes the actual RTSP playback URL for an event range (never returns live stream)
-  String playbackUrlForEvent(CameraEvent event, {bool forceCloud = false}) {
+  String? playbackUrlForEvent(CameraEvent event, {bool forceCloud = false}) {
     if (event.clipUrl != null &&
         event.clipUrl!.trim().isNotEmpty &&
         event.clipUrl!.trim() != streamUrl) {
       return event.clipUrl!.trim();
+    }
+
+    if (!manufacturer.supportsRtspPlayback) {
+      return null;
     }
 
     final useCloud = forceCloud || remoteAccessMode == 'remote';

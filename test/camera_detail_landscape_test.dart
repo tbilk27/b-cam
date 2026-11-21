@@ -49,7 +49,7 @@ void main() {
 
       // Check Sub-Header elements
       expect(find.text('Hoje'), findsOneWidget);
-      expect(find.text('Visualização do evento'), findsOneWidget);
+      expect(find.text('Histórico de Gravações'), findsOneWidget);
       expect(find.byIcon(FluentIcons.filter), findsOneWidget);
 
       // Check Zoom buttons

@@ -318,49 +318,10 @@ class _EventClipPlayerViewState extends State<EventClipPlayerView> {
     return DateFormat('HH:mm:ss').format(currentTime);
   }
 
-  /// Retorna o contorno onde o movimento foi identificado no vídeo do evento
+  /// Retorna o contorno real onde o movimento foi identificado no vídeo do evento
   List<BoundingBox> _eventBoundingBoxes() {
     if (!_showAiBoxes) return const [];
-    if (widget.event.boundingBoxes.isNotEmpty) {
-      return widget.event.boundingBoxes;
-    }
-    // Se o evento não possui bounding box salva, gera o contorno contextual baseado no tipo de detecção
-    switch (widget.event.type) {
-      case CameraEventType.person:
-        return [
-          const BoundingBox(
-            label: 'Pessoa',
-            confidence: 0.94,
-            left: 0.36,
-            top: 0.22,
-            width: 0.26,
-            height: 0.58,
-          ),
-        ];
-      case CameraEventType.vehicle:
-        return [
-          const BoundingBox(
-            label: 'Veículo',
-            confidence: 0.91,
-            left: 0.24,
-            top: 0.32,
-            width: 0.50,
-            height: 0.36,
-          ),
-        ];
-      case CameraEventType.motion:
-      default:
-        return [
-          const BoundingBox(
-            label: 'Movimento Detectado',
-            confidence: 0.88,
-            left: 0.22,
-            top: 0.26,
-            width: 0.54,
-            height: 0.44,
-          ),
-        ];
-    }
+    return widget.event.boundingBoxes;
   }
 
   Widget _buildBackgroundSnapshot() {
