@@ -1,9 +1,9 @@
 {
-  "versionCode": 28,
-  "versionName": "1.25.0",
+  "versionCode": 29,
+  "versionName": "1.26.0",
   "apkUrl": "http://192.168.3.62:8088/b-cam-arm64.apk",
-  "sha256": "86d5fcf838c0f7829ab518cad2b8afb53949aa0e2545b5d1128ed47c6359b409",
-  "fileSizeBytes": 63402073,
-  "releaseNotes": "Versão 1.25.0: Correção definitiva da listagem de eventos (remoção de eventos fictícios e cluster real), resolução de tela preta ao retornar da tela de logs (PopScope & callback) e infraestrutura Cloud Relay para comunicação e streaming fora da rede local (4G/5G).",
-  "releaseDate": "2026-11-21T15:52:00Z"
+  "sha256": "d4c026234420cd6e99ea19c978f1bc89bf27588e5c7686377117b518067b84a6",
+  "fileSizeBytes": 63467609,
+  "releaseNotes": "Versão 1.26.0: Suporte completo a comandos reais de PTZ e hardware (ONVIF porta 5000 + RTSP porta 554) para câmeras Yoosee, Sirene física, Holofote LED, Visão Noturna e controle de giro integrado diretamente na tela de visualização.",
+  "releaseDate": "2026-11-21T16:30:00Z"
 }

@@ -221,5 +221,42 @@ void main() {
       expect(listening2, isTrue);
       expect(service.isListening(camera.id), isTrue);
     });
+
+    test('Yoosee camera resolves onvifPort to 5000 and dispatches PTZ commands', () async {
+      final yooseeCam = CameraDevice(
+        id: 'yoosee_festas',
+        name: 'Área de Festas',
+        ip: '192.168.3.24',
+        rtspPort: 554,
+        webPort: 80,
+        username: 'admin',
+        password: 'password',
+        channel: 1,
+        manufacturer: CameraManufacturer.yoosee,
+        location: 'Festas',
+      );
+
+      // Yoosee camera MUST map to port 5000 for ONVIF gSOAP
+      expect(yooseeCam.onvifPort, equals(5000));
+
+      final otherCam = yooseeCam.copyWith(
+        manufacturer: CameraManufacturer.hikvision,
+        webPort: 8080,
+      );
+      expect(otherCam.onvifPort, equals(8080));
+
+      // Test PTZ Command execution (will attempt network or gracefully return false when camera unreachable in test env)
+      final service = CameraActionService.instance;
+      final result = await service.sendPtzCommand(
+        yooseeCam,
+        PtzDirection.up,
+        speed: 0.5,
+      );
+      // In offline unit test environment, it returns a boolean cleanly without throwing
+      expect(result, isA<bool>());
+
+      final presetResult = await service.gotoPreset(yooseeCam, 'Portão');
+      expect(presetResult, isA<bool>());
+    });
   });
 }

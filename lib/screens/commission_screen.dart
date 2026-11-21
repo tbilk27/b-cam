@@ -143,7 +143,7 @@ class _CommissionScreenState extends State<CommissionScreen> {
       name: _nameController.text.trim(),
       ip: _ipController.text.trim(),
       rtspPort: int.tryParse(_rtspPortController.text.trim()) ?? 554,
-      webPort: 80,
+      webPort: widget.existingCamera?.webPort ?? (_selectedManufacturer == CameraManufacturer.yoosee ? 5000 : 80),
       manufacturer: _selectedManufacturer,
       username: _userController.text.trim(),
       password: _passController.text.trim(),

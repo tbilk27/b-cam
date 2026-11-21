@@ -10,6 +10,7 @@ import '../services/camera_storage_service.dart';
 import '../services/diagnostic_logger_service.dart';
 import '../theme/fluent_theme.dart';
 import '../widgets/live_player_view.dart';
+import '../widgets/ptz_controller_widget.dart';
 import '../widgets/vertical_event_timeline.dart';
 import 'commission_screen.dart';
 import 'exclusion_zone_screen.dart';
@@ -35,6 +36,7 @@ class _CameraDetailScreenState extends State<CameraDetailScreen> {
   Timer? _recordTimer;
   bool _showShutterFlash = false;
   int _bottomMenuPage = 0; // 0 = main page (5 icons), 1 = secondary page
+  bool _showPtzOverlay = false;
   final GlobalKey<LivePlayerViewState> _livePlayerKey = GlobalKey<LivePlayerViewState>();
 
   Future<void> _persistLastSnapshotOnExit() async {
@@ -490,6 +492,26 @@ class _CameraDetailScreenState extends State<CameraDetailScreen> {
               ),
               const SizedBox(width: 3),
 
+              // PTZ Quick Button (Pan / Tilt / Zoom)
+              IconButton(
+                style: ButtonStyle(
+                  backgroundColor: WidgetStateProperty.all(
+                    _showPtzOverlay ? BCamTheme.statusOnlineGlow.withValues(alpha: 0.3) : const Color(0x22FFFFFF),
+                  ),
+                ),
+                icon: Icon(
+                  FluentIcons.game,
+                  size: 14,
+                  color: _showPtzOverlay ? BCamTheme.statusOnlineGlow : Colors.white,
+                ),
+                onPressed: () {
+                  setState(() {
+                    _showPtzOverlay = !_showPtzOverlay;
+                  });
+                },
+              ),
+              const SizedBox(width: 3),
+
               // Diagnostics / Telemetry
               IconButton(
                 style: ButtonStyle(
@@ -610,6 +632,18 @@ class _CameraDetailScreenState extends State<CameraDetailScreen> {
               ),
             ),
           ),
+
+        // PTZ On-Screen Floating Controller Overlay
+        if (_showPtzOverlay)
+          Positioned(
+            right: 8,
+            bottom: 8,
+            child: PtzControllerWidget(
+              camera: _camera,
+              isOverlay: true,
+              onClose: () => setState(() => _showPtzOverlay = false),
+            ),
+          ),
       ],
     ),
   );
@@ -699,6 +733,20 @@ class _CameraDetailScreenState extends State<CameraDetailScreen> {
                 : Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
+                      // 0. PTZ Virtual / Giro Pan-Tilt-Zoom
+                      _buildRodapeItem(
+                        icon: FluentIcons.game,
+                        label: _showPtzOverlay ? 'Fechar PTZ' : 'Giro PTZ',
+                        isCompact: isCompact,
+                        isActive: _showPtzOverlay,
+                        activeColor: BCamTheme.statusOnlineGlow,
+                        onTap: () {
+                          setState(() {
+                            _showPtzOverlay = !_showPtzOverlay;
+                          });
+                        },
+                      ),
+
                       // 1. Interfone (Falar / Push-to-Talk)
                       _buildRodapeItem(
                         icon: FluentIcons.microphone,

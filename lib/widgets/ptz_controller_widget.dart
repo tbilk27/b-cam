@@ -1,7 +1,7 @@
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/camera_device.dart';
-import '../services/diagnostic_logger_service.dart';
+import '../services/camera_action_service.dart';
 import '../theme/fluent_theme.dart';
 
 class PtzControllerWidget extends StatelessWidget {
@@ -16,23 +16,25 @@ class PtzControllerWidget extends StatelessWidget {
     this.onClose,
   });
 
-  void _sendPtz(BuildContext context, String action) {
-    DiagnosticLoggerService.instance.logInfo(
-      'PTZ',
-      'Comando PTZ "$action" enviado para "${camera.name}" (${camera.ip}:${camera.rtspPort})',
-      details: 'Protocolo: ONVIF PTZ ContinuousMove / RelativeMove ($action)',
-    );
+  void _sendPtz(BuildContext context, PtzDirection direction) async {
+    final success = await CameraActionService.instance.sendPtzCommand(camera, direction);
 
-    displayInfoBar(
-      context,
-      duration: const Duration(milliseconds: 1400),
-      builder: (context, close) => InfoBar(
-        title: Text('PTZ: $action'),
-        content: Text('Comando $action enviado para ${camera.ip}'),
-        severity: InfoBarSeverity.info,
-        onClose: close,
-      ),
-    );
+    if (context.mounted) {
+      displayInfoBar(
+        context,
+        duration: const Duration(milliseconds: 1400),
+        builder: (context, close) => InfoBar(
+          title: Text(success ? 'PTZ: ${direction.label}' : 'Falha no PTZ'),
+          content: Text(
+            success
+                ? 'Comando "${direction.label}" enviado para ${camera.ip} via ONVIF/RTSP'
+                : 'Não foi possível mover ${camera.ip}. Verifique a rede.',
+          ),
+          severity: success ? InfoBarSeverity.info : InfoBarSeverity.warning,
+          onClose: close,
+        ),
+      );
+    }
   }
 
   @override
@@ -197,7 +199,7 @@ class PtzControllerWidget extends StatelessWidget {
               icon: FluentIcons.chevron_up,
               tooltip: 'Subir',
               size: btnSize,
-              onTap: () => _sendPtz(context, 'Subir (Tilt Up)'),
+              onTap: () => _sendPtz(context, PtzDirection.up),
             ),
           ),
           // DOWN
@@ -208,7 +210,7 @@ class PtzControllerWidget extends StatelessWidget {
               icon: FluentIcons.chevron_down,
               tooltip: 'Descer',
               size: btnSize,
-              onTap: () => _sendPtz(context, 'Descer (Tilt Down)'),
+              onTap: () => _sendPtz(context, PtzDirection.down),
             ),
           ),
           // LEFT
@@ -219,7 +221,7 @@ class PtzControllerWidget extends StatelessWidget {
               icon: FluentIcons.chevron_left,
               tooltip: 'Esquerda',
               size: btnSize,
-              onTap: () => _sendPtz(context, 'Esquerda (Pan Left)'),
+              onTap: () => _sendPtz(context, PtzDirection.left),
             ),
           ),
           // RIGHT
@@ -230,7 +232,7 @@ class PtzControllerWidget extends StatelessWidget {
               icon: FluentIcons.chevron_right,
               tooltip: 'Direita',
               size: btnSize,
-              onTap: () => _sendPtz(context, 'Direita (Pan Right)'),
+              onTap: () => _sendPtz(context, PtzDirection.right),
             ),
           ),
           // CENTER / HOME
@@ -271,7 +273,7 @@ class PtzControllerWidget extends StatelessWidget {
     return Tooltip(
       message: 'Posição Central (Home)',
       child: GestureDetector(
-        onTap: () => _sendPtz(context, 'Centro / Posição Home'),
+        onTap: () => _sendPtz(context, PtzDirection.home),
         child: Container(
           width: size * 0.85,
           height: size * 0.85,
@@ -298,7 +300,7 @@ class PtzControllerWidget extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         GestureDetector(
-          onTap: () => _sendPtz(context, 'Zoom In (+)'),
+          onTap: () => _sendPtz(context, PtzDirection.zoomIn),
           child: Container(
             padding: EdgeInsets.symmetric(horizontal: compact ? 8 : 12, vertical: compact ? 4 : 6),
             decoration: BoxDecoration(
@@ -317,7 +319,7 @@ class PtzControllerWidget extends StatelessWidget {
         ),
         const SizedBox(width: 6),
         GestureDetector(
-          onTap: () => _sendPtz(context, 'Zoom Out (-)'),
+          onTap: () => _sendPtz(context, PtzDirection.zoomOut),
           child: Container(
             padding: EdgeInsets.symmetric(horizontal: compact ? 8 : 12, vertical: compact ? 4 : 6),
             decoration: BoxDecoration(
@@ -338,9 +340,30 @@ class PtzControllerWidget extends StatelessWidget {
     );
   }
 
+  void _sendPreset(BuildContext context, String preset) async {
+    final success = await CameraActionService.instance.gotoPreset(camera, preset);
+
+    if (context.mounted) {
+      displayInfoBar(
+        context,
+        duration: const Duration(milliseconds: 1400),
+        builder: (context, close) => InfoBar(
+          title: Text(success ? 'Preset: $preset' : 'Falha no Preset'),
+          content: Text(
+            success
+                ? 'Posição "$preset" enviada para ${camera.ip}'
+                : 'Não foi possível mover ${camera.ip} para o preset.',
+          ),
+          severity: success ? InfoBarSeverity.info : InfoBarSeverity.warning,
+          onClose: close,
+        ),
+      );
+    }
+  }
+
   Widget _buildPresetButton(BuildContext context, String preset) {
     return GestureDetector(
-      onTap: () => _sendPtz(context, 'Preset: $preset'),
+      onTap: () => _sendPreset(context, preset),
       child: Container(
         width: 100,
         padding: const EdgeInsets.symmetric(vertical: 5),

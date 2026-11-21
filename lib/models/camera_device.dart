@@ -97,6 +97,14 @@ class CameraDevice {
       manufacturer == CameraManufacturer.intelbrasMibo ||
       manufacturer == CameraManufacturer.intelbrasIC;
 
+  /// Resolves the effective ONVIF management and control port (5000 for Yoosee, 80/webPort for standard ONVIF)
+  int get onvifPort {
+    if (manufacturer == CameraManufacturer.yoosee || manufacturer.id == 'yoosee') {
+      return (webPort == 80 || webPort == 0) ? 5000 : webPort;
+    }
+    return webPort > 0 ? webPort : 80;
+  }
+
   /// Computes the actual RTSP playback URL for an event range (never returns live stream)
   String playbackUrlForEvent(CameraEvent event, {bool forceCloud = false}) {
     if (event.clipUrl != null &&
