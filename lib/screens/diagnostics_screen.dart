@@ -151,7 +151,7 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
             FilledButton(
               onPressed: () {
                 Navigator.of(context).pop();
-                _showDownloadModal(info, isReinstall: true);
+                AppUpdateService.showUpdateModal(context, info, isReinstall: true);
               },
               child: const Text('Baixar e Reinstalar'),
             ),
@@ -161,78 +161,7 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
       return;
     }
 
-    _showDownloadModal(info, isReinstall: false);
-  }
-
-  void _showDownloadModal(AppVersionInfo info, {bool isReinstall = false}) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        bool downloading = false;
-        double progress = 0.0;
-
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return ContentDialog(
-              title: Row(
-                children: [
-                  const Icon(FluentIcons.cloud_download, color: BCamTheme.accentLightBlue, size: 20),
-                  const SizedBox(width: 8),
-                  Text(
-                    isReinstall ? 'Reinstalar v${info.remoteVersionName}' : 'Nova Versão: v${info.remoteVersionName}',
-                    style: GoogleFonts.inter(fontWeight: FontWeight.w700),
-                  ),
-                ],
-              ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Versão Atual: v${info.currentVersionName} (Build ${info.currentVersionCode})\n'
-                    'Versão no Servidor: v${info.remoteVersionName} (Build ${info.remoteVersionCode})',
-                    style: GoogleFonts.robotoMono(fontSize: 12, color: BCamTheme.accentLightBlue),
-                  ),
-                  const SizedBox(height: 10),
-                  Text('Novidades:', style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 12)),
-                  const SizedBox(height: 4),
-                  Text(info.releaseNotes, style: GoogleFonts.inter(fontSize: 12, height: 1.3)),
-                  const SizedBox(height: 14),
-                  if (downloading) ...[
-                    ProgressBar(value: progress * 100),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Baixando atualização: ${(progress * 100).toInt()}% ${info.fileSizeFormatted}',
-                      style: GoogleFonts.robotoMono(fontSize: 11, color: BCamTheme.accentLightBlue),
-                    ),
-                  ],
-                ],
-              ),
-              actions: [
-                if (!downloading)
-                  Button(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('Mais Tarde'),
-                  ),
-                FilledButton(
-                  onPressed: downloading
-                      ? null
-                      : () async {
-                          setModalState(() => downloading = true);
-                          await AppUpdateService.instance.downloadAndInstallUpdate(
-                            info,
-                            onProgress: (p) => setModalState(() => progress = p),
-                          );
-                          if (context.mounted) Navigator.of(context).pop();
-                        },
-                  child: Text(downloading ? 'Baixando...' : (isReinstall ? 'Baixar e Reinstalar' : 'Baixar e Atualizar Agora')),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
+    AppUpdateService.showUpdateModal(context, info, isReinstall: false);
   }
 
   List<LogEntry> _filterLogs(List<LogEntry> logs) {
@@ -292,24 +221,6 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
               commandBar: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  FilledButton(
-                    style: ButtonStyle(
-                      backgroundColor: WidgetStateProperty.all(BCamTheme.accentBlue),
-                    ),
-                    onPressed: _checkAndShowUpdateDialog,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(FluentIcons.cloud_download, size: 12, color: Colors.white),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Atualizar',
-                          style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 4),
                   IconButton(
                     icon: const Icon(FluentIcons.copy, size: 15),
                     onPressed: () => _copyAllLogs(logger),
@@ -359,11 +270,11 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
               children: [
                 // In-App Auto-Update Card (Destaque Principal de Atualização OTA)
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   child: Card(
                     backgroundColor: const Color(0xFF131A26),
                     borderColor: BCamTheme.accentBlue.withValues(alpha: 0.6),
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(14),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -378,7 +289,7 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                               ),
                               child: const Icon(FluentIcons.cloud_download, size: 20, color: BCamTheme.accentLightBlue),
                             ),
-                            const SizedBox(width: 10),
+                            const SizedBox(width: 12),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -387,9 +298,9 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                                     children: [
                                       Text(
                                         'Atualização do Aplicativo',
-                                        style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white),
+                                        style: GoogleFonts.inter(fontSize: 13.5, fontWeight: FontWeight.w700, color: Colors.white),
                                       ),
-                                      const SizedBox(width: 6),
+                                      const SizedBox(width: 8),
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
                                         decoration: BoxDecoration(
@@ -404,7 +315,7 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                                       ),
                                     ],
                                   ),
-                                  const SizedBox(height: 2),
+                                  const SizedBox(height: 3),
                                   Text(
                                     'Versão instalada: v${AppUpdateService.appVersionName} (Build ${AppUpdateService.appVersionCode})',
                                     style: GoogleFonts.robotoMono(fontSize: 10.5, color: BCamTheme.textSecondary),
@@ -412,29 +323,34 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                                 ],
                               ),
                             ),
-                            FilledButton(
-                              style: ButtonStyle(
-                                backgroundColor: WidgetStateProperty.all(BCamTheme.accentBlue),
-                              ),
-                              onPressed: _checkAndShowUpdateDialog,
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(FluentIcons.sync, size: 12),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    'Atualizar',
-                                    style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600),
-                                  ),
-                                ],
-                              ),
-                            ),
                           ],
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 10),
                         Text(
-                          'Baixa e atualiza o aplicativo diretamente pelo servidor oficial sem precisar conectar ao computador.',
-                          style: GoogleFonts.inter(fontSize: 10.5, color: BCamTheme.textTertiary, height: 1.3),
+                          'Baixe e instale atualizações diretamente pelo servidor oficial sem precisar conectar ao computador.',
+                          style: GoogleFonts.inter(fontSize: 11, color: BCamTheme.textTertiary, height: 1.3),
+                        ),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 38,
+                          child: FilledButton(
+                            style: ButtonStyle(
+                              backgroundColor: WidgetStateProperty.all(BCamTheme.accentBlue),
+                            ),
+                            onPressed: _checkAndShowUpdateDialog,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(FluentIcons.sync, size: 13, color: Colors.white),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Verificar e Atualizar Agora',
+                                  style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -784,70 +700,6 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                               Text(
                                 'Instale o Tailscale no celular e em um PC/servidor da casa. Conecta sem abrir portas e acessa os IPs locais em qualquer lugar do mundo.',
                                 style: GoogleFonts.inter(fontSize: 10.5, color: BCamTheme.textTertiary),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                // In-App Auto-Update Card
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  child: Card(
-                    backgroundColor: BCamTheme.darkSurface,
-                    borderColor: BCamTheme.darkBorder,
-                    padding: const EdgeInsets.all(12),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(6),
-                                decoration: BoxDecoration(
-                                  color: BCamTheme.accentBlue.withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: const Icon(FluentIcons.cloud_download, size: 16, color: BCamTheme.accentLightBlue),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Atualização In-App (OTA)',
-                                      style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w600, color: BCamTheme.textPrimary),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    Text(
-                                      'Versão atual: v${AppUpdateService.appVersionName} • Build ${AppUpdateService.appVersionCode}',
-                                      style: GoogleFonts.robotoMono(fontSize: 10.5, color: BCamTheme.textSecondary),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        FilledButton(
-                          onPressed: _checkAndShowUpdateDialog,
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(FluentIcons.sync, size: 12),
-                              const SizedBox(width: 4),
-                              Text(
-                                'Atualizar App',
-                                style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600),
                               ),
                             ],
                           ),

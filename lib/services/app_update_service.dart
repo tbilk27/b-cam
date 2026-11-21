@@ -2,7 +2,9 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:path_provider/path_provider.dart';
+import '../theme/fluent_theme.dart';
 import 'diagnostic_logger_service.dart';
 
 class AppVersionInfo {
@@ -41,8 +43,8 @@ class AppUpdateService extends ChangeNotifier {
   AppUpdateService._internal();
 
   // Current App Version (Defined in pubspec.yaml)
-  static const int appVersionCode = 34;
-  static const String appVersionName = '1.31.0';
+  static const int appVersionCode = 35;
+  static const String appVersionName = '1.32.0';
 
   String _updateServerUrl = 'https://bilkcam.web.app';
   String get updateServerUrl => _updateServerUrl;
@@ -230,5 +232,81 @@ class AppUpdateService extends ChangeNotifier {
     }
 
     return true;
+  }
+
+  /// Exibe o diálogo/modal oficial para baixar e instalar a atualização com barra de progresso
+  static void showUpdateModal(
+    BuildContext context,
+    AppVersionInfo info, {
+    bool isReinstall = false,
+  }) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        bool downloading = false;
+        double progress = 0.0;
+
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return ContentDialog(
+              title: Row(
+                children: [
+                  const Icon(FluentIcons.cloud_download, color: BCamTheme.accentLightBlue, size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    isReinstall ? 'Reinstalar v${info.remoteVersionName}' : 'Nova Versão: v${info.remoteVersionName}',
+                    style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+                  ),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Versão Atual: v${info.currentVersionName} (Build ${info.currentVersionCode})\n'
+                    'Versão no Servidor: v${info.remoteVersionName} (Build ${info.remoteVersionCode})',
+                    style: GoogleFonts.robotoMono(fontSize: 12, color: BCamTheme.accentLightBlue),
+                  ),
+                  const SizedBox(height: 10),
+                  Text('Novidades:', style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 12)),
+                  const SizedBox(height: 4),
+                  Text(info.releaseNotes, style: GoogleFonts.inter(fontSize: 12, height: 1.3)),
+                  const SizedBox(height: 14),
+                  if (downloading) ...[
+                    ProgressBar(value: progress * 100),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Baixando atualização: ${(progress * 100).toInt()}% ${info.fileSizeFormatted}',
+                      style: GoogleFonts.robotoMono(fontSize: 11, color: BCamTheme.accentLightBlue),
+                    ),
+                  ],
+                ],
+              ),
+              actions: [
+                if (!downloading)
+                  Button(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Mais Tarde'),
+                  ),
+                FilledButton(
+                  onPressed: downloading
+                      ? null
+                      : () async {
+                          setModalState(() => downloading = true);
+                          await AppUpdateService.instance.downloadAndInstallUpdate(
+                            info,
+                            onProgress: (p) => setModalState(() => progress = p),
+                          );
+                          if (context.mounted) Navigator.of(context).pop();
+                        },
+                  child: Text(downloading ? 'Baixando...' : (isReinstall ? 'Baixar e Reinstalar' : 'Baixar e Atualizar Agora')),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 }

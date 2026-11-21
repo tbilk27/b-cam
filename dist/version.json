@@ -1,9 +1,9 @@
 {
-  "versionCode": 34,
-  "versionName": "1.31.0",
+  "versionCode": 35,
+  "versionName": "1.32.0",
   "apkUrl": "https://github.com/tbilk27/b-cam/releases/latest/download/b-cam-arm64.apk",
-  "sha256": "d2def1093f68abbd112e286b5d0fde7fd59f841a74c0f120eb905f42a73afb8f",
-  "fileSizeBytes": 35034715,
-  "releaseNotes": "Versão 1.31.0: Botão de atualização OTA in-app na aba Sistema, correção de reprodução de vídeo de eventos com buffer pre-roll de 15 segundos para exibir o movimento antes da detecção, separação de snapshot vs vídeo RTSP, e loop de vigilância otimizado a cada 3 segundos.",
-  "releaseDate": "2026-11-21T19:26:00Z"
+  "sha256": "4f2d130fac5a7142058f125c2322d3b8d83860c1d64b312e972ba8184729dbdb",
+  "fileSizeBytes": 35034719,
+  "releaseNotes": "Versão 1.32.0: Oferta automática de atualização ao entrar no aplicativo sempre que houver nova versão publicada, banner de atualização no feed inicial e correção no layout do botão de atualização na tela de Sistema (agora centralizado com largura total no card dedicado).",
+  "releaseDate": "2026-11-21T19:41:00Z"
 }

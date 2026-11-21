@@ -8,6 +8,7 @@ import '../models/camera_event.dart';
 import '../models/manufacturer.dart';
 import '../models/scan_result.dart';
 import '../services/ai_vision_agent_service.dart';
+import '../services/app_update_service.dart';
 import '../services/auth_service.dart';
 import '../services/camera_event_service.dart';
 import '../services/camera_storage_service.dart';
@@ -50,10 +51,17 @@ class _HomeScreenState extends State<HomeScreen> {
   double _radarProgress = 0.0;
   String _radarSubnet = '192.168.3';
 
+  // In-App Auto Update
+  AppVersionInfo? _availableUpdate;
+  static bool _hasCheckedUpdateOnLaunch = false;
+
   @override
   void initState() {
     super.initState();
     _initScannerSubnet();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkForAppUpdateOnStartup();
+    });
     _notificationSub = FirebaseNotificationService.instance.onNotificationReceived.listen((payload) {
       if (!mounted) return;
       displayInfoBar(
@@ -88,6 +96,27 @@ class _HomeScreenState extends State<HomeScreen> {
       final prefix = await _scannerService.getLocalSubnetPrefix();
       if (mounted) setState(() => _radarSubnet = prefix);
     } catch (_) {}
+  }
+
+  Future<void> _checkForAppUpdateOnStartup() async {
+    if (_hasCheckedUpdateOnLaunch) return;
+    _hasCheckedUpdateOnLaunch = true;
+
+    // Aguarda carregar o feed inicial com folga
+    await Future.delayed(const Duration(milliseconds: 1400));
+    if (!mounted) return;
+
+    try {
+      final info = await AppUpdateService.instance.checkForUpdates();
+      if (!mounted || info == null || !info.hasUpdate) return;
+
+      setState(() => _availableUpdate = info);
+
+      // Oferece a atualização na entrada do app com o modal interativo
+      AppUpdateService.showUpdateModal(context, info);
+    } catch (e) {
+      DiagnosticLoggerService.instance.logWarn('APP_UPDATE', 'Verificação no startup falhou: $e');
+    }
   }
 
   void _startRadarScan() {
@@ -483,11 +512,21 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
 
+    final feedHeader = Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (_availableUpdate != null && _availableUpdate!.hasUpdate)
+          _buildUpdateBanner(_availableUpdate!),
+        filterPillsBar,
+      ],
+    );
+
     if (filteredCameras.isEmpty) {
       return ListView(
         padding: const EdgeInsets.only(bottom: 24),
         children: [
-          filterPillsBar,
+          feedHeader,
           _buildEmptyCameraFeed(allCameras.isEmpty),
         ],
       );
@@ -495,7 +534,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return ReorderableListView.builder(
       padding: const EdgeInsets.only(bottom: 28),
-      header: filterPillsBar,
+      header: feedHeader,
       itemCount: filteredCameras.length,
       onReorder: (oldIndex, newIndex) async {
         await storage.reorderCameras(oldIndex, newIndex, currentList: filteredCameras);
@@ -509,6 +548,60 @@ class _HomeScreenState extends State<HomeScreen> {
           index: index,
         );
       },
+    );
+  }
+
+  Widget _buildUpdateBanner(AppVersionInfo info) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(14, 8, 14, 2),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFF131A26),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: BCamTheme.accentBlue.withValues(alpha: 0.8), width: 1),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(7),
+            decoration: BoxDecoration(
+              color: BCamTheme.accentBlue.withValues(alpha: 0.25),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(FluentIcons.cloud_download, color: BCamTheme.accentLightBlue, size: 18),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Nova versão v${info.remoteVersionName} disponível!',
+                  style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w700, color: Colors.white),
+                ),
+                const SizedBox(height: 1),
+                Text(
+                  'Toque para instalar novidades e melhorias.',
+                  style: GoogleFonts.inter(fontSize: 10.5, color: BCamTheme.textSecondary),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          FilledButton(
+            style: ButtonStyle(
+              backgroundColor: WidgetStateProperty.all(BCamTheme.accentBlue),
+              padding: WidgetStateProperty.all(const EdgeInsets.symmetric(horizontal: 12, vertical: 6)),
+            ),
+            onPressed: () => AppUpdateService.showUpdateModal(context, info),
+            child: Text(
+              'Atualizar',
+              style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
