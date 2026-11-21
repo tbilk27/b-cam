@@ -92,6 +92,30 @@ void main() {
       expect(cam.streamUrl, 'rtsp://custom:stream@custom.local:8554/live');
       expect(cam.maskedStreamUrl, 'rtsp://custom:******@custom.local:8554/live');
     });
+
+    test('Remote Host and Port resolution works for 3G/4G outside access', () {
+      final cam = CameraDevice(
+        id: 'test-remote',
+        name: 'Intelbras Remota',
+        ip: '192.168.3.74',
+        rtspPort: 554,
+        remoteHost: 'cameras.nexeoo.com',
+        remoteRtspPort: 8554,
+        remoteAccessMode: 'remote',
+        manufacturer: CameraManufacturer.intelbras,
+        username: 'admin',
+        password: 'pass',
+      );
+
+      expect(cam.streamUrl, contains('cameras.nexeoo.com:8554'));
+      expect(cam.maskedStreamUrl, contains('cameras.nexeoo.com:8554'));
+
+      final json = cam.toJson();
+      final fromJson = CameraDevice.fromJson(json);
+      expect(fromJson.remoteHost, 'cameras.nexeoo.com');
+      expect(fromJson.remoteRtspPort, 8554);
+      expect(fromJson.remoteAccessMode, 'remote');
+    });
   });
 
   group('MAC Address Binding & DHCP Resilience tests', () {

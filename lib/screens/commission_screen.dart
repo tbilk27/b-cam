@@ -36,12 +36,15 @@ class _CommissionScreenState extends State<CommissionScreen> {
   late TextEditingController _channelController;
   late TextEditingController _customUrlController;
   late TextEditingController _locationController;
+  late TextEditingController _remoteHostController;
+  late TextEditingController _remotePortController;
 
   late CameraManufacturer _selectedManufacturer;
   int _selectedSubType = 0; // 0 = Main, 1 = Sub
   bool _testingStream = false;
   bool _isManualCustomUrl = false;
   bool _cameraEnabled = true;
+  String _remoteAccessMode = 'auto';
 
   // AI Event Recognition & Confidence Threshold Configuration
   bool _aiDetectionEnabled = true;
@@ -74,6 +77,11 @@ class _CommissionScreenState extends State<CommissionScreen> {
       _channelController = TextEditingController(text: existing.channel.toString());
       _customUrlController = TextEditingController(text: existing.customUrl ?? '');
       _locationController = TextEditingController(text: existing.location);
+      _remoteHostController = TextEditingController(text: existing.remoteHost ?? '');
+      _remotePortController = TextEditingController(
+        text: existing.remoteRtspPort != null ? existing.remoteRtspPort.toString() : '',
+      );
+      _remoteAccessMode = existing.remoteAccessMode;
       _selectedManufacturer = existing.manufacturer;
       _selectedSubType = existing.subType;
       _isManualCustomUrl = existing.customUrl != null && existing.customUrl!.isNotEmpty;
@@ -90,6 +98,9 @@ class _CommissionScreenState extends State<CommissionScreen> {
       _channelController = TextEditingController(text: '1');
       _customUrlController = TextEditingController(text: '');
       _locationController = TextEditingController(text: 'Entrada');
+      _remoteHostController = TextEditingController(text: '');
+      _remotePortController = TextEditingController(text: '');
+      _remoteAccessMode = 'auto';
       _selectedManufacturer = scan.detectedManufacturer;
       _selectedSubType = 0;
     } else {
@@ -101,6 +112,9 @@ class _CommissionScreenState extends State<CommissionScreen> {
       _channelController = TextEditingController(text: '1');
       _customUrlController = TextEditingController(text: '');
       _locationController = TextEditingController(text: 'Geral');
+      _remoteHostController = TextEditingController(text: '');
+      _remotePortController = TextEditingController(text: '');
+      _remoteAccessMode = 'auto';
       _selectedManufacturer = CameraManufacturer.intelbras;
       _selectedSubType = 0;
     }
@@ -116,6 +130,8 @@ class _CommissionScreenState extends State<CommissionScreen> {
     _channelController.dispose();
     _customUrlController.dispose();
     _locationController.dispose();
+    _remoteHostController.dispose();
+    _remotePortController.dispose();
     super.dispose();
   }
 
@@ -138,6 +154,9 @@ class _CommissionScreenState extends State<CommissionScreen> {
       aiDetectionEnabled: _aiDetectionEnabled,
       aiMinConfidence: _aiMinConfidence,
       pushNotificationsEnabled: _pushNotificationsEnabled,
+      remoteHost: _remoteHostController.text.trim().isNotEmpty ? _remoteHostController.text.trim() : null,
+      remoteRtspPort: int.tryParse(_remotePortController.text.trim()),
+      remoteAccessMode: _remoteAccessMode,
     );
   }
 
@@ -532,6 +551,114 @@ class _CommissionScreenState extends State<CommissionScreen> {
                             ),
                           ),
                         ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // 3.5 Acesso Remoto (3G/4G/5G • Fora do Wi-Fi • Domínio nexeoo.com / DDNS)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                child: Card(
+                  backgroundColor: BCamTheme.darkSurface,
+                  borderColor: BCamTheme.darkBorder,
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(FluentIcons.globe, size: 16, color: BCamTheme.accentLightBlue),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Acesso Remoto (3G / 4G / Fora do Wi-Fi)',
+                                style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: BCamTheme.textPrimary),
+                              ),
+                            ],
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: BCamTheme.accentBlue.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: BCamTheme.accentBlue.withValues(alpha: 0.5), width: 0.8),
+                            ),
+                            child: Text(
+                              'nexeoo.com / DDNS',
+                              style: GoogleFonts.robotoMono(fontSize: 9, fontWeight: FontWeight.w700, color: BCamTheme.accentLightBlue),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Permite conectar à câmera via dados móveis ou redes Wi-Fi externas através do seu domínio (ex: cameras.nexeoo.com) ou IP público com redirecionamento de portas no roteador.',
+                        style: GoogleFonts.inter(fontSize: 11, color: BCamTheme.textSecondary, height: 1.3),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            flex: 2,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Host Remoto / DDNS / Domínio',
+                                  style: GoogleFonts.inter(fontSize: 12, color: BCamTheme.textSecondary),
+                                ),
+                                const SizedBox(height: 4),
+                                TextFormBox(
+                                  controller: _remoteHostController,
+                                  placeholder: 'ex: cameras.nexeoo.com',
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            flex: 1,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Porta Externa',
+                                  style: GoogleFonts.inter(fontSize: 12, color: BCamTheme.textSecondary),
+                                ),
+                                const SizedBox(height: 4),
+                                TextFormBox(
+                                  controller: _remotePortController,
+                                  placeholder: '8554',
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        'Modo de Conexão:',
+                        style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w600, color: BCamTheme.textSecondary),
+                      ),
+                      const SizedBox(height: 4),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ComboBox<String>(
+                          value: _remoteAccessMode,
+                          items: const [
+                            ComboBoxItem(value: 'auto', child: Text('Automático (Local na Wi-Fi / Remoto fora)')),
+                            ComboBoxItem(value: 'local', child: Text('Sempre Local (IP 192.168.x.x)')),
+                            ComboBoxItem(value: 'remote', child: Text('Sempre Remoto (Forçar 3G/4G/Domínio)')),
+                          ],
+                          onChanged: (val) {
+                            if (val != null) setState(() => _remoteAccessMode = val);
+                          },
+                        ),
                       ),
                     ],
                   ),

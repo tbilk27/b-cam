@@ -35,6 +35,11 @@ class CameraDevice {
   List<int> exclusionMask;
   bool exclusionZoneEnabled;
 
+  // Remote Access / Outside Local Wi-Fi (3G, 4G, 5G, External Wi-Fi)
+  String? remoteHost; // e.g. cameras.nexeoo.com or public DDNS IP
+  int? remoteRtspPort; // e.g. 8554
+  String remoteAccessMode; // 'auto', 'local', 'remote'
+
   CameraDevice({
     required this.id,
     required this.name,
@@ -63,6 +68,9 @@ class CameraDevice {
     this.aiCustomPrompt,
     List<int>? exclusionMask,
     this.exclusionZoneEnabled = true,
+    this.remoteHost,
+    this.remoteRtspPort,
+    this.remoteAccessMode = 'auto',
   }) : macAddress = normalizeMac(macAddress),
        aiTargetClasses = aiTargetClasses ?? ['person', 'vehicle', 'motion', 'alarm'],
        exclusionMask = exclusionMask != null ? List.unmodifiable(exclusionMask) : const [];
@@ -104,9 +112,17 @@ class CameraDevice {
     if (customUrl != null && customUrl!.trim().isNotEmpty) {
       return customUrl!.trim();
     }
+
+    final targetHost = (remoteAccessMode == 'remote' && remoteHost != null && remoteHost!.trim().isNotEmpty)
+        ? remoteHost!.trim()
+        : ip;
+    final targetPort = (remoteAccessMode == 'remote' && remoteRtspPort != null)
+        ? remoteRtspPort!
+        : rtspPort;
+
     return manufacturer.buildRtspUrl(
-      ip: ip,
-      port: rtspPort,
+      ip: targetHost,
+      port: targetPort,
       user: username,
       password: password,
       channel: channel,
@@ -120,9 +136,17 @@ class CameraDevice {
     if (customUrl != null && customUrl!.trim().isNotEmpty) {
       return customUrl!.replaceAll(RegExp(r':([^@/:?]+)@'), ':******@');
     }
+
+    final targetHost = (remoteAccessMode == 'remote' && remoteHost != null && remoteHost!.trim().isNotEmpty)
+        ? remoteHost!.trim()
+        : ip;
+    final targetPort = (remoteAccessMode == 'remote' && remoteRtspPort != null)
+        ? remoteRtspPort!
+        : rtspPort;
+
     return manufacturer.buildRtspUrl(
-      ip: ip,
-      port: rtspPort,
+      ip: targetHost,
+      port: targetPort,
       user: username,
       password: password.isNotEmpty ? '******' : '',
       channel: channel,
@@ -160,6 +184,9 @@ class CameraDevice {
       'aiCustomPrompt': aiCustomPrompt,
       'exclusionMask': exclusionMask,
       'exclusionZoneEnabled': exclusionZoneEnabled,
+      'remoteHost': remoteHost,
+      'remoteRtspPort': remoteRtspPort,
+      'remoteAccessMode': remoteAccessMode,
     };
   }
 
@@ -192,6 +219,9 @@ class CameraDevice {
       aiCustomPrompt: json['aiCustomPrompt'] as String?,
       exclusionMask: (json['exclusionMask'] as List<dynamic>?)?.map((e) => (e as num).toInt()).toList(),
       exclusionZoneEnabled: json['exclusionZoneEnabled'] as bool? ?? true,
+      remoteHost: json['remoteHost'] as String?,
+      remoteRtspPort: json['remoteRtspPort'] as int?,
+      remoteAccessMode: json['remoteAccessMode'] as String? ?? 'auto',
     );
   }
 
@@ -223,6 +253,9 @@ class CameraDevice {
     String? aiCustomPrompt,
     List<int>? exclusionMask,
     bool? exclusionZoneEnabled,
+    String? remoteHost,
+    int? remoteRtspPort,
+    String? remoteAccessMode,
   }) {
     return CameraDevice(
       id: id ?? this.id,
@@ -252,6 +285,9 @@ class CameraDevice {
       aiCustomPrompt: aiCustomPrompt ?? this.aiCustomPrompt,
       exclusionMask: exclusionMask ?? this.exclusionMask,
       exclusionZoneEnabled: exclusionZoneEnabled ?? this.exclusionZoneEnabled,
+      remoteHost: remoteHost ?? this.remoteHost,
+      remoteRtspPort: remoteRtspPort ?? this.remoteRtspPort,
+      remoteAccessMode: remoteAccessMode ?? this.remoteAccessMode,
     );
   }
 }

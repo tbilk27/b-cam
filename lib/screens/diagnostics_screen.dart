@@ -416,6 +416,86 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                   ),
                 ),
 
+                // Remote Access & 3G/4G Architecture Card
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  child: Card(
+                    backgroundColor: BCamTheme.darkSurface,
+                    borderColor: BCamTheme.darkBorder,
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(FluentIcons.globe, size: 16, color: BCamTheme.accentLightBlue),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Acesso Remoto (3G / 4G / Fora do Wi-Fi)',
+                                  style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w600, color: BCamTheme.textPrimary),
+                                ),
+                              ],
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: BCamTheme.statusOnlineGlow.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                '3G / 4G / 5G',
+                                style: GoogleFonts.robotoMono(fontSize: 9.5, fontWeight: FontWeight.w700, color: BCamTheme.statusOnlineGlow),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Por padrão, IPs 192.168.3.x funcionam apenas no Wi-Fi local. Para acessar fora de casa, escolha uma das 2 opções:',
+                          style: GoogleFonts.inter(fontSize: 11, color: BCamTheme.textSecondary, height: 1.3),
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: BCamTheme.darkCard,
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: BCamTheme.darkBorderSubtle),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'OPÇÃO 1: Seu Domínio nexeoo.com + Port Forwarding',
+                                style: GoogleFonts.robotoMono(fontSize: 10, fontWeight: FontWeight.w700, color: BCamTheme.accentLightBlue),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Crie um subdomínio (ex: cameras.nexeoo.com) apontando para o seu IP público e redirecione as portas RTSP (8554, 8555) no roteador.',
+                                style: GoogleFonts.inter(fontSize: 10.5, color: BCamTheme.textTertiary),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'OPÇÃO 2 (Mais Segura): Tailscale / WireGuard VPN',
+                                style: GoogleFonts.robotoMono(fontSize: 10, fontWeight: FontWeight.w700, color: const Color(0xFF00E676)),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Instale o Tailscale no celular e em um PC/servidor da casa. Conecta sem abrir portas e acessa os IPs locais em qualquer lugar do mundo.',
+                                style: GoogleFonts.inter(fontSize: 10.5, color: BCamTheme.textTertiary),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
                 // In-App Auto-Update Card
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
