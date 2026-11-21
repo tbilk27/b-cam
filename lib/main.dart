@@ -6,6 +6,7 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 import 'screens/splash_screen.dart';
 import 'services/ai_vision_agent_service.dart';
 import 'services/app_update_service.dart';
+import 'services/auth_service.dart';
 import 'services/camera_event_service.dart';
 import 'services/camera_storage_service.dart';
 import 'services/deep_link_service.dart';
@@ -67,6 +68,7 @@ class BCamApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => storageService ?? CameraStorageService()),
         ChangeNotifierProvider.value(value: DiagnosticLoggerService.instance),
+        ChangeNotifierProvider.value(value: AuthService.instance),
         ChangeNotifierProvider.value(value: CameraEventService.instance),
         ChangeNotifierProvider.value(value: FirebaseNotificationService.instance),
         ChangeNotifierProvider.value(value: AppUpdateService.instance),

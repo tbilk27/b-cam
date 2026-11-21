@@ -160,13 +160,6 @@ class _CommissionScreenState extends State<CommissionScreen> {
     );
   }
 
-  void _applyQuickCredential(String user, String pass) {
-    setState(() {
-      _userController.text = user;
-      _passController.text = pass;
-    });
-  }
-
   Future<void> _saveCamera() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
@@ -706,42 +699,6 @@ class _CommissionScreenState extends State<CommissionScreen> {
                         controller: _passController,
                         obscureText: true,
                         placeholder: 'Deixe em branco se não houver senha',
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Atalhos de credenciais comuns (padrão de fábrica):',
-                        style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: BCamTheme.textSecondary),
-                      ),
-                      const SizedBox(height: 6),
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        children: [
-                          Button(
-                            onPressed: () => _applyQuickCredential('admin', 'Zs29364835'),
-                            child: Text('admin / Zs29364835', style: GoogleFonts.inter(fontSize: 11)),
-                          ),
-                          Button(
-                            onPressed: () => _applyQuickCredential('admin', 'Compras10@'),
-                            child: Text('admin / Compras10@', style: GoogleFonts.inter(fontSize: 11)),
-                          ),
-                          Button(
-                            onPressed: () => _applyQuickCredential('admin', 'compras10'),
-                            child: Text('admin / compras10', style: GoogleFonts.inter(fontSize: 11)),
-                          ),
-                          Button(
-                            onPressed: () => _applyQuickCredential('admin', 'admin'),
-                            child: Text('admin / admin', style: GoogleFonts.inter(fontSize: 11)),
-                          ),
-                          Button(
-                            onPressed: () => _applyQuickCredential('admin', '123456'),
-                            child: Text('admin / 123456', style: GoogleFonts.inter(fontSize: 11)),
-                          ),
-                          Button(
-                            onPressed: () => _applyQuickCredential('admin', ''),
-                            child: Text('admin / (vazio)', style: GoogleFonts.inter(fontSize: 11)),
-                          ),
-                        ],
                       ),
                       if (_selectedManufacturer == CameraManufacturer.intelbrasMibo ||
                           _selectedManufacturer == CameraManufacturer.intelbrasIC) ...[

@@ -8,6 +8,7 @@ import '../models/camera_event.dart';
 import '../models/manufacturer.dart';
 import '../models/scan_result.dart';
 import '../services/ai_vision_agent_service.dart';
+import '../services/auth_service.dart';
 import '../services/camera_event_service.dart';
 import '../services/camera_storage_service.dart';
 import '../services/diagnostic_logger_service.dart';
@@ -23,6 +24,7 @@ import 'commission_screen.dart';
 import 'diagnostics_screen.dart';
 import 'fullscreen_camera_viewer.dart';
 import 'multi_grid_screen.dart';
+import 'profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -375,6 +377,44 @@ class _HomeScreenState extends State<HomeScreen> {
                     'Reconexão manual geral de todas as câmeras disparada (#$_refreshKey).',
                   );
                 },
+              ),
+              const SizedBox(width: 4),
+
+              // User Profile & Referral Shortcut (Google Account & WhatsApp Share)
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () {
+                  Navigator.of(context).push(
+                    FluentPageRoute(builder: (_) => const ProfileScreen()),
+                  );
+                },
+                child: Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: const Color(0xFF0078D4).withValues(alpha: 0.25),
+                    border: Border.all(color: const Color(0xFF4DA6FF), width: 1.2),
+                  ),
+                  child: Center(
+                    child: Consumer<AuthService>(
+                      builder: (context, auth, _) {
+                        final user = auth.currentUser;
+                        final initial = (user != null && user.displayName.isNotEmpty)
+                            ? user.displayName[0].toUpperCase()
+                            : 'G';
+                        return Text(
+                          initial,
+                          style: GoogleFonts.syne(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
               ),
             ],
           ),

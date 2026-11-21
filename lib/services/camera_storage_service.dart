@@ -104,6 +104,30 @@ class CameraStorageService extends ChangeNotifier {
     );
   }
 
+  /// Associa câmeras selecionadas (ou todas) à conta Google do usuário
+  Future<void> associateCamerasToUser(String email, {List<String>? cameraIds}) async {
+    bool changed = false;
+    for (int i = 0; i < _cameras.length; i++) {
+      if (cameraIds == null || cameraIds.contains(_cameras[i].id)) {
+        _cameras[i] = _cameras[i].copyWith(ownerEmail: email);
+        changed = true;
+      }
+    }
+    if (changed) {
+      await _persist();
+      notifyListeners();
+      DiagnosticLoggerService.instance.logInfo(
+        'STORAGE',
+        'Câmeras associadas à conta Google: $email',
+      );
+    }
+  }
+
+  /// Retorna as câmeras associadas ao e-mail do usuário logado
+  List<CameraDevice> getCamerasForUser(String email) {
+    return _cameras.where((c) => c.ownerEmail == null || c.ownerEmail == email).toList();
+  }
+
   /// Add or update camera binding by MAC Address (DHCP resilient)
   Future<void> addCamera(CameraDevice camera) async {
     // 1. Try to find existing device by unique hardware MAC address

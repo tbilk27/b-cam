@@ -1,0 +1,98 @@
+{
+  "project_info": {
+    "project_number": "714733873657",
+    "project_id": "bilkcam",
+    "storage_bucket": "bilkcam.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:714733873657:android:c2d0ea47a4a3735ca2f528",
+        "android_client_info": {
+          "package_name": "com.nexeoo.bcam"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "714733873657-g3nkh7dteepi09d43p81ffjd7mk4hpfd.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.nexeoo.bcam",
+            "certificate_hash": "b52e36151cab920ea82ce24400006c1fb2b95b0f"
+          }
+        },
+        {
+          "client_id": "714733873657-dbljek172kfvc2huh7npd75h9l02epn8.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAauyNq0HwJ77S3FrkkJD0YFAC7cd7KXLQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "714733873657-dbljek172kfvc2huh7npd75h9l02epn8.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "714733873657-esabkfsrno802g8t8lv0n53dqq9na2og.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "net.premiersoft.bilkcam"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:714733873657:android:7b7a0c30d5ef8ca2a2f528",
+        "android_client_info": {
+          "package_name": "net.premiersoft.bilkcam"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "714733873657-3hsms04l631hpgl7er4j7ur3rp7bcvff.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "net.premiersoft.bilkcam",
+            "certificate_hash": "b52e36151cab920ea82ce24400006c1fb2b95b0f"
+          }
+        },
+        {
+          "client_id": "714733873657-dbljek172kfvc2huh7npd75h9l02epn8.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAauyNq0HwJ77S3FrkkJD0YFAC7cd7KXLQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "714733873657-dbljek172kfvc2huh7npd75h9l02epn8.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "714733873657-esabkfsrno802g8t8lv0n53dqq9na2og.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "net.premiersoft.bilkcam"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

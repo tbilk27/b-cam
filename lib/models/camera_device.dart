@@ -40,6 +40,9 @@ class CameraDevice {
   int? remoteRtspPort; // e.g. 8554
   String remoteAccessMode; // 'auto', 'local', 'remote'
 
+  // User Association (@gmail.com account)
+  String? ownerEmail;
+
   CameraDevice({
     required this.id,
     required this.name,
@@ -71,6 +74,7 @@ class CameraDevice {
     this.remoteHost,
     this.remoteRtspPort,
     this.remoteAccessMode = 'auto',
+    this.ownerEmail,
   }) : macAddress = normalizeMac(macAddress),
        aiTargetClasses = aiTargetClasses ?? ['person', 'vehicle', 'motion', 'alarm'],
        exclusionMask = exclusionMask != null ? List.unmodifiable(exclusionMask) : const [];
@@ -187,6 +191,7 @@ class CameraDevice {
       'remoteHost': remoteHost,
       'remoteRtspPort': remoteRtspPort,
       'remoteAccessMode': remoteAccessMode,
+      'ownerEmail': ownerEmail,
     };
   }
 
@@ -222,6 +227,7 @@ class CameraDevice {
       remoteHost: json['remoteHost'] as String?,
       remoteRtspPort: json['remoteRtspPort'] as int?,
       remoteAccessMode: json['remoteAccessMode'] as String? ?? 'auto',
+      ownerEmail: json['ownerEmail'] as String?,
     );
   }
 
@@ -256,6 +262,7 @@ class CameraDevice {
     String? remoteHost,
     int? remoteRtspPort,
     String? remoteAccessMode,
+    String? ownerEmail,
   }) {
     return CameraDevice(
       id: id ?? this.id,
@@ -288,6 +295,7 @@ class CameraDevice {
       remoteHost: remoteHost ?? this.remoteHost,
       remoteRtspPort: remoteRtspPort ?? this.remoteRtspPort,
       remoteAccessMode: remoteAccessMode ?? this.remoteAccessMode,
+      ownerEmail: ownerEmail ?? this.ownerEmail,
     );
   }
 }

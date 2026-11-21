@@ -2,11 +2,14 @@ import 'dart:async';
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import '../services/auth_service.dart';
 import '../services/camera_storage_service.dart';
 import '../services/deep_link_service.dart';
 import '../services/diagnostic_logger_service.dart';
 import '../services/firebase_notification_service.dart';
 import '../theme/fluent_theme.dart';
+import 'auth_screen.dart';
+import 'first_access_screen.dart';
 import 'home_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -54,6 +57,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     // Inicialização concorrente dos subsistemas para máxima agilidade de abertura
     await Future.wait([
       storage.loadCameras(),
+      AuthService.instance.initialize(),
       FirebaseNotificationService.instance.initialize(),
       Future.delayed(const Duration(milliseconds: 250)),
     ]);
@@ -64,10 +68,24 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       _progressValue = 100.0;
     });
 
-    // Roteamento imediato para a tela principal
+    final auth = AuthService.instance;
+    final user = auth.currentUser;
+
+    Widget nextScreen;
+    if (user == null) {
+      nextScreen = const AuthScreen(autoPromptBiometrics: false);
+    } else if (user.isBiometricEnabled && auth.isBiometricsAvailable) {
+      nextScreen = const AuthScreen(autoPromptBiometrics: true);
+    } else if (!user.hasCompletedFirstAccess) {
+      nextScreen = const FirstAccessScreen();
+    } else {
+      nextScreen = const HomeScreen();
+    }
+
+    // Roteamento para a tela apropriada (Auth, Primeiro Acesso ou Home)
     Navigator.of(context).pushReplacement(
       FluentPageRoute(
-        builder: (context) => const HomeScreen(),
+        builder: (context) => nextScreen,
       ),
     );
 

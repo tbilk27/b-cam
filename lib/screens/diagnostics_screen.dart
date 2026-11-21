@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../services/app_update_service.dart';
 import '../services/diagnostic_logger_service.dart';
 import '../theme/fluent_theme.dart';
+import 'profile_screen.dart';
 
 class DiagnosticsScreen extends StatefulWidget {
   const DiagnosticsScreen({super.key});
@@ -359,6 +360,57 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                               ),
                             ],
                           ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // User Profile & WhatsApp Referral Card
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF16161E),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: BCamTheme.darkBorder, width: 0.8),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: const Color(0xFF0078D4).withValues(alpha: 0.2),
+                            border: Border.all(color: const Color(0xFF4DA6FF), width: 1.2),
+                          ),
+                          child: const Icon(FluentIcons.contact, size: 16, color: Color(0xFF4DA6FF)),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Perfil & Indicação por WhatsApp',
+                                style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w700, color: Colors.white),
+                              ),
+                              Text(
+                                'Gerenciar conta Google, biometria e indicar o app via WhatsApp',
+                                style: GoogleFonts.inter(fontSize: 10.5, color: BCamTheme.textSecondary),
+                              ),
+                            ],
+                          ),
+                        ),
+                        FilledButton(
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              FluentPageRoute(builder: (_) => const ProfileScreen()),
+                            );
+                          },
+                          child: const Text('Abrir', style: TextStyle(fontSize: 11)),
                         ),
                       ],
                     ),
