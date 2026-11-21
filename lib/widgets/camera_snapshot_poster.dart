@@ -197,10 +197,16 @@ class CameraSnapshotPoster extends StatelessWidget {
       return Image.file(
         File(camera.lastSnapshotPath!),
         fit: BoxFit.cover,
+        gaplessPlayback: true,
+        key: ValueKey('${camera.lastSnapshotPath}_${camera.lastAccessed?.millisecondsSinceEpoch}'),
+        errorBuilder: (context, error, stackTrace) => _buildProceduralBackground(),
       );
     }
 
-    // High-tech procedural surveillance scene representation
+    return _buildProceduralBackground();
+  }
+
+  Widget _buildProceduralBackground() {
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -213,7 +219,7 @@ class CameraSnapshotPoster extends StatelessWidget {
           ],
         ),
       ),
-      child: Center(
+      child: const Center(
         child: Opacity(
           opacity: 0.12,
           child: Icon(

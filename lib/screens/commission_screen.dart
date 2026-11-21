@@ -571,16 +571,22 @@ class _CommissionScreenState extends State<CommissionScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Row(
-                            children: [
-                              const Icon(FluentIcons.globe, size: 16, color: BCamTheme.accentLightBlue),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Acesso Remoto (3G / 4G / Fora do Wi-Fi)',
-                                style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: BCamTheme.textPrimary),
-                              ),
-                            ],
+                          Expanded(
+                            child: Row(
+                              children: [
+                                const Icon(FluentIcons.globe, size: 16, color: BCamTheme.accentLightBlue),
+                                const SizedBox(width: 8),
+                                Flexible(
+                                  child: Text(
+                                    'Acesso Remoto (3G / 4G)',
+                                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: BCamTheme.textPrimary),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
+                          const SizedBox(width: 6),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(

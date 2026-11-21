@@ -25,13 +25,9 @@ class CameraEventService extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Retorna eventos associados a uma câmera específica
+  /// Retorna eventos associados a uma câmera específica (apenas eventos reais registrados)
   List<CameraEvent> getEventsForCamera(CameraDevice camera) {
-    final list = _events.where((e) => e.cameraId == camera.id || e.cameraName == camera.name).toList();
-    if (list.isNotEmpty) return list;
-
-    // Fallback dinâmico para novas câmeras comissionadas
-    return _generateDynamicTimelineFor(camera);
+    return _events.where((e) => e.cameraId == camera.id || e.cameraName == camera.name).toList();
   }
 
   /// Busca evento por ID
@@ -110,42 +106,5 @@ class CameraEventService extends ChangeNotifier {
     }
 
     return true;
-  }
-
-  List<CameraEvent> _generateDynamicTimelineFor(CameraDevice camera) {
-    final now = DateTime.now();
-    return [
-      CameraEvent(
-        id: 'evt-${camera.id}-1',
-        cameraId: camera.id,
-        cameraName: camera.name,
-        type: CameraEventType.motion,
-        timestamp: now.subtract(const Duration(minutes: 5)),
-        duration: const Duration(seconds: 30),
-        description: 'Vigilância ativa: detecção de movimento em ${camera.location}.',
-        confidence: 0.89,
-        sceneInterpretation: 'Atividade no perímetro monitorado.',
-        boundingBoxes: const [
-          BoundingBox(
-            label: 'Movimento',
-            confidence: 0.89,
-            left: 0.35,
-            top: 0.35,
-            width: 0.30,
-            height: 0.40,
-            colorHex: '#00CC6A',
-          ),
-        ],
-      ),
-      CameraEvent(
-        id: 'evt-${camera.id}-2',
-        cameraId: camera.id,
-        cameraName: camera.name,
-        type: CameraEventType.recording,
-        timestamp: now.subtract(const Duration(hours: 1)),
-        duration: const Duration(minutes: 10),
-        description: 'Arquivo de gravação local consolidado.',
-      ),
-    ];
   }
 }

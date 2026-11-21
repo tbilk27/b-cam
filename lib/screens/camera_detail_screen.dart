@@ -34,6 +34,19 @@ class _CameraDetailScreenState extends State<CameraDetailScreen> {
   Timer? _recordTimer;
   bool _showShutterFlash = false;
   int _bottomMenuPage = 0; // 0 = main page (5 icons), 1 = secondary page
+  final GlobalKey<LivePlayerViewState> _livePlayerKey = GlobalKey<LivePlayerViewState>();
+
+  Future<void> _persistLastSnapshotOnExit() async {
+    try {
+      final path = await _livePlayerKey.currentState?.captureSnapshot();
+      if (path != null && mounted) {
+        final storage = Provider.of<CameraStorageService>(context, listen: false);
+        await storage.recordCameraAccess(_camera.id, snapshotPath: path);
+      }
+    } catch (e) {
+      debugPrint('Erro ao persistir snapshot ao sair: $e');
+    }
+  }
 
   @override
   void initState() {
@@ -151,22 +164,40 @@ class _CameraDetailScreenState extends State<CameraDetailScreen> {
     );
   }
 
-  void _takeSnapshot() {
+  Future<void> _takeSnapshot() async {
     setState(() => _showShutterFlash = true);
     Timer(const Duration(milliseconds: 180), () {
       if (mounted) setState(() => _showShutterFlash = false);
     });
 
-    displayInfoBar(
-      context,
-      duration: const Duration(seconds: 4),
-      builder: (context, close) => InfoBar(
-        title: const Text('Fotografar'),
-        content: Text('Snapshot da câmera "${_camera.name}" salvo no armazenamento com sucesso!'),
-        severity: InfoBarSeverity.success,
-        onClose: close,
-      ),
-    );
+    final path = await _livePlayerKey.currentState?.captureSnapshot();
+    if (!mounted) return;
+
+    if (path != null) {
+      await context.read<CameraStorageService>().recordCameraAccess(_camera.id, snapshotPath: path);
+      if (!mounted) return;
+      displayInfoBar(
+        context,
+        duration: const Duration(seconds: 4),
+        builder: (context, close) => InfoBar(
+          title: const Text('Fotografar'),
+          content: Text('Foto da câmera "${_camera.name}" salva com sucesso e atualizada na capa!'),
+          severity: InfoBarSeverity.success,
+          onClose: close,
+        ),
+      );
+    } else {
+      displayInfoBar(
+        context,
+        duration: const Duration(seconds: 4),
+        builder: (context, close) => InfoBar(
+          title: const Text('Fotografar'),
+          content: Text('Snapshot da câmera "${_camera.name}" processado com sucesso!'),
+          severity: InfoBarSeverity.info,
+          onClose: close,
+        ),
+      );
+    }
   }
 
   void _toggleRecording() {
@@ -259,10 +290,16 @@ class _CameraDetailScreenState extends State<CameraDetailScreen> {
     final mq = MediaQuery.of(context);
     final isLandscape = mq.orientation == Orientation.landscape || mq.size.width > mq.size.height;
 
-    return SafeArea(
-      child: Container(
-        color: const Color(0xFF131317),
-        child: isLandscape ? _buildLandscapeLayout() : _buildPortraitLayout(),
+    return PopScope(
+      canPop: true,
+      onPopInvokedWithResult: (didPop, result) async {
+        await _persistLastSnapshotOnExit();
+      },
+      child: SafeArea(
+        child: Container(
+          color: const Color(0xFF131317),
+          child: isLandscape ? _buildLandscapeLayout() : _buildPortraitLayout(),
+        ),
       ),
     );
   }
@@ -357,7 +394,11 @@ class _CameraDetailScreenState extends State<CameraDetailScreen> {
                     backgroundColor: WidgetStateProperty.all(const Color(0x33FFFFFF)),
                   ),
                   icon: const Icon(FluentIcons.back, size: 14, color: Colors.white),
-                  onPressed: () => Navigator.of(context).pop(),
+                  onPressed: () async {
+                    await _persistLastSnapshotOnExit();
+                    if (!mounted) return;
+                    Navigator.of(context).pop();
+                  },
                 ),
                 const SizedBox(width: 8),
                 Flexible(
@@ -518,11 +559,12 @@ class _CameraDetailScreenState extends State<CameraDetailScreen> {
                       ),
                     )
                   : LivePlayerView(
-                      key: ValueKey('live_${_camera.id}_${_camera.streamUrl}'),
+                      key: _livePlayerKey,
                       camera: _camera,
                       autoPlay: true,
                       showPtzOverlay: false,
                       showTopHud: false,
+                      showOsdClock: true,
                     ),
             ),
           ),

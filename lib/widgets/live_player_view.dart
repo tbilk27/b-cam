@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:fluent_ui/fluent_ui.dart' as fluent;
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import '../models/bounding_box.dart';
 import '../models/camera_device.dart';
@@ -22,6 +24,7 @@ class LivePlayerView extends StatefulWidget {
   final bool showPtzOverlay;
   final bool isMiniature;
   final bool showTopHud;
+  final bool showOsdClock;
 
   const LivePlayerView({
     super.key,
@@ -30,13 +33,14 @@ class LivePlayerView extends StatefulWidget {
     this.showPtzOverlay = false,
     this.isMiniature = false,
     this.showTopHud = true,
+    this.showOsdClock = true,
   });
 
   @override
-  State<LivePlayerView> createState() => _LivePlayerViewState();
+  State<LivePlayerView> createState() => LivePlayerViewState();
 }
 
-class _LivePlayerViewState extends State<LivePlayerView>
+class LivePlayerViewState extends State<LivePlayerView>
     with WidgetsBindingObserver, AutomaticKeepAliveClientMixin {
   Player? _player;
   VideoController? _controller;
@@ -50,6 +54,34 @@ class _LivePlayerViewState extends State<LivePlayerView>
   StreamSubscription? _bufferingSub;
   StreamSubscription? _completedSub;
   StreamSubscription? _playingSub;
+  bool _hasAutoCaptured = false;
+
+  /// Captura o frame atual em reprodução no Player e salva no armazenamento persistente
+  Future<String?> captureSnapshot() async {
+    try {
+      if (_player == null) return null;
+      final bytes = await _player!.screenshot(format: 'image/jpeg');
+      if (bytes != null && bytes.isNotEmpty) {
+        final dir = await getApplicationDocumentsDirectory();
+        final snapDir = Directory('${dir.path}/snapshots');
+        if (!await snapDir.exists()) {
+          await snapDir.create(recursive: true);
+        }
+        final path = '${snapDir.path}/snap_${widget.camera.id}.jpg';
+        final file = File(path);
+        await file.writeAsBytes(bytes, flush: true);
+        await FileImage(file).evict();
+        DiagnosticLoggerService.instance.logInfo(
+          'SNAPSHOT',
+          'Frame ao vivo salvo como capa da câmera "${widget.camera.name}": $path (${bytes.length} bytes)',
+        );
+        return path;
+      }
+    } catch (e) {
+      DiagnosticLoggerService.instance.logWarn('SNAPSHOT', 'Falha ao capturar frame ao vivo: $e');
+    }
+    return null;
+  }
 
   // Auto-reconnect engine
   int _reconnectAttempt = 0;
@@ -93,14 +125,15 @@ class _LivePlayerViewState extends State<LivePlayerView>
   }
 
   void _startHudClock() {
+    _clockTimer?.cancel();
     _clockTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) {
         setState(() {
-          _currentTime = DateFormat('HH:mm:ss').format(DateTime.now());
+          _currentTime = DateFormat('dd/MM/yyyy HH:mm:ss').format(DateTime.now());
         });
       }
     });
-    _currentTime = DateFormat('HH:mm:ss').format(DateTime.now());
+    _currentTime = DateFormat('dd/MM/yyyy HH:mm:ss').format(DateTime.now());
   }
 
   void _startWatchdog() {
@@ -179,6 +212,22 @@ class _LivePlayerViewState extends State<LivePlayerView>
             _isLoading = false;
             _reconnectAttempt = 0;
           });
+
+          // Dispara captura automática do frame após 3 segundos de estabilização do fluxo
+          if (!_hasAutoCaptured) {
+            _hasAutoCaptured = true;
+            Future.delayed(const Duration(seconds: 3), () async {
+              if (mounted && (_player?.state.playing ?? false)) {
+                final path = await captureSnapshot();
+                if (path != null && mounted) {
+                  try {
+                    final storage = Provider.of<CameraStorageService>(context, listen: false);
+                    await storage.recordCameraAccess(widget.camera.id, snapshotPath: path);
+                  } catch (_) {}
+                }
+              }
+            });
+          }
         }
       });
 
@@ -715,124 +764,152 @@ class _LivePlayerViewState extends State<LivePlayerView>
               child: const SizedBox.expand(),
             ),
 
-          // 6. Top HUD Bar (REC indicator & Timestamp)
-          if (widget.showTopHud)
+          // 6. Dedicated CCTV OSD Timestamp (Data e Hora do Vídeo ao Vivo)
+          if (widget.showOsdClock)
             Positioned(
               top: 8,
-              left: 10,
               right: 10,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                // Live indicator and AI Detection Badge
-                Row(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3.5),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.75),
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(color: Colors.white24, width: 0.6),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.5),
+                      blurRadius: 4,
+                    ),
+                  ],
+                ),
+                child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
-                      width: 7,
-                      height: 7,
+                      width: 6,
+                      height: 6,
+                      margin: const EdgeInsets.only(right: 6),
                       decoration: BoxDecoration(
-                        color: _hasError ? BCamTheme.statusOffline : BCamTheme.statusOnlineGlow,
+                        color: _hasError ? const Color(0xFFFF3B30) : const Color(0xFF00E676),
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: (_hasError ? BCamTheme.statusOffline : BCamTheme.statusOnlineGlow)
-                                .withValues(alpha: 0.6),
-                            blurRadius: 6,
+                            color: (_hasError ? const Color(0xFFFF3B30) : const Color(0xFF00E676))
+                                .withValues(alpha: 0.8),
+                            blurRadius: 4,
                             spreadRadius: 1,
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(width: 6),
                     Text(
-                      _hasError
-                          ? (_secondsRemaining > 0 ? 'RETRY' : 'OFFLINE')
-                          : 'LIVE',
-                      style: GoogleFonts.inter(
-                        fontSize: widget.isMiniature ? 9 : 10.5,
+                      _currentTime,
+                      style: GoogleFonts.robotoMono(
+                        fontSize: widget.isMiniature ? 8.5 : 10.5,
                         fontWeight: FontWeight.w700,
                         color: Colors.white,
-                        letterSpacing: 0.8,
+                        letterSpacing: 0.5,
                       ),
                     ),
-                    if (widget.camera.hasExclusionZone) ...[
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1.5),
-                        decoration: BoxDecoration(
-                          color: const Color(0x33FF3B30),
-                          borderRadius: BorderRadius.circular(4),
-                          border: Border.all(color: const Color(0x80FF3B30), width: 0.8),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(fluent.FluentIcons.blocked2, size: 8, color: Color(0xFFFF3B30)),
-                            const SizedBox(width: 3),
-                            Text(
-                              '${widget.camera.exclusionZonePercentage.toStringAsFixed(0)}% EXCLUÍDO',
-                              style: GoogleFonts.robotoMono(
-                                fontSize: widget.isMiniature ? 7.5 : 8.5,
-                                fontWeight: FontWeight.w700,
-                                color: const Color(0xFFFF6961),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                    if (_showAiOverlay && widget.camera.aiDetectionEnabled && liveBoxes.isNotEmpty) ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-                        decoration: BoxDecoration(
-                          color: liveBoxes.first.displayColor.withValues(alpha: 0.22),
-                          borderRadius: BorderRadius.circular(4),
-                          border: Border.all(
-                            color: liveBoxes.first.displayColor.withValues(alpha: 0.7),
-                            width: 0.8,
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(fluent.FluentIcons.robot, size: 9, color: Colors.white),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${liveBoxes.first.label.toUpperCase()} ${liveBoxes.first.assertivenessFormatted}',
-                              style: GoogleFonts.robotoMono(
-                                fontSize: widget.isMiniature ? 8 : 9,
-                                fontWeight: FontWeight.w800,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
                   ],
                 ),
-                // HUD Timestamp
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.6),
-                    borderRadius: BorderRadius.circular(4),
-                    border: Border.all(color: Colors.white12, width: 0.8),
-                  ),
-                  child: Text(
-                    _currentTime,
-                    style: GoogleFonts.robotoMono(
-                      fontSize: widget.isMiniature ? 9 : 10.5,
-                      fontWeight: FontWeight.w600,
-                      color: BCamTheme.textSecondary,
+              ),
+            ),
+
+          // 6.1 Top-Left Status HUD Bar (REC/LIVE status & Exclusions)
+          if (widget.showTopHud)
+            Positioned(
+              top: 8,
+              left: 10,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 7,
+                    height: 7,
+                    decoration: BoxDecoration(
+                      color: _hasError ? BCamTheme.statusOffline : BCamTheme.statusOnlineGlow,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: (_hasError ? BCamTheme.statusOffline : BCamTheme.statusOnlineGlow)
+                              .withValues(alpha: 0.6),
+                          blurRadius: 6,
+                          spreadRadius: 1,
+                        ),
+                      ],
                     ),
                   ),
-                ),
-              ],
+                  const SizedBox(width: 6),
+                  Text(
+                    _hasError
+                        ? (_secondsRemaining > 0 ? 'RETRY' : 'OFFLINE')
+                        : 'LIVE',
+                    style: GoogleFonts.inter(
+                      fontSize: widget.isMiniature ? 9 : 10.5,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                  if (widget.camera.hasExclusionZone) ...[
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1.5),
+                      decoration: BoxDecoration(
+                        color: const Color(0x33FF3B30),
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: const Color(0x80FF3B30), width: 0.8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(fluent.FluentIcons.blocked2, size: 8, color: Color(0xFFFF3B30)),
+                          const SizedBox(width: 3),
+                          Text(
+                            '${widget.camera.exclusionZonePercentage.toStringAsFixed(0)}% EXCLUÍDO',
+                            style: GoogleFonts.robotoMono(
+                              fontSize: widget.isMiniature ? 7.5 : 8.5,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFFFF6961),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  if (_showAiOverlay && widget.camera.aiDetectionEnabled && liveBoxes.isNotEmpty) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                      decoration: BoxDecoration(
+                        color: liveBoxes.first.displayColor.withValues(alpha: 0.22),
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(
+                          color: liveBoxes.first.displayColor.withValues(alpha: 0.7),
+                          width: 0.8,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(fluent.FluentIcons.robot, size: 9, color: Colors.white),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${liveBoxes.first.label.toUpperCase()} ${liveBoxes.first.assertivenessFormatted}',
+                            style: GoogleFonts.robotoMono(
+                              fontSize: widget.isMiniature ? 8 : 9,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ),
-          ),
 
           // 7. Bottom HUD Bar (Brand, Channel, Controls)
           Positioned(

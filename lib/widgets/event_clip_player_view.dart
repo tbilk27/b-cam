@@ -47,6 +47,7 @@ class _EventClipPlayerViewState extends State<EventClipPlayerView> {
   Timer? _playbackTimer;
   bool _showControls = true;
   Timer? _hideControlsTimer;
+  bool _showAiBoxes = false;
 
   StreamSubscription? _errorSub;
   StreamSubscription? _playingSub;
@@ -269,19 +270,10 @@ class _EventClipPlayerViewState extends State<EventClipPlayerView> {
     return DateFormat('HH:mm:ss').format(currentTime);
   }
 
-  /// Only returns the actual bounding box of this recorded event (no synthetic fallback)
+  /// Retorna apenas bounding boxes reais e validadas se o usuário habilitar o destaque de IA
   List<BoundingBox> _eventBoundingBoxes() {
-    if (widget.event.boundingBoxes.isEmpty) return const [];
-
-    final progress = _totalDurationSeconds > 0 ? _currentSeconds / _totalDurationSeconds : 0.0;
-    return widget.event.boundingBoxes.map((box) {
-      final offsetX = sin(progress * pi * 2) * 0.03;
-      final offsetY = cos(progress * pi * 2) * 0.015;
-      return box.copyWith(
-        left: (box.left + offsetX).clamp(0.02, 0.90),
-        top: (box.top + offsetY).clamp(0.02, 0.90),
-      );
-    }).toList();
+    if (!_showAiBoxes || widget.event.boundingBoxes.isEmpty) return const [];
+    return widget.event.boundingBoxes;
   }
 
   Widget _buildBackgroundSnapshot() {
@@ -573,10 +565,25 @@ class _EventClipPlayerViewState extends State<EventClipPlayerView> {
                             ],
                           ),
 
-                          // Controls: Audio Mute + Speed + Restart
+                          // Controls: Audio Mute + Speed + Restart + Destaque IA
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
+                              // Toggle Destaque IA (se o evento possui objetos identificados)
+                              if (widget.event.boundingBoxes.isNotEmpty) ...[
+                                IconButton(
+                                  icon: Icon(
+                                    FluentIcons.robot,
+                                    size: 14,
+                                    color: _showAiBoxes ? BCamTheme.statusOnlineGlow : Colors.white.withValues(alpha: 0.54),
+                                  ),
+                                  onPressed: () {
+                                    setState(() => _showAiBoxes = !_showAiBoxes);
+                                  },
+                                ),
+                                const SizedBox(width: 4),
+                              ],
+
                               // Mute / Unmute
                               IconButton(
                                 icon: Icon(

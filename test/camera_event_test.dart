@@ -56,7 +56,7 @@ void main() {
       expect(events.any((e) => e.type == CameraEventType.person), true);
     });
 
-    test('CameraEventService dynamically provides timeline for new cameras', () {
+    test('CameraEventService returns clean empty timeline for unseeded cameras', () {
       final service = CameraEventService.instance;
       final camNew = CameraDevice(
         id: 'cam-unseeded-99',
@@ -68,8 +68,7 @@ void main() {
       );
 
       final events = service.getEventsForCamera(camNew);
-      expect(events.isNotEmpty, true);
-      expect(events.first.cameraId, 'cam-unseeded-99');
+      expect(events.isEmpty, true);
     });
   });
 }
