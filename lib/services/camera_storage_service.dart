@@ -18,6 +18,21 @@ class CameraStorageService extends ChangeNotifier {
   List<CameraDevice> get disabledCameras =>
       _cameras.where((c) => !c.isEnabled).toList();
 
+  /// Verifica se um dispositivo identificado na varredura já está cadastrado/comissionado
+  bool isCameraAlreadyAdded(ScanResult scan) {
+    return _cameras.any((c) {
+      if (scan.macAddress != null && c.macAddress != null) {
+        if (c.matchesMac(scan.macAddress)) return true;
+      }
+      return c.ip == scan.ip;
+    });
+  }
+
+  /// Filtra uma lista de varredura, retornando apenas as câmeras ainda não cadastradas
+  List<ScanResult> filterUnregistered(List<ScanResult> scanResults) {
+    return scanResults.where((s) => !isCameraAlreadyAdded(s)).toList();
+  }
+
   bool _isInitialized = false;
   bool get isInitialized => _isInitialized;
 

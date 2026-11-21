@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:bcam/models/camera_device.dart';
 import 'package:bcam/models/manufacturer.dart';
+import 'package:bcam/models/scan_result.dart';
 import 'package:bcam/services/camera_storage_service.dart';
 
 void main() {
@@ -85,6 +86,51 @@ void main() {
       expect(storage.disabledCameras.isEmpty, isTrue);
       expect(storage.enabledCameras.length, initialCount);
       expect(storage.cameras.firstWhere((c) => c.id == targetCam.id).isEnabled, isTrue);
+    });
+  });
+
+  group('Scan Filter Unregistered Tests', () {
+    test('filterUnregistered excludes already commissioned cameras by IP and MAC', () async {
+      SharedPreferences.setMockInitialValues({});
+      final storage = CameraStorageService();
+      await storage.loadCameras();
+
+      await storage.addCamera(CameraDevice(
+        id: 'cam-74',
+        name: 'Portão',
+        ip: '192.168.3.74',
+        macAddress: '98:2A:0A:89:56:62',
+      ));
+
+      final scanResults = <ScanResult>[
+        ScanResult(
+          ip: '192.168.3.74', // matches IP of cam-74
+          openPorts: [554],
+          detectedManufacturer: CameraManufacturer.intelbras,
+          detectionSource: 'Port 554',
+          suggestedName: 'Intelbras Portão',
+          suggestedRtspUrl: 'rtsp://192.168.3.74:554/cam/realmonitor',
+          confidence: 0.9,
+          macAddress: '98:2A:0A:89:56:62',
+        ),
+        ScanResult(
+          ip: '192.168.3.23', // new camera
+          openPorts: [554],
+          detectedManufacturer: CameraManufacturer.yoosee,
+          detectionSource: 'Port 5000',
+          suggestedName: 'Yoosee Garagem',
+          suggestedRtspUrl: 'rtsp://192.168.3.23:554/onvif1',
+          confidence: 0.85,
+          macAddress: '98:03:CF:DC:00:0A',
+        ),
+      ];
+
+      expect(storage.isCameraAlreadyAdded(scanResults[0]), isTrue);
+      expect(storage.isCameraAlreadyAdded(scanResults[1]), isFalse);
+
+      final unreg = storage.filterUnregistered(scanResults);
+      expect(unreg.length, 1);
+      expect(unreg.first.ip, '192.168.3.23');
     });
   });
 }

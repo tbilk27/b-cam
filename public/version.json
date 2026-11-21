@@ -1,9 +1,9 @@
 {
-  "versionCode": 23,
-  "versionName": "1.22.0",
+  "versionCode": 24,
+  "versionName": "1.22.1",
   "apkUrl": "http://192.168.3.62:8088/b-cam-arm64.apk",
-  "sha256": "6c635aa6ea47704b45a39a7b7bf3b4d7d748c4e3b178156b16938b82f0d7aa61",
+  "sha256": "d65d5d13476434cd6b1f3b23321dc240b0d6c44fd19e8e7d2112f11f8548db68",
   "fileSizeBytes": 64185340,
-  "releaseNotes": "Versão 1.22.0: Suporte a múltiplos clipes em grupos de eventos na timeline, resolução correta de URL de playback RTSP de gravação NVR, eliminação da oscilação de segundos no player, notificações push nativas com filtro de tipos de evento por câmera, e Painel de Administração Web para gestão de usuários e frotas de câmeras.",
-  "releaseDate": "2026-11-21T12:15:00Z"
+  "releaseNotes": "Versão 1.22.1: Filtragem automática na tela de varredura Wi-Fi e Radar para ocultar câmeras que já foram cadastradas no b-cam, exibindo apenas novos dispositivos detectados.",
+  "releaseDate": "2026-11-21T12:40:00Z"
 }

@@ -815,6 +815,10 @@ class _HomeScreenState extends State<HomeScreen> {
   // TAB 1: RADAR / VARREDURA DA REDE WI-FI
   // ===========================================================================
   Widget _buildRadarScannerTab() {
+    final storage = context.watch<CameraStorageService>();
+    final uncommissionedDiscovered = storage.filterUnregistered(_radarDiscovered);
+    final alreadyCount = _radarDiscovered.length - uncommissionedDiscovered.length;
+
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -872,24 +876,44 @@ class _HomeScreenState extends State<HomeScreen> {
         const SizedBox(height: 16),
 
         Text(
-          'Dispositivos Detectados (${_radarDiscovered.length})',
+          'Novos Dispositivos (${uncommissionedDiscovered.length})',
           style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: BCamTheme.textPrimary),
         ),
         const SizedBox(height: 8),
 
-        if (_radarDiscovered.isEmpty && !_isRadarScanning)
+        if (uncommissionedDiscovered.isEmpty && !_isRadarScanning)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 30),
             child: Center(
-              child: Text(
-                'Nenhum dispositivo encontrado ainda.\nToque em "Iniciar Varredura Completa".',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.inter(fontSize: 12, color: BCamTheme.textSecondary),
+              child: Column(
+                children: [
+                  Icon(
+                    _radarDiscovered.isNotEmpty ? FluentIcons.check_mark : FluentIcons.search,
+                    size: 32,
+                    color: _radarDiscovered.isNotEmpty ? BCamTheme.statusOnlineGlow : BCamTheme.textTertiary,
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    _radarDiscovered.isNotEmpty
+                        ? 'Todas as ${_radarDiscovered.length} câmeras detectadas na rede já foram cadastradas no b-cam.'
+                        : 'Nenhum dispositivo encontrado ainda.\nToque em "Iniciar Varredura Completa".',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(fontSize: 12, color: BCamTheme.textSecondary),
+                  ),
+                  if (alreadyCount > 0)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Text(
+                        '($alreadyCount câmera(s) já cadastradas e ocultadas da lista)',
+                        style: GoogleFonts.inter(fontSize: 11, color: BCamTheme.textTertiary),
+                      ),
+                    ),
+                ],
               ),
             ),
           )
         else
-          ..._radarDiscovered.map((res) {
+          ...uncommissionedDiscovered.map((res) {
             return Container(
               margin: const EdgeInsets.only(bottom: 8),
               padding: const EdgeInsets.all(12),

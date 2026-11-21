@@ -106,11 +106,11 @@ class _ScanScreenState extends State<ScanScreen> {
     super.dispose();
   }
 
-  Future<void> _commissionAllDiscovered() async {
+  Future<void> _commissionAllDiscovered(List<ScanResult> uncommissioned) async {
     final storage = context.read<CameraStorageService>();
     int count = 0;
 
-    for (final scan in _discoveredCameras) {
+    for (final scan in uncommissioned) {
       final device = CameraDevice(
         id: const Uuid().v4(),
         name: scan.suggestedName,
@@ -136,7 +136,7 @@ class _ScanScreenState extends State<ScanScreen> {
         context,
         builder: (context, close) => InfoBar(
           title: const Text('Câmeras Comissionadas'),
-          content: Text('$count câmera(s) adicionadas com sucesso!'),
+          content: Text('$count nova(s) câmera(s) adicionadas com sucesso!'),
           severity: InfoBarSeverity.success,
           onClose: close,
         ),
@@ -147,6 +147,10 @@ class _ScanScreenState extends State<ScanScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final storage = context.watch<CameraStorageService>();
+    final uncommissionedCameras = storage.filterUnregistered(_discoveredCameras);
+    final alreadyCount = _discoveredCameras.length - uncommissionedCameras.length;
+
     return SafeArea(
       child: ScaffoldPage.scrollable(
       header: PageHeader(
@@ -237,7 +241,7 @@ class _ScanScreenState extends State<ScanScreen> {
                       style: GoogleFonts.robotoMono(fontSize: 11, color: BCamTheme.textSecondary),
                     ),
                     Text(
-                      '${(_progress * 100).toInt()}% • ${_discoveredCameras.length} detectadas',
+                      '${(_progress * 100).toInt()}% • ${uncommissionedCameras.length} novas detectadas',
                       style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: BCamTheme.accentLightBlue),
                     ),
                   ],
@@ -248,44 +252,58 @@ class _ScanScreenState extends State<ScanScreen> {
         ),
 
         // Discovered Header & Bulk Action
-        if (_discoveredCameras.isNotEmpty)
+        if (uncommissionedCameras.isNotEmpty)
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Câmeras Detectadas (${_discoveredCameras.length})',
+                  'Novas Câmeras Encontradas (${uncommissionedCameras.length})',
                   style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700),
                 ),
                 Button(
-                  onPressed: _commissionAllDiscovered,
+                  onPressed: () => _commissionAllDiscovered(uncommissionedCameras),
                   child: const Text('Comissionar Todas'),
                 ),
               ],
             ),
           ),
 
-        // Discovered Camera Cards
-        if (_discoveredCameras.isEmpty && !_isScanning)
+        // Discovered Camera Cards (Only unregistered cameras)
+        if (uncommissionedCameras.isEmpty && !_isScanning)
           Padding(
             padding: const EdgeInsets.all(32),
             child: Center(
               child: Column(
                 children: [
-                  const Icon(FluentIcons.wifi, size: 40, color: BCamTheme.textTertiary),
+                  Icon(
+                    _discoveredCameras.isNotEmpty ? FluentIcons.check_mark : FluentIcons.wifi,
+                    size: 40,
+                    color: _discoveredCameras.isNotEmpty ? BCamTheme.statusOnlineGlow : BCamTheme.textTertiary,
+                  ),
                   const SizedBox(height: 12),
                   Text(
-                    'Nenhuma câmera identificada na sub-rede ${_subnetController.text}.1 - 254',
+                    _discoveredCameras.isNotEmpty
+                        ? 'Todas as ${_discoveredCameras.length} câmeras detectadas nesta sub-rede já foram cadastradas no b-cam.'
+                        : 'Nenhuma câmera identificada na sub-rede ${_subnetController.text}.1 - 254',
                     textAlign: TextAlign.center,
                     style: GoogleFonts.inter(fontSize: 13, color: BCamTheme.textSecondary),
                   ),
+                  if (alreadyCount > 0)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Text(
+                        '($alreadyCount câmera(s) já configuradas e ocultadas da lista)',
+                        style: GoogleFonts.inter(fontSize: 11, color: BCamTheme.textTertiary),
+                      ),
+                    ),
                 ],
               ),
             ),
           )
         else
-          ..._discoveredCameras.map((scan) {
+          ...uncommissionedCameras.map((scan) {
             return Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               child: Card(
