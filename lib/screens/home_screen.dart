@@ -260,22 +260,30 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Container(
-        color: const Color(0xFF0F0F13),
-        child: Column(
-          children: [
-            // Instagram-Style Top App Header (Always at top)
-            _buildInstagramTopHeader(),
+    return PopScope(
+      canPop: _currentTabIndex == 0,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop && _currentTabIndex != 0) {
+          setState(() => _currentTabIndex = 0);
+        }
+      },
+      child: SafeArea(
+        child: Container(
+          color: const Color(0xFF0F0F13),
+          child: Column(
+            children: [
+              // Instagram-Style Top App Header (Always at top)
+              _buildInstagramTopHeader(),
 
-            // Dynamic Body Content
-            Expanded(
-              child: _buildCurrentTab(),
-            ),
+              // Dynamic Body Content
+              Expanded(
+                child: _buildCurrentTab(),
+              ),
 
-            // Instagram-Style Fixed Command Bar (Permanently docked at the bottom)
-            _buildInstagramBottomBar(),
-          ],
+              // Instagram-Style Fixed Command Bar (Permanently docked at the bottom)
+              _buildInstagramBottomBar(),
+            ],
+          ),
         ),
       ),
     );
@@ -1314,7 +1322,9 @@ class _HomeScreenState extends State<HomeScreen> {
   // TAB 4: TELEMETRIA, DIAGNÓSTICOS & ATUALIZAÇÃO OTA
   // ===========================================================================
   Widget _buildDiagnosticsTab() {
-    return const DiagnosticsScreen();
+    return DiagnosticsScreen(
+      onBack: () => setState(() => _currentTabIndex = 0),
+    );
   }
 
   // ===========================================================================

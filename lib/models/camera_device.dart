@@ -98,18 +98,19 @@ class CameraDevice {
       manufacturer == CameraManufacturer.intelbrasIC;
 
   /// Computes the actual RTSP playback URL for an event range (never returns live stream)
-  String playbackUrlForEvent(CameraEvent event) {
+  String playbackUrlForEvent(CameraEvent event, {bool forceCloud = false}) {
     if (event.clipUrl != null &&
         event.clipUrl!.trim().isNotEmpty &&
         event.clipUrl!.trim() != streamUrl) {
       return event.clipUrl!.trim();
     }
 
-    final targetHost = (remoteAccessMode == 'remote' && remoteHost != null && remoteHost!.trim().isNotEmpty)
-        ? remoteHost!.trim()
+    final useCloud = forceCloud || remoteAccessMode == 'remote';
+    final targetHost = useCloud
+        ? (remoteHost != null && remoteHost!.trim().isNotEmpty ? remoteHost!.trim() : 'cloud.bilkcam.web.app')
         : ip;
-    final targetPort = (remoteAccessMode == 'remote' && remoteRtspPort != null)
-        ? remoteRtspPort!
+    final targetPort = useCloud
+        ? (remoteRtspPort != null && remoteRtspPort! > 0 ? remoteRtspPort! : 8554)
         : rtspPort;
 
     return manufacturer.buildPlaybackRtspUrl(
@@ -154,16 +155,20 @@ class CameraDevice {
   }
 
   /// Computes the actual RTSP stream URL to play
-  String get streamUrl {
+  String get streamUrl => getEffectiveStreamUrl();
+
+  /// Gets the stream URL, with optional forceCloud parameter for outside-network routing
+  String getEffectiveStreamUrl({bool forceCloud = false}) {
     if (customUrl != null && customUrl!.trim().isNotEmpty) {
       return customUrl!.trim();
     }
 
-    final targetHost = (remoteAccessMode == 'remote' && remoteHost != null && remoteHost!.trim().isNotEmpty)
-        ? remoteHost!.trim()
+    final useCloud = forceCloud || remoteAccessMode == 'remote';
+    final targetHost = useCloud
+        ? (remoteHost != null && remoteHost!.trim().isNotEmpty ? remoteHost!.trim() : 'cloud.bilkcam.web.app')
         : ip;
-    final targetPort = (remoteAccessMode == 'remote' && remoteRtspPort != null)
-        ? remoteRtspPort!
+    final targetPort = useCloud
+        ? (remoteRtspPort != null && remoteRtspPort! > 0 ? remoteRtspPort! : 8554)
         : rtspPort;
 
     return manufacturer.buildRtspUrl(
@@ -178,16 +183,20 @@ class CameraDevice {
   }
 
   /// URL with masked password for UI display
-  String get maskedStreamUrl {
+  String get maskedStreamUrl => getEffectiveMaskedStreamUrl();
+
+  /// Gets the masked stream URL for logging and UI display
+  String getEffectiveMaskedStreamUrl({bool forceCloud = false}) {
     if (customUrl != null && customUrl!.trim().isNotEmpty) {
       return customUrl!.replaceAll(RegExp(r':([^@/:?]+)@'), ':******@');
     }
 
-    final targetHost = (remoteAccessMode == 'remote' && remoteHost != null && remoteHost!.trim().isNotEmpty)
-        ? remoteHost!.trim()
+    final useCloud = forceCloud || remoteAccessMode == 'remote';
+    final targetHost = useCloud
+        ? (remoteHost != null && remoteHost!.trim().isNotEmpty ? remoteHost!.trim() : 'cloud.bilkcam.web.app')
         : ip;
-    final targetPort = (remoteAccessMode == 'remote' && remoteRtspPort != null)
-        ? remoteRtspPort!
+    final targetPort = useCloud
+        ? (remoteRtspPort != null && remoteRtspPort! > 0 ? remoteRtspPort! : 8554)
         : rtspPort;
 
     return manufacturer.buildRtspUrl(

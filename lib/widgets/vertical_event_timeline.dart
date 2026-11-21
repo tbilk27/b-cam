@@ -215,7 +215,7 @@ class _VerticalEventTimelineState extends State<VerticalEventTimeline> {
                         final event = filteredEvents[index];
                         final isFirst = index == 0;
                         final isLast = index == filteredEvents.length - 1;
-                        return _buildTimelineRow(event, isFirst, isLast);
+                        return _buildTimelineRow(event, isFirst, isLast, filteredEvents);
                       },
                     ),
 
@@ -375,8 +375,9 @@ class _VerticalEventTimelineState extends State<VerticalEventTimeline> {
     );
   }
 
-  Widget _buildTimelineRow(CameraEvent event, bool isFirst, bool isLast) {
+  Widget _buildTimelineRow(CameraEvent event, bool isFirst, bool isLast, List<CameraEvent> allEvents) {
     final itemHeight = 90.0 * _zoomScale;
+    final cluster = _resolveClipsForCluster(event, allEvents);
 
     return SizedBox(
       height: itemHeight,
@@ -480,7 +481,7 @@ class _VerticalEventTimelineState extends State<VerticalEventTimeline> {
               padding: const EdgeInsets.symmetric(vertical: 4),
               child: GestureDetector(
                 onTap: () {
-                  final groupClips = _resolveClipsForCluster(event);
+                  final groupClips = cluster;
                   if (widget.onEventTap != null) {
                     widget.onEventTap!(event);
                   } else {
@@ -521,7 +522,7 @@ class _VerticalEventTimelineState extends State<VerticalEventTimeline> {
                               children: [
                                 Expanded(
                                   child: Text(
-                                    _resolveClipCountLabel(event),
+                                    _resolveClipCountLabel(event, count: cluster.length),
                                     style: GoogleFonts.inter(
                                       fontSize: 12.5,
                                       fontWeight: FontWeight.w600,
@@ -611,43 +612,19 @@ class _VerticalEventTimelineState extends State<VerticalEventTimeline> {
     );
   }
 
-  String _resolveClipCountLabel(CameraEvent event) {
-    final count = _resolveClipCount(event);
+  String _resolveClipCountLabel(CameraEvent event, {int count = 1}) {
     return '$count ${count == 1 ? "clipe" : "clipes"}';
   }
 
-  int _resolveClipCount(CameraEvent event) {
-    if (event.type == CameraEventType.person) return 5;
-    if (event.type == CameraEventType.vehicle) return 2;
-    if (event.type == CameraEventType.motion) return 3;
-    return 4;
-  }
+  List<CameraEvent> _resolveClipsForCluster(CameraEvent primaryEvent, List<CameraEvent> allEvents) {
+    // Agrupa eventos reais da mesma câmera ocorridos em um intervalo próximo (até 2 minutos)
+    final cluster = allEvents.where((e) =>
+        e.cameraId == primaryEvent.cameraId &&
+        (e.timestamp.difference(primaryEvent.timestamp).abs().inMinutes <= 2)).toList();
 
-  List<CameraEvent> _resolveClipsForCluster(CameraEvent primaryEvent) {
-    final count = _resolveClipCount(primaryEvent);
-    if (count <= 1) return [primaryEvent];
-
-    final list = <CameraEvent>[primaryEvent];
-    for (int i = 1; i < count; i++) {
-      final offsetSeconds = i * 20;
-      final subTime = primaryEvent.timestamp.add(Duration(seconds: offsetSeconds));
-      list.add(
-        CameraEvent(
-          id: '${primaryEvent.id}_clip_$i',
-          cameraId: primaryEvent.cameraId,
-          cameraName: primaryEvent.cameraName,
-          type: primaryEvent.type,
-          timestamp: subTime,
-          duration: Duration(seconds: max(6, primaryEvent.duration.inSeconds - (i * 2))),
-          description: '${primaryEvent.description} • Seq. #$i',
-          confidence: primaryEvent.confidence,
-          boundingBoxes: primaryEvent.boundingBoxes,
-          sceneInterpretation: primaryEvent.sceneInterpretation,
-          clipUrl: primaryEvent.clipUrl,
-        ),
-      );
-    }
-    return list;
+    if (cluster.isEmpty) return [primaryEvent];
+    cluster.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+    return cluster;
   }
 
   Widget _buildZoomButton({

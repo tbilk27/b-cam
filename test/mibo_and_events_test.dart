@@ -74,8 +74,8 @@ void main() {
       );
 
       final service = CameraEventService.instance;
-      final events1 = service.getEventsForCamera(cam1);
-      final events2 = service.getEventsForCamera(cam2);
+      final events1 = service.getEventsForCamera(cam1, autoGenerateIfEmpty: true);
+      final events2 = service.getEventsForCamera(cam2, autoGenerateIfEmpty: true);
 
       expect(events1, isNotEmpty);
       expect(events2, isNotEmpty);
@@ -111,6 +111,37 @@ void main() {
       final pbUrl = cam.playbackUrlForEvent(event);
       expect(pbUrl, isNot(equals(cam.streamUrl)));
       expect(pbUrl, contains('playback'));
+    });
+
+    test('getEventsForCamera returns empty list by default if camera has no events', () {
+      final camEmpty = CameraDevice(
+        id: 'cam-empty-area-festas',
+        name: 'Área de Festas',
+        ip: '192.168.3.24',
+        manufacturer: CameraManufacturer.yoosee,
+      );
+
+      final service = CameraEventService.instance;
+      final events = service.getEventsForCamera(camEmpty);
+      expect(events, isEmpty);
+    });
+  });
+
+  group('Cloud Relay & Outside Network Routing Tests', () {
+    test('CameraDevice resolves Cloud Relay URL when forced or in remote mode', () {
+      final cam = CameraDevice(
+        id: 'cam-cloud-1',
+        name: 'Área de Festas',
+        ip: '192.168.3.24',
+        manufacturer: CameraManufacturer.yoosee,
+      );
+
+      final localUrl = cam.getEffectiveStreamUrl(forceCloud: false);
+      final cloudUrl = cam.getEffectiveStreamUrl(forceCloud: true);
+
+      expect(localUrl, contains('192.168.3.24'));
+      expect(cloudUrl, contains('cloud.bilkcam.web.app'));
+      expect(cloudUrl, contains('8554'));
     });
   });
 

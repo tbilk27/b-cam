@@ -1,9 +1,9 @@
 {
-  "versionCode": 27,
-  "versionName": "1.24.0",
+  "versionCode": 28,
+  "versionName": "1.25.0",
   "apkUrl": "http://192.168.3.62:8088/b-cam-arm64.apk",
-  "sha256": "d08df60ed6d244820e9167003daa2386fdb9116053496d041dfd6fc4a6f64b78",
+  "sha256": "86d5fcf838c0f7829ab518cad2b8afb53949aa0e2545b5d1128ed47c6359b409",
   "fileSizeBytes": 63402073,
-  "releaseNotes": "Vers\u00e3o 1.24.0: Suporte estrito a Intelbras Mibo (C\u00f3digo de verifica\u00e7\u00e3o da etiqueta e endpoints iM/iC), eventos descorrelacionados por c\u00e2mera com contorno de detec\u00e7\u00e3o, reordena\u00e7\u00e3o de c\u00e2meras por arrastar e soltar, e logo sem fundo na tela de login.",
-  "releaseDate": "2026-11-21T15:00:00Z"
+  "releaseNotes": "Versão 1.25.0: Correção definitiva da listagem de eventos (remoção de eventos fictícios e cluster real), resolução de tela preta ao retornar da tela de logs (PopScope & callback) e infraestrutura Cloud Relay para comunicação e streaming fora da rede local (4G/5G).",
+  "releaseDate": "2026-11-21T15:52:00Z"
 }

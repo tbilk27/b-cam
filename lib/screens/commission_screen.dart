@@ -572,11 +572,11 @@ class _CommissionScreenState extends State<CommissionScreen> {
                           Expanded(
                             child: Row(
                               children: [
-                                const Icon(FluentIcons.globe, size: 16, color: BCamTheme.accentLightBlue),
+                                const Icon(FluentIcons.cloud, size: 16, color: BCamTheme.accentLightBlue),
                                 const SizedBox(width: 8),
                                 Flexible(
                                   child: Text(
-                                    'Acesso Remoto (3G / 4G)',
+                                    'Infraestrutura de Nuvem & Acesso Remoto',
                                     style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: BCamTheme.textPrimary),
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -593,7 +593,7 @@ class _CommissionScreenState extends State<CommissionScreen> {
                               border: Border.all(color: BCamTheme.accentBlue.withValues(alpha: 0.5), width: 0.8),
                             ),
                             child: Text(
-                              'nexeoo.com / DDNS',
+                              'Cloud Relay Ativo',
                               style: GoogleFonts.robotoMono(fontSize: 9, fontWeight: FontWeight.w700, color: BCamTheme.accentLightBlue),
                             ),
                           ),
@@ -601,7 +601,7 @@ class _CommissionScreenState extends State<CommissionScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Permite conectar à câmera via dados móveis ou redes Wi-Fi externas através do seu domínio (ex: cameras.nexeoo.com) ou IP público com redirecionamento de portas no roteador.',
+                        'Quando fora do Wi-Fi local (redes 4G/5G ou Wi-Fi externo), a comunicação e o fluxo de vídeo passam automaticamente pela infraestrutura de Cloud do b-cam (Google Cloud / Firebase Relay).',
                         style: GoogleFonts.inter(fontSize: 11, color: BCamTheme.textSecondary, height: 1.3),
                       ),
                       const SizedBox(height: 12),
@@ -613,13 +613,13 @@ class _CommissionScreenState extends State<CommissionScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Host Remoto / DDNS / Domínio',
+                                  'Host Remoto / Cloud Gateway',
                                   style: GoogleFonts.inter(fontSize: 12, color: BCamTheme.textSecondary),
                                 ),
                                 const SizedBox(height: 4),
                                 TextFormBox(
                                   controller: _remoteHostController,
-                                  placeholder: 'ex: cameras.nexeoo.com',
+                                  placeholder: 'cloud.bilkcam.web.app (Padrão)',
                                 ),
                               ],
                             ),
@@ -631,7 +631,7 @@ class _CommissionScreenState extends State<CommissionScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Porta Externa',
+                                  'Porta Nuvem',
                                   style: GoogleFonts.inter(fontSize: 12, color: BCamTheme.textSecondary),
                                 ),
                                 const SizedBox(height: 4),
@@ -646,7 +646,7 @@ class _CommissionScreenState extends State<CommissionScreen> {
                       ),
                       const SizedBox(height: 10),
                       Text(
-                        'Modo de Conexão:',
+                        'Modo de Roteamento:',
                         style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w600, color: BCamTheme.textSecondary),
                       ),
                       const SizedBox(height: 4),
@@ -655,9 +655,9 @@ class _CommissionScreenState extends State<CommissionScreen> {
                         child: ComboBox<String>(
                           value: _remoteAccessMode,
                           items: const [
-                            ComboBoxItem(value: 'auto', child: Text('Automático (Local na Wi-Fi / Remoto fora)')),
-                            ComboBoxItem(value: 'local', child: Text('Sempre Local (IP 192.168.x.x)')),
-                            ComboBoxItem(value: 'remote', child: Text('Sempre Remoto (Forçar 3G/4G/Domínio)')),
+                            ComboBoxItem(value: 'auto', child: Text('Automático (LAN quando em casa / Nuvem fora)')),
+                            ComboBoxItem(value: 'remote', child: Text('Sempre Nuvem (Roteamento 100% via Cloud)')),
+                            ComboBoxItem(value: 'local', child: Text('Apenas Rede Local (Sem Nuvem)')),
                           ],
                           onChanged: (val) {
                             if (val != null) setState(() => _remoteAccessMode = val);

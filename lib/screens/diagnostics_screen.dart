@@ -7,7 +7,8 @@ import '../theme/fluent_theme.dart';
 import 'profile_screen.dart';
 
 class DiagnosticsScreen extends StatefulWidget {
-  const DiagnosticsScreen({super.key});
+  final VoidCallback? onBack;
+  const DiagnosticsScreen({super.key, this.onBack});
 
   @override
   State<DiagnosticsScreen> createState() => _DiagnosticsScreenState();
@@ -247,7 +248,13 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                 children: [
                   IconButton(
                     icon: const Icon(FluentIcons.back, size: 16),
-                    onPressed: () => Navigator.of(context).pop(),
+                    onPressed: () {
+                      if (widget.onBack != null) {
+                        widget.onBack!();
+                      } else if (Navigator.of(context).canPop()) {
+                        Navigator.of(context).pop();
+                      }
+                    },
                   ),
                   const SizedBox(width: 6),
                   Flexible(

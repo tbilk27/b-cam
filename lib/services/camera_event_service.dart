@@ -38,10 +38,29 @@ class CameraEventService extends ChangeNotifier {
             _events.add(CameraEvent.fromJson(item as Map<String, dynamic>));
           } catch (_) {}
         }
+
+        // Remove eventos sintéticos/fictícios legados para manter apenas dados e gravações reais
+        final beforeCount = _events.length;
+        _events.removeWhere((e) =>
+            e.id.startsWith('evt-') &&
+            (e.description.contains('Bloco de gravação contínua') ||
+             e.description.contains('Passagem ou manobra de veículo') ||
+             e.description.contains('Atividade noturna registrada') ||
+             e.description.contains('Movimento detectado no setor') ||
+             e.description.contains('Detecção de presença humana na área monitorada')));
+
+        if (_events.length != beforeCount) {
+          DiagnosticLoggerService.instance.logInfo(
+            'EVENTS',
+            'Limpeza de dados legados: ${beforeCount - _events.length} eventos sintéticos removidos do histórico.',
+          );
+          await _persistEvents();
+        }
+
         _events.sort((a, b) => b.timestamp.compareTo(a.timestamp));
         DiagnosticLoggerService.instance.logInfo(
           'EVENTS',
-          '${_events.length} eventos de segurança carregados do armazenamento persistente.',
+          '${_events.length} eventos de segurança reais carregados do armazenamento persistente.',
         );
       }
     } catch (e) {
@@ -72,47 +91,30 @@ class CameraEventService extends ChangeNotifier {
     }
   }
 
-  /// Garante que todas as câmeras cadastradas possuam eventos registrados no histórico
+  /// Garante a sincronização de eventos para as câmeras cadastradas sem criar dados fictícios
   Future<void> ensureEventsForCameras(List<CameraDevice> cameras) async {
-    bool hasNewEvents = false;
-    for (final cam in cameras) {
-      final hasEvents = _events.any((e) =>
-          e.cameraId == cam.id ||
-          e.cameraName.toLowerCase() == cam.name.toLowerCase() ||
-          (e.clipUrl != null && e.clipUrl!.contains(cam.ip)));
-
-      if (!hasEvents) {
-        final newEvents = _generateEventsForCamera(cam);
-        _events.addAll(newEvents);
-        hasNewEvents = true;
-      }
-    }
-
-    if (hasNewEvents) {
-      _events.sort((a, b) => b.timestamp.compareTo(a.timestamp));
-      await _persistEvents();
-      notifyListeners();
-      DiagnosticLoggerService.instance.logInfo(
-        'EVENTS',
-        'Eventos de segurança sincronizados para ${cameras.length} câmeras comissionadas.',
-      );
+    // Mantém a integridade do histórico sem injetar eventos falsos
+    if (!_isInitialized) {
+      await initialize();
     }
   }
 
   /// Garante eventos para uma câmera específica
   Future<void> ensureEventsForCamera(CameraDevice camera) async {
-    await ensureEventsForCameras([camera]);
+    if (!_isInitialized) {
+      await initialize();
+    }
   }
 
-  /// Retorna eventos associados a uma câmera específica
-  List<CameraEvent> getEventsForCamera(CameraDevice camera, {bool autoGenerateIfEmpty = true}) {
+  /// Retorna eventos reais associados a uma câmera específica
+  List<CameraEvent> getEventsForCamera(CameraDevice camera, {bool autoGenerateIfEmpty = false}) {
     var filtered = _events.where((e) {
       return e.cameraId == camera.id ||
-          e.cameraName.toLowerCase() == camera.name.toLowerCase() ||
+          (camera.name.isNotEmpty && e.cameraName.toLowerCase() == camera.name.toLowerCase()) ||
           (e.clipUrl != null && e.clipUrl!.contains(camera.ip));
     }).toList();
 
-    // Se ainda não existirem eventos para esta câmera, gera eventos contextuais gravados
+    // Gera eventos sintéticos APENAS se explicitamente solicitado (ex: suítes de testes de regressão)
     if (filtered.isEmpty && autoGenerateIfEmpty) {
       final generated = _generateEventsForCamera(camera);
       _events.addAll(generated);

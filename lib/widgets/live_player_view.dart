@@ -13,6 +13,7 @@ import '../models/camera_device.dart';
 import '../services/ai_vision_agent_service.dart';
 import '../services/camera_event_service.dart';
 import '../services/camera_storage_service.dart';
+import '../services/cloud_relay_service.dart';
 import '../services/diagnostic_logger_service.dart';
 import '../theme/fluent_theme.dart';
 import 'bounding_box_overlay.dart';
@@ -91,6 +92,9 @@ class LivePlayerViewState extends State<LivePlayerView>
 
   // Camera state & local copy for immediate credential healing
   late CameraDevice _effectiveCamera;
+
+  // Cloud Relay Routing (Fora da LAN / 4G / 5G)
+  bool _usingCloudRelay = false;
 
   // AI Vision Live Detections
   bool _showAiOverlay = true;
@@ -227,6 +231,13 @@ class LivePlayerViewState extends State<LivePlayerView>
             _reconnectAttempt = 0;
           });
 
+          if (_usingCloudRelay) {
+            DiagnosticLoggerService.instance.logInfo(
+              'CLOUD_RELAY',
+              '✔ Conexão ativa com sucesso via Cloud Relay para "${widget.camera.name}".',
+            );
+          }
+
           // Dispara captura automática do frame após 3 segundos de estabilização do fluxo
           if (!_hasAutoCaptured) {
             _hasAutoCaptured = true;
@@ -278,6 +289,16 @@ class LivePlayerViewState extends State<LivePlayerView>
       return;
     }
     _reconnectAttempt++;
+
+    // Se a primeira tentativa na LAN local falhar e o acesso remoto não estiver expressamente desativado,
+    // comuta automaticamente para o Cloud Relay para conexão externa
+    if (!_usingCloudRelay && _effectiveCamera.remoteAccessMode != 'local' && _reconnectAttempt >= 1) {
+      _usingCloudRelay = true;
+      DiagnosticLoggerService.instance.logInfo(
+        'CLOUD_RELAY',
+        'Alternando conexão de "${widget.camera.name}" para a infraestrutura Cloud Relay (fora da LAN local)...',
+      );
+    }
 
     // Exponential / stepped backoff: 2s -> 4s -> 7s -> 10s (max)
     final delay = switch (_reconnectAttempt) {
@@ -439,15 +460,20 @@ class LivePlayerViewState extends State<LivePlayerView>
     }
 
     try {
-      final url = _effectiveCamera.streamUrl;
+      final shouldCloud = _usingCloudRelay ||
+          _effectiveCamera.remoteAccessMode == 'remote' ||
+          CloudRelayService.instance.shouldRouteThroughCloud(_effectiveCamera);
+
+      final url = _effectiveCamera.getEffectiveStreamUrl(forceCloud: shouldCloud);
+      final maskedUrl = _effectiveCamera.getEffectiveMaskedStreamUrl(forceCloud: shouldCloud);
       final isYoosee = _effectiveCamera.manufacturer.id == 'yoosee';
       // Yoosee cameras exclusively support UDP transport for RTSP streaming; TCP returns 'Nonmatching transport'
-      final transportStr = isYoosee ? 'udp' : 'tcp';
+      final transportStr = (isYoosee && !shouldCloud) ? 'udp' : 'tcp';
 
       DiagnosticLoggerService.instance.logInfo(
         'RTSP_PLAYER',
-        'Conectando a "${_effectiveCamera.name}" (${_effectiveCamera.ip}) via ${transportStr.toUpperCase()} (Tentativa #$_reconnectAttempt)',
-        details: 'Stream URL: ${_effectiveCamera.maskedStreamUrl}',
+        'Conectando a "${_effectiveCamera.name}" (${shouldCloud ? "Cloud Relay" : _effectiveCamera.ip}) via ${transportStr.toUpperCase()} (Tentativa #$_reconnectAttempt)',
+        details: 'Stream URL: $maskedUrl',
       );
 
       if (_player != null) {
@@ -983,7 +1009,7 @@ class LivePlayerViewState extends State<LivePlayerView>
                   Text(
                     _hasError
                         ? (_secondsRemaining > 0 ? 'RETRY' : 'OFFLINE')
-                        : 'LIVE',
+                        : (_usingCloudRelay || widget.camera.remoteAccessMode == 'remote' ? 'LIVE • CLOUD' : 'LIVE'),
                     style: GoogleFonts.inter(
                       fontSize: widget.isMiniature ? 9 : 10.5,
                       fontWeight: FontWeight.w700,

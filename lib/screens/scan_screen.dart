@@ -156,7 +156,11 @@ class _ScanScreenState extends State<ScanScreen> {
           children: [
             IconButton(
               icon: const Icon(FluentIcons.back, size: 16),
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: () {
+                if (Navigator.of(context).canPop()) {
+                  Navigator.of(context).pop();
+                }
+              },
             ),
             const SizedBox(width: 6),
             Flexible(
