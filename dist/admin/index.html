@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel de Administração • b-cam PRO | Bilk Sistemas</title>
+  
+  <link rel="icon" type="image/jpeg" href="../b_cam_icon.jpg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Roboto+Mono:wght@500;700&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS & FontAwesome -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              dark: '#0A0A0D',
+              surface: '#121217',
+              card: '#181820',
+              border: '#262633',
+              accent: '#0078D4',
+              glow: '#00A2FF',
+              green: '#00C853',
+              yellow: '#FFB900',
+              red: '#FF3B30'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['Roboto Mono', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background-color: #0A0A0D;
+      color: #F0F0F5;
+      font-family: 'Inter', sans-serif;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #121217;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #2A2A38;
+      border-radius: 3px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #0078D4;
+    }
+    .glow-border:hover {
+      border-color: #0078D4;
+      box-shadow: 0 0 15px rgba(0, 120, 212, 0.2);
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col bg-[#0A0A0D] text-slate-100">
+
+  <!-- Top Navbar -->
+  <header class="border-b border-[#22222E] bg-[#101015]/95 backdrop-blur sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      
+      <!-- Brand & Title -->
+      <div class="flex items-center space-x-3">
+        <a href="../" class="flex items-center space-x-3 group">
+          <img src="../b_cam_icon.jpg" alt="Logo b-cam" class="w-10 h-10 rounded-xl border border-[#333344] shadow-md group-hover:scale-105 transition-transform">
+          <div>
+            <div class="flex items-center space-x-2">
+              <span class="font-extrabold text-lg tracking-tight text-white">b-cam <span class="text-[#0078D4]">PRO</span></span>
+              <span class="bg-[#0078D4]/20 text-[#00A2FF] text-[10px] font-bold px-2 py-0.5 rounded border border-[#0078D4]/40 font-mono">ADMIN</span>
+            </div>
+            <p class="text-xs text-slate-400 font-medium">Gestão de Usuários & Frotas CFTV • Bilk Sistemas</p>
+          </div>
+        </a>
+      </div>
+
+      <!-- Quick Actions & System Pill -->
+      <div class="flex items-center space-x-3">
+        <div class="hidden sm:flex items-center space-x-2 bg-[#181822] border border-[#262635] px-3 py-1.5 rounded-lg text-xs font-mono text-slate-300">
+          <span class="w-2 h-2 rounded-full bg-[#00C853] animate-pulse"></span>
+          <span>Dados Reais de Produção</span>
+        </div>
+
+        <button onclick="resetToRealData()" class="bg-[#181822] hover:bg-[#20202D] text-xs font-semibold px-3 py-2 rounded-lg border border-[#2D2D3D] transition flex items-center space-x-1.5 text-slate-300 hover:text-white" title="Recarregar dados reais da frota">
+          <i class="fa-solid fa-arrows-rotate text-[#00A2FF]"></i>
+          <span class="hidden md:inline">Recarregar Reais</span>
+        </button>
+
+        <button onclick="exportToCSV()" class="bg-[#181822] hover:bg-[#20202D] text-xs font-semibold px-3 py-2 rounded-lg border border-[#2D2D3D] transition flex items-center space-x-1.5 text-slate-300 hover:text-white">
+          <i class="fa-solid fa-file-csv text-[#00C853]"></i>
+          <span class="hidden md:inline">Exportar CSV</span>
+        </button>
+
+        <button onclick="exportToJSON()" class="bg-[#181822] hover:bg-[#20202D] text-xs font-semibold px-3 py-2 rounded-lg border border-[#2D2D3D] transition flex items-center space-x-1.5 text-slate-300 hover:text-white">
+          <i class="fa-solid fa-file-code text-[#00A2FF]"></i>
+          <span class="hidden md:inline">Exportar JSON</span>
+        </button>
+
+        <button onclick="openAddUserModal()" class="bg-[#0078D4] hover:bg-[#006cbd] text-xs font-bold px-3.5 py-2 rounded-lg transition flex items-center space-x-1.5 text-white shadow-lg shadow-[#0078D4]/25">
+          <i class="fa-solid fa-user-plus"></i>
+          <span>Novo Usuário</span>
+        </button>
+
+        <a href="../" class="text-xs text-slate-400 hover:text-white px-2 py-1.5 transition ml-2">
+          <i class="fa-solid fa-arrow-up-right-from-square"></i>
+        </a>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- Main Content Container -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+
+    <!-- KPI Metric Cards Grid -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      
+      <!-- Metric 1: Total Users -->
+      <div class="bg-[#14141B] border border-[#22222E] rounded-xl p-5 relative overflow-hidden glow-border transition">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Total Usuários</span>
+          <div class="w-9 h-9 rounded-lg bg-[#0078D4]/15 border border-[#0078D4]/30 flex items-center justify-center text-[#00A2FF]">
+            <i class="fa-brands fa-google text-sm"></i>
+          </div>
+        </div>
+        <div class="mt-4 flex items-baseline space-x-2">
+          <span id="kpi-total-users" class="text-3xl font-extrabold text-white font-mono">0</span>
+          <span class="text-xs text-emerald-400 font-medium">Contas @gmail</span>
+        </div>
+        <p class="mt-1 text-xs text-slate-500">Autenticação oficial via Google SDK</p>
+      </div>
+
+      <!-- Metric 2: Total Cameras -->
+      <div class="bg-[#14141B] border border-[#22222E] rounded-xl p-5 relative overflow-hidden glow-border transition">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Câmeras Cadastradas</span>
+          <div class="w-9 h-9 rounded-lg bg-[#00C853]/15 border border-[#00C853]/30 flex items-center justify-center text-[#00C853]">
+            <i class="fa-solid fa-video text-sm"></i>
+          </div>
+        </div>
+        <div class="mt-4 flex items-baseline space-x-2">
+          <span id="kpi-total-cameras" class="text-3xl font-extrabold text-white font-mono">0</span>
+          <span class="text-xs text-[#00C853] font-medium">Fluxos RTSP</span>
+        </div>
+        <p class="mt-1 text-xs text-slate-500">Intelbras, Hikvision, Yoosee, ONVIF</p>
+      </div>
+
+      <!-- Metric 3: Online Feeds -->
+      <div class="bg-[#14141B] border border-[#22222E] rounded-xl p-5 relative overflow-hidden glow-border transition">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Câmeras Ativas (Online)</span>
+          <div class="w-9 h-9 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+            <i class="fa-solid fa-signal text-sm"></i>
+          </div>
+        </div>
+        <div class="mt-4 flex items-baseline space-x-2">
+          <span id="kpi-online-cameras" class="text-3xl font-extrabold text-emerald-400 font-mono">0</span>
+          <span id="kpi-online-percent" class="text-xs text-slate-400 font-medium">0% ativação</span>
+        </div>
+        <p class="mt-1 text-xs text-slate-500">Transmissão em tempo real verificada</p>
+      </div>
+
+      <!-- Metric 4: Avg Cameras per User -->
+      <div class="bg-[#14141B] border border-[#22222E] rounded-xl p-5 relative overflow-hidden glow-border transition">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Média Câmeras / Conta</span>
+          <div class="w-9 h-9 rounded-lg bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-400">
+            <i class="fa-solid fa-chart-pie text-sm"></i>
+          </div>
+        </div>
+        <div class="mt-4 flex items-baseline space-x-2">
+          <span id="kpi-avg-cameras" class="text-3xl font-extrabold text-white font-mono">0.0</span>
+          <span class="text-xs text-purple-400 font-medium">câmeras/usuário</span>
+        </div>
+        <p class="mt-1 text-xs text-slate-500">Densidade de monitoramento residencial</p>
+      </div>
+
+    </div>
+
+    <!-- Charts Row -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      
+      <!-- Chart 1: Camera Manufacturers Distribution -->
+      <div class="bg-[#14141B] border border-[#22222E] rounded-xl p-5">
+        <h3 class="text-sm font-bold text-white mb-1 flex items-center space-x-2">
+          <i class="fa-solid fa-network-wired text-[#0078D4]"></i>
+          <span>Fabricantes de Câmeras</span>
+        </h3>
+        <p class="text-xs text-slate-400 mb-4">Divisão da frota por marca e protocolo</p>
+        <div class="relative h-48 flex items-center justify-center">
+          <canvas id="chart-manufacturers"></canvas>
+        </div>
+      </div>
+
+      <!-- Chart 2: Top Users by Camera Count -->
+      <div class="bg-[#14141B] border border-[#22222E] rounded-xl p-5 lg:col-span-2">
+        <h3 class="text-sm font-bold text-white mb-1 flex items-center space-x-2">
+          <i class="fa-solid fa-layer-group text-[#00C853]"></i>
+          <span>Distribuição de Câmeras por Usuário</span>
+        </h3>
+        <p class="text-xs text-slate-400 mb-4">Quantidade de dispositivos vinculados a cada conta Google @gmail</p>
+        <div class="relative h-48">
+          <canvas id="chart-users-cameras"></canvas>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Users Table Card with Search & Filters -->
+    <div class="bg-[#14141B] border border-[#22222E] rounded-xl overflow-hidden shadow-xl">
+      
+      <!-- Toolbar Header -->
+      <div class="p-5 border-b border-[#22222E] flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        
+        <div>
+          <h2 class="text-base font-bold text-white flex items-center space-x-2">
+            <i class="fa-solid fa-users text-[#0078D4]"></i>
+            <span>Contas de Usuários Registrados</span>
+          </h2>
+          <p class="text-xs text-slate-400 mt-0.5">Gerencie os acessos, associação de câmeras e biometria</p>
+        </div>
+
+        <!-- Search Bar and Filter Controls -->
+        <div class="flex flex-wrap items-center gap-3">
+          
+          <!-- Search Input -->
+          <div class="relative min-w-[240px]">
+            <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-xs text-slate-400"></i>
+            <input 
+              type="text" 
+              id="search-input" 
+              placeholder="Buscar por nome, email ou câmera..."
+              oninput="handleSearch()"
+              class="w-full bg-[#1A1A24] border border-[#2C2C3C] text-xs rounded-lg pl-8 pr-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-[#0078D4] transition"
+            >
+          </div>
+
+          <!-- Status Filter -->
+          <select 
+            id="filter-status" 
+            onchange="handleFilter()"
+            class="bg-[#1A1A24] border border-[#2C2C3C] text-xs rounded-lg px-3 py-2 text-slate-300 focus:outline-none focus:border-[#0078D4]"
+          >
+            <option value="all">Todos os Usuários</option>
+            <option value="with_cameras">Com Câmeras Cadastradas</option>
+            <option value="no_cameras">Sem Câmeras (Novos)</option>
+            <option value="biometrics_active">Biometria Ativada</option>
+          </select>
+
+          <!-- Refresh Button -->
+          <button onclick="renderTable()" class="p-2 bg-[#1A1A24] hover:bg-[#222232] border border-[#2C2C3C] rounded-lg text-slate-400 hover:text-white transition" title="Recarregar">
+            <i class="fa-solid fa-arrows-rotate text-xs"></i>
+          </button>
+
+        </div>
+
+      </div>
+
+      <!-- Users Table -->
+      <div class="overflow-x-auto custom-scrollbar">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-[#111117] text-[11px] font-bold uppercase tracking-wider text-slate-400 border-b border-[#22222E]">
+              <th class="py-3 px-5">Usuário (Google Account)</th>
+              <th class="py-3 px-4">Biometria</th>
+              <th class="py-3 px-4">Data Cadastro</th>
+              <th class="py-3 px-4">Qtd. Câmeras</th>
+              <th class="py-3 px-4">Frota de Câmeras</th>
+              <th class="py-3 px-5 text-right">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="users-table-body" class="divide-y divide-[#1D1D28] text-xs">
+            <!-- Dynamically Rendered Rows -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Table Footer / Pagination -->
+      <div class="p-4 border-t border-[#22222E] bg-[#111117] flex flex-col sm:flex-row items-center justify-between text-xs text-slate-400 gap-2">
+        <span id="table-record-count">Exibindo 0 usuários</span>
+        <span class="font-mono text-[11px]">Sistema b-cam PRO v1.22.1 • Powered by Bilk Sistemas</span>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Camera Details Modal Drawer -->
+  <div id="camera-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-[#14141C] border border-[#282838] rounded-2xl max-w-3xl w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+      
+      <!-- Modal Header -->
+      <div class="p-5 border-b border-[#242434] flex items-center justify-between bg-[#111117]">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-xl bg-[#0078D4]/20 border border-[#0078D4]/40 flex items-center justify-center text-[#00A2FF]">
+            <i class="fa-solid fa-video"></i>
+          </div>
+          <div>
+            <h3 id="modal-user-title" class="text-sm font-bold text-white">Câmeras do Usuário</h3>
+            <p id="modal-user-subtitle" class="text-xs text-slate-400 font-mono">user@gmail.com</p>
+          </div>
+        </div>
+
+        <button onclick="closeCameraModal()" class="w-8 h-8 rounded-lg bg-[#1F1F2C] hover:bg-[#2A2A3C] text-slate-400 hover:text-white flex items-center justify-center transition">
+          <i class="fa-solid fa-xmark text-sm"></i>
+        </button>
+      </div>
+
+      <!-- Modal Body (Camera Cards List) -->
+      <div id="modal-camera-list" class="p-5 overflow-y-auto custom-scrollbar space-y-4 flex-1">
+        <!-- Dynamically Rendered Camera Items -->
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="p-4 border-t border-[#242434] bg-[#111117] flex items-center justify-between">
+        <button onclick="openAddCameraModal()" class="bg-[#0078D4]/20 hover:bg-[#0078D4]/30 text-[#00A2FF] border border-[#0078D4]/40 text-xs font-semibold px-3 py-1.5 rounded-lg transition flex items-center space-x-2">
+          <i class="fa-solid fa-plus text-[10px]"></i>
+          <span>Vincular Nova Câmera a este Usuário</span>
+        </button>
+        <button onclick="closeCameraModal()" class="bg-[#20202D] hover:bg-[#28283A] text-xs font-semibold px-4 py-2 rounded-lg text-slate-300 transition">
+          Fechar
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Add User Modal -->
+  <div id="add-user-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-[#14141C] border border-[#282838] rounded-2xl max-w-md w-full shadow-2xl p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-base font-bold text-white flex items-center space-x-2">
+          <i class="fa-solid fa-user-plus text-[#0078D4]"></i>
+          <span>Cadastrar Novo Usuário</span>
+        </h3>
+        <button onclick="closeAddUserModal()" class="text-slate-400 hover:text-white">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <form onsubmit="handleCreateUser(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Nome Completo</label>
+          <input type="text" id="new-user-name" required placeholder="Ex: Lucas Ferreira" class="w-full bg-[#1B1B26] border border-[#2B2B3C] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-[#0078D4]">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Conta Google (@gmail.com)</label>
+          <input type="email" id="new-user-email" required placeholder="usuario@gmail.com" pattern=".+@gmail\.com$" title="Permitido apenas contas @gmail.com" class="w-full bg-[#1B1B26] border border-[#2B2B3C] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-[#0078D4]">
+        </div>
+        <div class="flex items-center space-x-2 pt-2">
+          <input type="checkbox" id="new-user-bio" class="rounded bg-[#1B1B26] border-[#2B2B3C] text-[#0078D4] focus:ring-0">
+          <label for="new-user-bio" class="text-xs text-slate-300">Biometria (Touch ID / Face ID) Habilitada</label>
+        </div>
+        <div class="pt-4 flex justify-end space-x-2">
+          <button type="button" onclick="closeAddUserModal()" class="px-4 py-2 bg-[#20202C] text-xs font-medium rounded-lg text-slate-300 hover:bg-[#282838] transition">Cancelar</button>
+          <button type="submit" class="px-4 py-2 bg-[#0078D4] text-xs font-bold rounded-lg text-white hover:bg-[#006bbd] transition">Salvar Usuário</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add Camera Modal -->
+  <div id="add-cam-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-[#14141C] border border-[#282838] rounded-2xl max-w-lg w-full shadow-2xl p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-base font-bold text-white flex items-center space-x-2">
+          <i class="fa-solid fa-video text-[#00C853]"></i>
+          <span>Vincular Câmera ao Usuário</span>
+        </h3>
+        <button onclick="closeAddCameraModal()" class="text-slate-400 hover:text-white">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <form onsubmit="handleCreateCamera(event)" class="space-y-3">
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Nome da Câmera</label>
+          <input type="text" id="new-cam-name" required placeholder="Ex: Portão Social" class="w-full bg-[#1B1B26] border border-[#2B2B3C] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-[#0078D4]">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-slate-300 mb-1">IP da Câmera</label>
+            <input type="text" id="new-cam-ip" required placeholder="192.168.3.74" class="w-full bg-[#1B1B26] border border-[#2B2B3C] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-[#0078D4]">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-300 mb-1">Porta RTSP</label>
+            <input type="number" id="new-cam-port" value="554" required class="w-full bg-[#1B1B26] border border-[#2B2B3C] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-[#0078D4]">
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-slate-300 mb-1">Fabricante</label>
+            <select id="new-cam-manufacturer" class="w-full bg-[#1B1B26] border border-[#2B2B3C] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-[#0078D4]">
+              <option value="Intelbras">Intelbras</option>
+              <option value="Intelbras Mibo (Linha iM)">Intelbras Mibo</option>
+              <option value="Hikvision">Hikvision</option>
+              <option value="Yoosee">Yoosee</option>
+              <option value="TP-Link Tapo">TP-Link Tapo</option>
+              <option value="Dahua">Dahua</option>
+              <option value="ONVIF / RTSP Genérico">ONVIF Genérico</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-300 mb-1">Localização</label>
+            <input type="text" id="new-cam-location" placeholder="Ex: Entrada" value="Entrada" class="w-full bg-[#1B1B26] border border-[#2B2B3C] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-[#0078D4]">
+          </div>
+        </div>
+        <div class="pt-3 flex justify-end space-x-2">
+          <button type="button" onclick="closeAddCameraModal()" class="px-4 py-2 bg-[#20202C] text-xs font-medium rounded-lg text-slate-300 hover:bg-[#282838] transition">Cancelar</button>
+          <button type="submit" class="px-4 py-2 bg-[#00C853] text-xs font-bold rounded-lg text-black hover:bg-[#00b047] transition">Adicionar Câmera</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- JavaScript Logic & Data -->
+  <script>
+    // Dados Reais da Frota de Câmeras & Contas Google Autenticadas
+    const REAL_PROD_DATA = [
+      {
+        id: "JGUwlg4O5uVwbpYaJsWl2UKVISZ2",
+        name: "Tiago Alexandre Bilk",
+        email: "tbilk27@gmail.com",
+        avatar: "https://lh3.googleusercontent.com/a/ACg8ocK2i6mD93cuFwkzxvOM8WMG3VA48cGOyfpENWNRqua7DPdyVYJTzw=s96-c",
+        biometricsEnabled: true,
+        createdAt: "2026-11-20T14:30:00Z",
+        cameras: [
+          {
+            id: "cam-74",
+            name: "Intelbras Frente da Casa",
+            ip: "192.168.3.74",
+            rtspPort: 554,
+            manufacturer: "Intelbras",
+            channel: 1,
+            subType: 0,
+            location: "Frente / Portão",
+            isOnline: true,
+            pushNotifications: true,
+            notificationEventTypes: ["person", "vehicle", "motion", "alarm"],
+            aiMinConfidence: 0.25,
+            remoteHost: "cameras.nexeoo.com",
+            remoteRtspPort: 8554
+          },
+          {
+            id: "cam-23",
+            name: "Yoosee Corredor & Jardim",
+            ip: "192.168.3.23",
+            rtspPort: 554,
+            manufacturer: "Yoosee",
+            channel: 1,
+            subType: 0,
+            location: "Corredor / Jardim",
+            isOnline: true,
+            pushNotifications: true,
+            notificationEventTypes: ["person", "motion"],
+            aiMinConfidence: 0.25
+          },
+          {
+            id: "cam-24",
+            name: "Yoosee Área Gourmet",
+            ip: "192.168.3.24",
+            rtspPort: 554,
+            manufacturer: "Yoosee",
+            channel: 1,
+            subType: 0,
+            location: "Área Gourmet / Fundos",
+            isOnline: true,
+            pushNotifications: true,
+            notificationEventTypes: ["motion", "alarm"],
+            aiMinConfidence: 0.25
+          },
+          {
+            id: "cam-22",
+            name: "Intelbras iC5",
+            ip: "192.168.3.22",
+            rtspPort: 554,
+            manufacturer: "Intelbras Mibo (Linha iM)",
+            channel: 1,
+            subType: 0,
+            location: "Interior / Entrada",
+            isOnline: true,
+            pushNotifications: true,
+            notificationEventTypes: ["person", "motion"],
+            aiMinConfidence: 0.30
+          }
+        ]
+      }
+    ];
+
+    const STORAGE_KEY = "bcam_admin_real_users_v2";
+
+    // Expurgar qualquer cache anterior com dados fictícios de teste
+    try {
+      localStorage.removeItem("bcam_admin_users_v1");
+    } catch (_) {}
+
+    function loadUsers() {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          // Filtrar qualquer conta fictícia legada remanescente
+          const clean = parsed.filter(u => 
+            u.email !== "seguranca.bilk@gmail.com" && 
+            u.email !== "residencial.bilk@gmail.com" && 
+            u.email !== "marcelo.silveira.cctv@gmail.com"
+          );
+          if (clean.length > 0) return clean;
+        } catch (e) {
+          console.error("Erro ao carregar dados do localStorage:", e);
+        }
+      }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(REAL_PROD_DATA));
+      return REAL_PROD_DATA;
+    }
+
+    function saveUsers(usersData) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(usersData));
+    }
+
+    async function fetchServerData() {
+      try {
+        const resp = await fetch('users.json?t=' + Date.now(), { cache: 'no-store' });
+        if (resp.ok) {
+          const data = await resp.json();
+          if (Array.isArray(data) && data.length > 0) {
+            users = data;
+            saveUsers(users);
+            renderTable();
+          }
+        }
+      } catch (err) {
+        console.warn("Utilizando armazenamento local de dados reais:", err);
+      }
+    }
+
+    function resetToRealData() {
+      try {
+        localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem("bcam_admin_users_v1");
+      } catch (_) {}
+      users = JSON.parse(JSON.stringify(REAL_PROD_DATA));
+      saveUsers(users);
+      fetchServerData();
+      renderTable();
+    }
+
+    let users = loadUsers();
+    let selectedUserIdForModal = null;
+    let mfrChartInstance = null;
+    let userChartInstance = null;
+
+    // Render KPI Metrics
+    function updateMetrics(userList) {
+      const totalUsers = userList.length;
+      let totalCameras = 0;
+      let onlineCameras = 0;
+
+      userList.forEach(u => {
+        (u.cameras || []).forEach(c => {
+          totalCameras++;
+          if (c.isOnline) onlineCameras++;
+        });
+      });
+
+      const onlinePercent = totalCameras > 0 ? Math.round((onlineCameras / totalCameras) * 100) : 0;
+      const avgCameras = totalUsers > 0 ? (totalCameras / totalUsers).toFixed(1) : 0;
+
+      document.getElementById("kpi-total-users").textContent = totalUsers;
+      document.getElementById("kpi-total-cameras").textContent = totalCameras;
+      document.getElementById("kpi-online-cameras").textContent = onlineCameras;
+      document.getElementById("kpi-online-percent").textContent = `${onlinePercent}% ativação`;
+      document.getElementById("kpi-avg-cameras").textContent = avgCameras;
+    }
+
+    // Render Charts with Chart.js
+    function renderCharts(userList) {
+      // 1. Manufacturer Distribution
+      const mfrCounts = {};
+      userList.forEach(u => {
+        (u.cameras || []).forEach(c => {
+          const m = c.manufacturer || "Genérico";
+          mfrCounts[m] = (mfrCounts[m] || 0) + 1;
+        });
+      });
+
+      const mfrLabels = Object.keys(mfrCounts);
+      const mfrData = Object.values(mfrCounts);
+
+      if (mfrChartInstance) mfrChartInstance.destroy();
+      const ctx1 = document.getElementById("chart-manufacturers").getContext("2d");
+      mfrChartInstance = new Chart(ctx1, {
+        type: 'doughnut',
+        data: {
+          labels: mfrLabels,
+          datasets: [{
+            data: mfrData,
+            backgroundColor: [
+              '#00C853', // Intelbras Green
+              '#0078D4', // ONVIF Blue
+              '#00E5FF', // Yoosee Cyan
+              '#FF3B30', // Hikvision Red
+              '#FFB900', // Yellow
+              '#A855F7'  // Purple
+            ],
+            borderColor: '#14141B',
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: {
+                color: '#94A3B8',
+                font: { size: 10, family: 'Inter' },
+                boxWidth: 10
+              }
+            }
+          }
+        }
+      });
+
+      // 2. Users by Camera Count (Bar Chart)
+      const userLabels = userList.map(u => u.name.split(' ')[0]);
+      const userCameraCounts = userList.map(u => (u.cameras || []).length);
+
+      if (userChartInstance) userChartInstance.destroy();
+      const ctx2 = document.getElementById("chart-users-cameras").getContext("2d");
+      userChartInstance = new Chart(ctx2, {
+        type: 'bar',
+        data: {
+          labels: userLabels,
+          datasets: [{
+            label: 'Câmeras',
+            data: userCameraCounts,
+            backgroundColor: '#0078D4',
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: { color: '#94A3B8', stepSize: 1, font: { family: 'Roboto Mono', size: 10 } },
+              grid: { color: '#22222E' }
+            },
+            x: {
+              ticks: { color: '#94A3B8', font: { family: 'Inter', size: 11 } },
+              grid: { display: false }
+            }
+          },
+          plugins: {
+            legend: { display: false }
+          }
+        }
+      });
+    }
+
+    // Render Table Rows
+    function renderTable() {
+      const search = document.getElementById("search-input").value.toLowerCase().trim();
+      const filter = document.getElementById("filter-status").value;
+
+      let filtered = users.filter(u => {
+        const matchSearch = 
+          u.name.toLowerCase().includes(search) ||
+          u.email.toLowerCase().includes(search) ||
+          (u.cameras || []).some(c => c.name.toLowerCase().includes(search) || c.ip.includes(search));
+
+        if (!matchSearch) return false;
+
+        if (filter === "with_cameras") return (u.cameras || []).length > 0;
+        if (filter === "no_cameras") return (u.cameras || []).length === 0;
+        if (filter === "biometrics_active") return u.biometricsEnabled;
+        return true;
+      });
+
+      updateMetrics(users);
+      renderCharts(users);
+
+      const tbody = document.getElementById("users-table-body");
+      tbody.innerHTML = "";
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6" class="text-center py-8 text-slate-500 font-medium">
+              Nenhum usuário encontrado com os filtros atuais.
+            </td>
+          </tr>
+        `;
+        document.getElementById("table-record-count").textContent = "Exibindo 0 usuários";
+        return;
+      }
+
+      filtered.forEach(u => {
+        const camCount = (u.cameras || []).length;
+        const onlineCount = (u.cameras || []).filter(c => c.isOnline).length;
+        const dateFormatted = new Date(u.createdAt).toLocaleDateString('pt-BR');
+
+        // Badges for manufacturers in fleet
+        const mfrs = [...new Set((u.cameras || []).map(c => c.manufacturer))];
+        const mfrBadges = mfrs.map(m => {
+          let color = "bg-blue-500/10 text-blue-400 border-blue-500/30";
+          if (m.includes("Intelbras")) color = "bg-emerald-500/10 text-emerald-400 border-emerald-500/30";
+          if (m.includes("Hikvision")) color = "bg-rose-500/10 text-rose-400 border-rose-500/30";
+          if (m.includes("Yoosee")) color = "bg-cyan-500/10 text-cyan-400 border-cyan-500/30";
+          return `<span class="inline-block text-[10px] font-mono px-1.5 py-0.5 rounded border ${color} mr-1 mb-1">${m}</span>`;
+        }).join("");
+
+        const tr = document.createElement("tr");
+        tr.className = "hover:bg-[#181822] transition group";
+        tr.innerHTML = `
+          <td class="py-3 px-5">
+            <div class="flex items-center space-x-3">
+              <img src="${u.avatar}" alt="${u.name}" class="w-9 h-9 rounded-full object-cover border border-[#2D2D3D]">
+              <div>
+                <div class="font-bold text-white flex items-center space-x-1.5">
+                  <span>${u.name}</span>
+                  <i class="fa-brands fa-google text-[#00A2FF] text-[10px]" title="Autenticado via Google"></i>
+                </div>
+                <div class="text-[11px] text-slate-400 font-mono">${u.email}</div>
+              </div>
+            </div>
+          </td>
+          <td class="py-3 px-4">
+            ${u.biometricsEnabled 
+              ? `<span class="inline-flex items-center space-x-1 px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-medium text-[11px]">
+                  <i class="fa-solid fa-fingerprint text-xs"></i>
+                  <span>Ativa</span>
+                </span>` 
+              : `<span class="inline-flex items-center space-x-1 px-2 py-0.5 rounded bg-slate-800 text-slate-400 text-[11px]">
+                  <i class="fa-solid fa-ban text-[10px]"></i>
+                  <span>Inativa</span>
+                </span>`
+            }
+          </td>
+          <td class="py-3 px-4 font-mono text-slate-400">${dateFormatted}</td>
+          <td class="py-3 px-4">
+            <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-mono font-bold ${camCount > 0 ? 'bg-[#0078D4]/20 text-[#00A2FF] border border-[#0078D4]/40' : 'bg-slate-800 text-slate-400'}">
+              ${camCount} ${camCount === 1 ? 'câmera' : 'câmeras'}
+            </span>
+            ${camCount > 0 ? `<div class="text-[10px] text-emerald-400 font-mono mt-0.5">${onlineCount} online</div>` : ''}
+          </td>
+          <td class="py-3 px-4 max-w-xs">
+            ${camCount > 0 ? mfrBadges : '<span class="text-slate-500 italic text-[11px]">Nenhuma câmera vinculada</span>'}
+          </td>
+          <td class="py-3 px-5 text-right">
+            <div class="flex items-center justify-end space-x-2">
+              <button onclick="viewUserCameras('${u.id}')" class="px-2.5 py-1.5 rounded-lg bg-[#20202E] hover:bg-[#0078D4] text-slate-300 hover:text-white transition text-xs font-semibold flex items-center space-x-1" title="Visualizar e Gerenciar Câmeras">
+                <i class="fa-solid fa-video text-[10px]"></i>
+                <span class="hidden sm:inline">Ver Câmeras</span>
+              </button>
+              <button onclick="deleteUser('${u.id}')" class="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 transition" title="Excluir Usuário">
+                <i class="fa-solid fa-trash-can text-xs"></i>
+              </button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById("table-record-count").textContent = `Exibindo ${filtered.length} de ${users.length} usuários`;
+    }
+
+    function handleSearch() {
+      renderTable();
+    }
+
+    function handleFilter() {
+      renderTable();
+    }
+
+    // Modal: View User Cameras
+    function viewUserCameras(userId) {
+      selectedUserIdForModal = userId;
+      const user = users.find(u => u.id === userId);
+      if (!user) return;
+
+      document.getElementById("modal-user-title").textContent = `Câmeras de ${user.name}`;
+      document.getElementById("modal-user-subtitle").textContent = `${user.email} • ${(user.cameras || []).length} dispositivos configurados`;
+
+      const listContainer = document.getElementById("modal-camera-list");
+      listContainer.innerHTML = "";
+
+      if (!user.cameras || user.cameras.length === 0) {
+        listContainer.innerHTML = `
+          <div class="text-center py-12 text-slate-500">
+            <i class="fa-solid fa-video-slash text-3xl mb-2"></i>
+            <p class="text-sm font-semibold text-slate-400">Nenhuma câmera cadastrada para este usuário.</p>
+            <p class="text-xs text-slate-500 mt-1">Clique no botão abaixo para adicionar o primeiro stream RTSP.</p>
+          </div>
+        `;
+      } else {
+        user.cameras.forEach((cam, index) => {
+          const card = document.createElement("div");
+          card.className = "bg-[#181822] border border-[#262638] rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4";
+          
+          let mfrColor = "bg-blue-500/15 text-blue-400 border-blue-500/30";
+          if (cam.manufacturer.includes("Intelbras")) mfrColor = "bg-emerald-500/15 text-emerald-400 border-emerald-500/30";
+          if (cam.manufacturer.includes("Hikvision")) mfrColor = "bg-rose-500/15 text-rose-400 border-rose-500/30";
+          if (cam.manufacturer.includes("Yoosee")) mfrColor = "bg-cyan-500/15 text-cyan-400 border-cyan-500/30";
+
+          const notifPills = (cam.notificationEventTypes || ['person', 'vehicle', 'motion', 'alarm']).map(t => {
+            let label = t === 'person' ? 'Pessoas' : t === 'vehicle' ? 'Veículos' : t === 'motion' ? 'Movimento' : 'Alarme';
+            return `<span class="bg-[#242436] text-slate-300 text-[10px] px-1.5 py-0.5 rounded font-mono">${label}</span>`;
+          }).join(" ");
+
+          card.innerHTML = `
+            <div class="flex items-start space-x-3">
+              <div class="w-10 h-10 rounded-lg ${cam.isOnline ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' : 'bg-rose-500/20 text-rose-400 border border-rose-500/40'} flex items-center justify-center shrink-0">
+                <i class="fa-solid fa-camera"></i>
+              </div>
+              <div>
+                <div class="flex items-center space-x-2">
+                  <h4 class="font-bold text-sm text-white">${cam.name}</h4>
+                  <span class="inline-block px-2 py-0.5 rounded text-[10px] font-mono border ${mfrColor}">
+                    ${cam.manufacturer}
+                  </span>
+                  <span class="text-[10px] font-mono px-2 py-0.5 rounded ${cam.isOnline ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/10 text-rose-400 border border-rose-500/30'}">
+                    ${cam.isOnline ? 'ONLINE' : 'OFFLINE'}
+                  </span>
+                </div>
+                <div class="text-xs text-slate-400 mt-1 font-mono flex flex-wrap gap-x-3 gap-y-1">
+                  <span><i class="fa-solid fa-network-wired text-slate-500 mr-1"></i>IP: ${cam.ip}:${cam.rtspPort}</span>
+                  <span><i class="fa-solid fa-location-dot text-slate-500 mr-1"></i>${cam.location}</span>
+                  <span><i class="fa-solid fa-bullseye text-slate-500 mr-1"></i>IA: ${Math.round((cam.aiMinConfidence || 0.25) * 100)}%</span>
+                  ${cam.remoteHost ? `<span class="text-cyan-400"><i class="fa-solid fa-globe mr-1"></i>${cam.remoteHost}</span>` : ''}
+                </div>
+                <div class="mt-2 flex items-center space-x-1.5">
+                  <span class="text-[10px] text-slate-500 font-semibold uppercase">Notificações:</span>
+                  ${cam.pushNotifications ? notifPills : '<span class="text-[10px] text-rose-400 font-mono">Desativadas</span>'}
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-center space-x-2 self-end sm:self-center">
+              <button onclick="toggleCameraStatus('${user.id}', '${cam.id}')" class="px-2.5 py-1.5 bg-[#252538] hover:bg-[#303048] rounded-lg text-xs font-semibold text-slate-300 hover:text-white transition">
+                <i class="fa-solid fa-power-off text-xs mr-1 ${cam.isOnline ? 'text-emerald-400' : 'text-slate-500'}"></i>
+                <span>${cam.isOnline ? 'Desativar' : 'Ativar'}</span>
+              </button>
+              <button onclick="deleteCamera('${user.id}', '${cam.id}')" class="p-1.5 text-slate-500 hover:text-rose-400 transition" title="Remover Câmera">
+                <i class="fa-solid fa-trash-can text-xs"></i>
+              </button>
+            </div>
+          `;
+          listContainer.appendChild(card);
+        });
+      }
+
+      document.getElementById("camera-modal").classList.remove("hidden");
+    }
+
+    function closeCameraModal() {
+      document.getElementById("camera-modal").classList.add("hidden");
+      selectedUserIdForModal = null;
+    }
+
+    // Toggle Camera Status
+    function toggleCameraStatus(userId, camId) {
+      const user = users.find(u => u.id === userId);
+      if (!user) return;
+      const cam = user.cameras.find(c => c.id === camId);
+      if (cam) {
+        cam.isOnline = !cam.isOnline;
+        saveUsers(users);
+        viewUserCameras(userId);
+        renderTable();
+      }
+    }
+
+    // Delete Camera
+    function deleteCamera(userId, camId) {
+      if (!confirm("Tem certeza que deseja remover esta câmera deste usuário?")) return;
+      const user = users.find(u => u.id === userId);
+      if (user) {
+        user.cameras = user.cameras.filter(c => c.id !== camId);
+        saveUsers(users);
+        viewUserCameras(userId);
+        renderTable();
+      }
+    }
+
+    // Delete User
+    function deleteUser(userId) {
+      if (!confirm("Tem certeza que deseja excluir esta conta de usuário e todas as suas câmeras?")) return;
+      users = users.filter(u => u.id !== userId);
+      saveUsers(users);
+      renderTable();
+    }
+
+    // Add User Flow
+    function openAddUserModal() {
+      document.getElementById("add-user-modal").classList.remove("hidden");
+    }
+
+    function closeAddUserModal() {
+      document.getElementById("add-user-modal").classList.add("hidden");
+      document.getElementById("new-user-name").value = "";
+      document.getElementById("new-user-email").value = "";
+    }
+
+    function handleCreateUser(e) {
+      e.preventDefault();
+      const name = document.getElementById("new-user-name").value.trim();
+      const email = document.getElementById("new-user-email").value.trim().toLowerCase();
+      const bio = document.getElementById("new-user-bio").checked;
+
+      if (!email.endsWith("@gmail.com")) {
+        alert("Regra de Segurança b-cam: O e-mail deve pertencer ao domínio @gmail.com.");
+        return;
+      }
+
+      if (users.some(u => u.email === email)) {
+        alert("Já existe um usuário cadastrado com este e-mail.");
+        return;
+      }
+
+      const newUser = {
+        id: `usr_${Date.now()}`,
+        name,
+        email,
+        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0078D4&color=fff&bold=true`,
+        biometricsEnabled: bio,
+        createdAt: new Date().toISOString(),
+        cameras: []
+      };
+
+      users.unshift(newUser);
+      saveUsers(users);
+      closeAddUserModal();
+      renderTable();
+    }
+
+    // Add Camera Flow
+    function openAddCameraModal() {
+      if (!selectedUserIdForModal) return;
+      document.getElementById("add-cam-modal").classList.remove("hidden");
+    }
+
+    function closeAddCameraModal() {
+      document.getElementById("add-cam-modal").classList.add("hidden");
+      document.getElementById("new-cam-name").value = "";
+      document.getElementById("new-cam-ip").value = "";
+    }
+
+    function handleCreateCamera(e) {
+      e.preventDefault();
+      if (!selectedUserIdForModal) return;
+      const user = users.find(u => u.id === selectedUserIdForModal);
+      if (!user) return;
+
+      const name = document.getElementById("new-cam-name").value.trim();
+      const ip = document.getElementById("new-cam-ip").value.trim();
+      const port = parseInt(document.getElementById("new-cam-port").value.trim()) || 554;
+      const mfr = document.getElementById("new-cam-manufacturer").value;
+      const loc = document.getElementById("new-cam-location").value.trim() || "Geral";
+
+      const newCam = {
+        id: `cam_${Date.now()}`,
+        name,
+        ip,
+        rtspPort: port,
+        manufacturer: mfr,
+        channel: 1,
+        subType: 0,
+        location: loc,
+        isOnline: true,
+        pushNotifications: true,
+        notificationEventTypes: ["person", "vehicle", "motion", "alarm"],
+        aiMinConfidence: 0.25
+      };
+
+      user.cameras.push(newCam);
+      saveUsers(users);
+      closeAddCameraModal();
+      viewUserCameras(selectedUserIdForModal);
+      renderTable();
+    }
+
+    // Export Handlers
+    function exportToCSV() {
+      const rows = [
+        ["ID Usuario", "Nome", "Email", "Biometria", "Data Cadastro", "Qtd Cameras", "Cameras (Nome | IP | Fabricante | Status)"]
+      ];
+
+      users.forEach(u => {
+        const camDetails = (u.cameras || []).map(c => `${c.name} (${c.ip}:${c.rtspPort} - ${c.manufacturer} - ${c.isOnline ? 'ONLINE' : 'OFFLINE'})`).join(" ; ");
+        rows.push([
+          u.id,
+          `"${u.name}"`,
+          u.email,
+          u.biometricsEnabled ? "SIM" : "NAO",
+          u.createdAt,
+          (u.cameras || []).length,
+          `"${camDetails}"`
+        ]);
+      });
+
+      const csvContent = "data:text/csv;charset=utf-8," + rows.map(e => e.join(",")).join("\n");
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `bcam_usuarios_cameras_${new Date().toISOString().slice(0, 10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    function exportToJSON() {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(users, null, 2));
+      const downloadAnchor = document.createElement("a");
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `bcam_fleet_backup_${new Date().toISOString().slice(0, 10)}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+    }
+
+    // Initialize on DOM Load
+    document.addEventListener("DOMContentLoaded", () => {
+      renderTable();
+      fetchServerData();
+    });
+  </script>
+
+</body>
+</html>

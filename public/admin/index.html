@@ -93,8 +93,13 @@
       <div class="flex items-center space-x-3">
         <div class="hidden sm:flex items-center space-x-2 bg-[#181822] border border-[#262635] px-3 py-1.5 rounded-lg text-xs font-mono text-slate-300">
           <span class="w-2 h-2 rounded-full bg-[#00C853] animate-pulse"></span>
-          <span>Google Auth: Ativo</span>
+          <span>Dados Reais de Produção</span>
         </div>
+
+        <button onclick="resetToRealData()" class="bg-[#181822] hover:bg-[#20202D] text-xs font-semibold px-3 py-2 rounded-lg border border-[#2D2D3D] transition flex items-center space-x-1.5 text-slate-300 hover:text-white" title="Recarregar dados reais da frota">
+          <i class="fa-solid fa-arrows-rotate text-[#00A2FF]"></i>
+          <span class="hidden md:inline">Recarregar Reais</span>
+        </button>
 
         <button onclick="exportToCSV()" class="bg-[#181822] hover:bg-[#20202D] text-xs font-semibold px-3 py-2 rounded-lg border border-[#2D2D3D] transition flex items-center space-x-1.5 text-slate-300 hover:text-white">
           <i class="fa-solid fa-file-csv text-[#00C853]"></i>
@@ -288,7 +293,7 @@
       <!-- Table Footer / Pagination -->
       <div class="p-4 border-t border-[#22222E] bg-[#111117] flex flex-col sm:flex-row items-center justify-between text-xs text-slate-400 gap-2">
         <span id="table-record-count">Exibindo 0 usuários</span>
-        <span class="font-mono text-[11px]">Sistema b-cam PRO v1.22.0 • Powered by Bilk Sistemas</span>
+        <span class="font-mono text-[11px]">Sistema b-cam PRO v1.22.1 • Powered by Bilk Sistemas</span>
       </div>
 
     </div>
@@ -423,25 +428,25 @@
 
   <!-- JavaScript Logic & Data -->
   <script>
-    // Initial Seed Data (Users & Commissioned Cameras)
-    const DEFAULT_DATA = [
+    // Dados Reais da Frota de Câmeras & Contas Google Autenticadas
+    const REAL_PROD_DATA = [
       {
-        id: "usr_tiago_bilk",
-        name: "Tiago Bilk",
+        id: "JGUwlg4O5uVwbpYaJsWl2UKVISZ2",
+        name: "Tiago Alexandre Bilk",
         email: "tbilk27@gmail.com",
-        avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80",
+        avatar: "https://lh3.googleusercontent.com/a/ACg8ocK2i6mD93cuFwkzxvOM8WMG3VA48cGOyfpENWNRqua7DPdyVYJTzw=s96-c",
         biometricsEnabled: true,
         createdAt: "2026-11-20T14:30:00Z",
         cameras: [
           {
             id: "cam-74",
-            name: "Intelbras Portão Principal",
+            name: "Intelbras Frente da Casa",
             ip: "192.168.3.74",
             rtspPort: 554,
             manufacturer: "Intelbras",
             channel: 1,
             subType: 0,
-            location: "Entrada",
+            location: "Frente / Portão",
             isOnline: true,
             pushNotifications: true,
             notificationEventTypes: ["person", "vehicle", "motion", "alarm"],
@@ -450,180 +455,107 @@
             remoteRtspPort: 8554
           },
           {
-            id: "cam-22",
-            name: "Intelbras Mibo Hall Social",
-            ip: "192.168.3.22",
-            rtspPort: 554,
-            manufacturer: "Intelbras Mibo (Linha iM)",
-            channel: 1,
-            subType: 0,
-            location: "Corredor",
-            isOnline: true,
-            pushNotifications: true,
-            notificationEventTypes: ["person", "motion"],
-            aiMinConfidence: 0.30
-          },
-          {
             id: "cam-23",
-            name: "Yoosee Garagem",
+            name: "Yoosee Corredor & Jardim",
             ip: "192.168.3.23",
             rtspPort: 554,
             manufacturer: "Yoosee",
             channel: 1,
             subType: 0,
-            location: "Garagem",
-            isOnline: true,
-            pushNotifications: true,
-            notificationEventTypes: ["vehicle", "motion"],
-            aiMinConfidence: 0.25
-          },
-          {
-            id: "cam-24",
-            name: "Yoosee Perímetro Fundos",
-            ip: "192.168.3.24",
-            rtspPort: 554,
-            manufacturer: "Yoosee",
-            channel: 1,
-            subType: 0,
-            location: "Fundos",
-            isOnline: true,
-            pushNotifications: false,
-            notificationEventTypes: ["motion"],
-            aiMinConfidence: 0.20
-          },
-          {
-            id: "cam-62",
-            name: "Yoosee Área de Lazer",
-            ip: "192.168.3.62",
-            rtspPort: 5000,
-            manufacturer: "Yoosee",
-            channel: 1,
-            subType: 0,
-            location: "Piscina",
-            isOnline: false,
-            pushNotifications: true,
-            notificationEventTypes: ["person"],
-            aiMinConfidence: 0.40
-          }
-        ]
-      },
-      {
-        id: "usr_seguranca_bilk",
-        name: "Central de Segurança Bilk",
-        email: "seguranca.bilk@gmail.com",
-        avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80",
-        biometricsEnabled: true,
-        createdAt: "2026-11-21T08:15:00Z",
-        cameras: [
-          {
-            id: "cam-dahua-01",
-            name: "Dahua Portaria Comercial",
-            ip: "192.168.3.110",
-            rtspPort: 554,
-            manufacturer: "Dahua",
-            channel: 1,
-            subType: 0,
-            location: "Recepção",
-            isOnline: true,
-            pushNotifications: true,
-            notificationEventTypes: ["person", "vehicle", "alarm"],
-            aiMinConfidence: 0.25
-          },
-          {
-            id: "cam-hik-02",
-            name: "Hikvision Perímetro Leste",
-            ip: "192.168.3.112",
-            rtspPort: 554,
-            manufacturer: "Hikvision",
-            channel: 1,
-            subType: 0,
-            location: "Perímetro",
-            isOnline: true,
-            pushNotifications: true,
-            notificationEventTypes: ["person", "alarm"],
-            aiMinConfidence: 0.35
-          },
-          {
-            id: "cam-intelbras-03",
-            name: "Intelbras Cúpula Servidores",
-            ip: "192.168.3.115",
-            rtspPort: 554,
-            manufacturer: "Intelbras",
-            channel: 1,
-            subType: 0,
-            location: "Datacenter",
-            isOnline: true,
-            pushNotifications: true,
-            notificationEventTypes: ["person", "motion", "alarm"],
-            aiMinConfidence: 0.20
-          }
-        ]
-      },
-      {
-        id: "usr_residencial_bilk",
-        name: "Residencial Bilk",
-        email: "residencial.bilk@gmail.com",
-        avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80",
-        biometricsEnabled: false,
-        createdAt: "2026-11-21T08:45:00Z",
-        cameras: [
-          {
-            id: "cam-tapo-01",
-            name: "TP-Link Tapo C200 Sala",
-            ip: "192.168.3.140",
-            rtspPort: 554,
-            manufacturer: "TP-Link Tapo",
-            channel: 1,
-            subType: 0,
-            location: "Sala de Estar",
+            location: "Corredor / Jardim",
             isOnline: true,
             pushNotifications: true,
             notificationEventTypes: ["person", "motion"],
             aiMinConfidence: 0.25
           },
           {
-            id: "cam-mibo-ic3",
-            name: "Intelbras iC3 Jardim",
-            ip: "192.168.3.142",
+            id: "cam-24",
+            name: "Yoosee Área Gourmet",
+            ip: "192.168.3.24",
             rtspPort: 554,
-            manufacturer: "Intelbras",
+            manufacturer: "Yoosee",
             channel: 1,
             subType: 0,
-            location: "Jardim",
+            location: "Área Gourmet / Fundos",
             isOnline: true,
-            pushNotifications: false,
-            notificationEventTypes: ["motion"],
-            aiMinConfidence: 0.20
+            pushNotifications: true,
+            notificationEventTypes: ["motion", "alarm"],
+            aiMinConfidence: 0.25
+          },
+          {
+            id: "cam-22",
+            name: "Intelbras iC5",
+            ip: "192.168.3.22",
+            rtspPort: 554,
+            manufacturer: "Intelbras Mibo (Linha iM)",
+            channel: 1,
+            subType: 0,
+            location: "Interior / Entrada",
+            isOnline: true,
+            pushNotifications: true,
+            notificationEventTypes: ["person", "motion"],
+            aiMinConfidence: 0.30
           }
         ]
-      },
-      {
-        id: "usr_novo_marcelo",
-        name: "Marcelo Silveira",
-        email: "marcelo.silveira.cctv@gmail.com",
-        avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80",
-        biometricsEnabled: true,
-        createdAt: "2026-11-21T09:00:00Z",
-        cameras: []
       }
     ];
 
-    // Local Storage State Management
+    const STORAGE_KEY = "bcam_admin_real_users_v2";
+
+    // Expurgar qualquer cache anterior com dados fictícios de teste
+    try {
+      localStorage.removeItem("bcam_admin_users_v1");
+    } catch (_) {}
+
     function loadUsers() {
-      const stored = localStorage.getItem("bcam_admin_users_v1");
+      const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         try {
-          return JSON.parse(stored);
+          const parsed = JSON.parse(stored);
+          // Filtrar qualquer conta fictícia legada remanescente
+          const clean = parsed.filter(u => 
+            u.email !== "seguranca.bilk@gmail.com" && 
+            u.email !== "residencial.bilk@gmail.com" && 
+            u.email !== "marcelo.silveira.cctv@gmail.com"
+          );
+          if (clean.length > 0) return clean;
         } catch (e) {
           console.error("Erro ao carregar dados do localStorage:", e);
         }
       }
-      localStorage.setItem("bcam_admin_users_v1", JSON.stringify(DEFAULT_DATA));
-      return DEFAULT_DATA;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(REAL_PROD_DATA));
+      return REAL_PROD_DATA;
     }
 
-    function saveUsers(users) {
-      localStorage.setItem("bcam_admin_users_v1", JSON.stringify(users));
+    function saveUsers(usersData) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(usersData));
+    }
+
+    async function fetchServerData() {
+      try {
+        const resp = await fetch('users.json?t=' + Date.now(), { cache: 'no-store' });
+        if (resp.ok) {
+          const data = await resp.json();
+          if (Array.isArray(data) && data.length > 0) {
+            users = data;
+            saveUsers(users);
+            renderTable();
+          }
+        }
+      } catch (err) {
+        console.warn("Utilizando armazenamento local de dados reais:", err);
+      }
+    }
+
+    function resetToRealData() {
+      try {
+        localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem("bcam_admin_users_v1");
+      } catch (_) {}
+      users = JSON.parse(JSON.stringify(REAL_PROD_DATA));
+      saveUsers(users);
+      fetchServerData();
+      renderTable();
     }
 
     let users = loadUsers();
@@ -1106,6 +1038,7 @@
     // Initialize on DOM Load
     document.addEventListener("DOMContentLoaded", () => {
       renderTable();
+      fetchServerData();
     });
   </script>
 
