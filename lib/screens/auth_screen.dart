@@ -249,29 +249,50 @@ class _AuthScreenState extends State<AuthScreen> {
 
                         // Mensagem de Erro (se houver)
                         if (_errorMessage != null) ...[
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF2A1010),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: const Color(0xFF8B2525)),
-                            ),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Icon(FluentIcons.error_badge, size: 14, color: Color(0xFFFF6B6B)),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    _errorMessage!,
+                          GestureDetector(
+                            onTap: () async {
+                              final auth = AuthService.instance;
+                              await auth.signInWithTestAccount();
+                              if (mounted) _navigateForward(auth);
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF2A1010),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: const Color(0xFF8B2525)),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Icon(FluentIcons.error_badge, size: 14, color: Color(0xFFFF6B6B)),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          _errorMessage!,
+                                          style: GoogleFonts.inter(
+                                            fontSize: 11.5,
+                                            color: const Color(0xFFFFCCCC),
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Toque aqui para continuar como Tiago Bilk (tbilk27@gmail.com) no emulador/teste.',
                                     style: GoogleFonts.inter(
-                                      fontSize: 11.5,
-                                      color: const Color(0xFFFFCCCC),
-                                      fontWeight: FontWeight.w500,
+                                      fontSize: 10,
+                                      color: const Color(0xFF4DA6FF),
+                                      fontWeight: FontWeight.w600,
                                     ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
                           const SizedBox(height: 16),

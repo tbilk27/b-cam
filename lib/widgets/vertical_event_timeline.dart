@@ -480,10 +480,16 @@ class _VerticalEventTimelineState extends State<VerticalEventTimeline> {
               padding: const EdgeInsets.symmetric(vertical: 4),
               child: GestureDetector(
                 onTap: () {
+                  final groupClips = _resolveClipsForCluster(event);
                   if (widget.onEventTap != null) {
                     widget.onEventTap!(event);
                   } else {
-                    EventPlaybackDialog.show(context, event, widget.camera);
+                    EventPlaybackDialog.show(
+                      context,
+                      event,
+                      widget.camera,
+                      groupClips,
+                    );
                   }
                 },
                 child: Container(
@@ -594,15 +600,42 @@ class _VerticalEventTimelineState extends State<VerticalEventTimeline> {
   }
 
   String _resolveClipCountLabel(CameraEvent event) {
-    if (event.type == CameraEventType.person) {
-      return '5 clipes';
-    } else if (event.type == CameraEventType.vehicle) {
-      return '2 clipes';
-    } else if (event.type == CameraEventType.motion) {
-      return '3 clipes';
-    } else {
-      return '8 clipes';
+    final count = _resolveClipCount(event);
+    return '$count ${count == 1 ? "clipe" : "clipes"}';
+  }
+
+  int _resolveClipCount(CameraEvent event) {
+    if (event.type == CameraEventType.person) return 5;
+    if (event.type == CameraEventType.vehicle) return 2;
+    if (event.type == CameraEventType.motion) return 3;
+    return 4;
+  }
+
+  List<CameraEvent> _resolveClipsForCluster(CameraEvent primaryEvent) {
+    final count = _resolveClipCount(primaryEvent);
+    if (count <= 1) return [primaryEvent];
+
+    final list = <CameraEvent>[primaryEvent];
+    for (int i = 1; i < count; i++) {
+      final offsetSeconds = i * 20;
+      final subTime = primaryEvent.timestamp.add(Duration(seconds: offsetSeconds));
+      list.add(
+        CameraEvent(
+          id: '${primaryEvent.id}_clip_$i',
+          cameraId: primaryEvent.cameraId,
+          cameraName: primaryEvent.cameraName,
+          type: primaryEvent.type,
+          timestamp: subTime,
+          duration: Duration(seconds: max(6, primaryEvent.duration.inSeconds - (i * 2))),
+          description: '${primaryEvent.description} • Seq. #$i',
+          confidence: primaryEvent.confidence,
+          boundingBoxes: primaryEvent.boundingBoxes,
+          sceneInterpretation: primaryEvent.sceneInterpretation,
+          clipUrl: primaryEvent.clipUrl,
+        ),
+      );
     }
+    return list;
   }
 
   Widget _buildZoomButton({

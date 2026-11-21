@@ -1,9 +1,16 @@
 package com.nexeoo.bcam
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.FileProvider
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -13,6 +20,7 @@ import java.net.URLEncoder
 
 class MainActivity : FlutterFragmentActivity() {
     private val CHANNEL = "com.nexeoo.bcam/deeplink"
+    private val NOTIFICATION_CHANNEL_ID = "b_cam_surveillance_alerts"
     private var pendingDeepLink: String? = null
     private var methodChannel: MethodChannel? = null
 
@@ -21,8 +29,27 @@ class MainActivity : FlutterFragmentActivity() {
         // Impede que a tela do dispositivo apague ou bloqueie enquanto o app b-cam estiver aberto
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
+        createNotificationChannel()
+
         intent?.data?.toString()?.let {
             pendingDeepLink = it
+        }
+    }
+
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val name = "Alertas de Vigilância b-cam"
+            val descriptionText = "Notificações prioritárias de eventos de vigilância e IA"
+            val importance = NotificationManager.IMPORTANCE_HIGH
+            val channel = NotificationChannel(NOTIFICATION_CHANNEL_ID, name, importance).apply {
+                description = descriptionText
+                enableLights(true)
+                enableVibration(true)
+                vibrationPattern = longArrayOf(0, 250, 150, 250)
+            }
+            val notificationManager: NotificationManager =
+                getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.createNotificationChannel(channel)
         }
     }
 
@@ -155,6 +182,44 @@ class MainActivity : FlutterFragmentActivity() {
                         }
                     } catch (e: Exception) {
                         result.error("SHARE_ERROR", e.localizedMessage, null)
+                    }
+                }
+                "showSystemNotification" -> {
+                    val id = call.argument<Int>("id") ?: System.currentTimeMillis().toInt()
+                    val title = call.argument<String>("title") ?: "🚨 Alerta b-cam"
+                    val body = call.argument<String>("body") ?: "Movimento detectado"
+                    val deepLink = call.argument<String>("deepLink") ?: "bcam://event"
+
+                    try {
+                        val notifyIntent = Intent(Intent.ACTION_VIEW, Uri.parse(deepLink), this, MainActivity::class.java).apply {
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                        }
+
+                        val pendingIntentFlags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                        } else {
+                            PendingIntent.FLAG_UPDATE_CURRENT
+                        }
+
+                        val pendingIntent = PendingIntent.getActivity(this, id, notifyIntent, pendingIntentFlags)
+
+                        val builder = NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
+                            .setSmallIcon(R.mipmap.ic_launcher)
+                            .setContentTitle(title)
+                            .setContentText(body)
+                            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+                            .setPriority(NotificationCompat.PRIORITY_HIGH)
+                            .setCategory(NotificationCompat.CATEGORY_ALARM)
+                            .setContentIntent(pendingIntent)
+                            .setAutoCancel(true)
+                            .setVibrate(longArrayOf(0, 250, 150, 250))
+
+                        with(NotificationManagerCompat.from(this)) {
+                            notify(id, builder.build())
+                        }
+                        result.success(true)
+                    } catch (e: Exception) {
+                        result.error("NOTIFICATION_ERROR", e.localizedMessage, null)
                     }
                 }
                 else -> {

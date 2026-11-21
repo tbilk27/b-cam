@@ -50,6 +50,7 @@ class _CommissionScreenState extends State<CommissionScreen> {
   bool _aiDetectionEnabled = true;
   double _aiMinConfidence = 0.25; // 25% default
   bool _pushNotificationsEnabled = true;
+  List<String> _notificationEventTypes = ['person', 'vehicle', 'motion', 'alarm'];
 
   final List<String> _commonLocations = [
     'Entrada',
@@ -89,6 +90,7 @@ class _CommissionScreenState extends State<CommissionScreen> {
       _aiDetectionEnabled = existing.aiDetectionEnabled;
       _aiMinConfidence = existing.aiMinConfidence;
       _pushNotificationsEnabled = existing.pushNotificationsEnabled;
+      _notificationEventTypes = List<String>.from(existing.notificationEventTypes);
     } else if (scan != null) {
       _nameController = TextEditingController(text: scan.suggestedName);
       _ipController = TextEditingController(text: scan.ip);
@@ -154,6 +156,7 @@ class _CommissionScreenState extends State<CommissionScreen> {
       aiDetectionEnabled: _aiDetectionEnabled,
       aiMinConfidence: _aiMinConfidence,
       pushNotificationsEnabled: _pushNotificationsEnabled,
+      notificationEventTypes: List<String>.from(_notificationEventTypes),
       remoteHost: _remoteHostController.text.trim().isNotEmpty ? _remoteHostController.text.trim() : null,
       remoteRtspPort: int.tryParse(_remotePortController.text.trim()),
       remoteAccessMode: _remoteAccessMode,
@@ -902,6 +905,37 @@ class _CommissionScreenState extends State<CommissionScreen> {
                           ),
                         ],
                       ),
+                      if (_pushNotificationsEnabled) ...[
+                        const SizedBox(height: 10),
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF16161C),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFF2C2C36), width: 0.8),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Tipos de Evento para Notificar:',
+                                style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: BCamTheme.accentLightBlue),
+                              ),
+                              const SizedBox(height: 8),
+                              Wrap(
+                                spacing: 12,
+                                runSpacing: 8,
+                                children: [
+                                  _buildEventTypeCheckbox('person', 'Pessoas', FluentIcons.contact),
+                                  _buildEventTypeCheckbox('vehicle', 'Veículos', FluentIcons.car),
+                                  _buildEventTypeCheckbox('motion', 'Movimento', FluentIcons.running),
+                                  _buildEventTypeCheckbox('alarm', 'Alarmes', FluentIcons.warning),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 14),
 
                       // Botões de Simulação Rápida para Testar Limiar
@@ -1031,6 +1065,51 @@ class _CommissionScreenState extends State<CommissionScreen> {
               const SizedBox(height: 32),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEventTypeCheckbox(String typeKey, String label, IconData icon) {
+    final isChecked = _notificationEventTypes.contains(typeKey);
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          if (isChecked) {
+            _notificationEventTypes.remove(typeKey);
+          } else {
+            _notificationEventTypes.add(typeKey);
+          }
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+        decoration: BoxDecoration(
+          color: isChecked ? BCamTheme.accentBlue.withValues(alpha: 0.2) : Colors.transparent,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(
+            color: isChecked ? BCamTheme.accentLightBlue : const Color(0xFF3E3E4C),
+            width: 0.8,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isChecked ? FluentIcons.check_mark : icon,
+              size: 12,
+              color: isChecked ? BCamTheme.statusOnlineGlow : BCamTheme.textSecondary,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 11,
+                fontWeight: isChecked ? FontWeight.w600 : FontWeight.w400,
+                color: isChecked ? Colors.white : BCamTheme.textSecondary,
+              ),
+            ),
+          ],
         ),
       ),
     );

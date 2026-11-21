@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:bcam/models/camera_device.dart';
+import 'package:bcam/models/camera_event.dart';
 import 'package:bcam/models/manufacturer.dart';
 
 void main() {
@@ -139,6 +140,53 @@ void main() {
       expect(cam.matchesMac('98:2a:0a:89:56:62'), isTrue);
       expect(cam.matchesMac('98-2A-0A-89-56-62'), isTrue);
       expect(cam.matchesMac('18:0D:2C:5D:96:FE'), isFalse);
+    });
+  });
+
+  group('Playback RTSP URL and Notification Event Filtering tests', () {
+    test('playbackUrlForEvent builds correct RTSP playback URL for Intelbras DVR/NVR', () {
+      final cam = CameraDevice(
+        id: 'cam-intelbras',
+        name: 'Entrada',
+        ip: '192.168.3.74',
+        rtspPort: 554,
+        manufacturer: CameraManufacturer.intelbras,
+        username: 'admin',
+        password: 'password123',
+        channel: 1,
+      );
+
+      final event = CameraEvent(
+        id: 'evt-1',
+        cameraId: cam.id,
+        cameraName: cam.name,
+        type: CameraEventType.person,
+        timestamp: DateTime(2026, 11, 21, 8, 30, 0),
+        duration: const Duration(seconds: 45),
+        description: 'Pessoa na entrada',
+      );
+
+      final playbackUrl = cam.playbackUrlForEvent(event);
+      expect(playbackUrl, contains('/cam/playback?channel=1&starttime=2026_11_21_08_30_00&endtime=2026_11_21_08_30_45'));
+      expect(playbackUrl, contains('admin:password123@192.168.3.74:554'));
+    });
+
+    test('isNotificationEnabledFor correctly respects filtered categories', () {
+      final cam = CameraDevice(
+        id: 'cam-filtered',
+        name: 'Garagem',
+        ip: '192.168.3.23',
+        pushNotificationsEnabled: true,
+        notificationEventTypes: ['person', 'vehicle'], // only person and vehicle
+      );
+
+      expect(cam.isNotificationEnabledFor(CameraEventType.person), isTrue);
+      expect(cam.isNotificationEnabledFor(CameraEventType.vehicle), isTrue);
+      expect(cam.isNotificationEnabledFor(CameraEventType.motion), isFalse);
+      expect(cam.isNotificationEnabledFor(CameraEventType.alarm), isFalse);
+
+      final camDisabled = cam.copyWith(pushNotificationsEnabled: false);
+      expect(camDisabled.isNotificationEnabledFor(CameraEventType.person), isFalse);
     });
   });
 }

@@ -1,4 +1,5 @@
 import 'bounding_box.dart';
+import 'camera_event.dart';
 import 'exclusion_zone.dart';
 import 'manufacturer.dart';
 
@@ -29,6 +30,7 @@ class CameraDevice {
   double aiMinConfidence; // 0.0 to 1.0 (default 0.25 = 25%)
   List<String> aiTargetClasses; // ['person', 'vehicle', 'motion', 'alarm']
   bool pushNotificationsEnabled;
+  List<String> notificationEventTypes; // ['person', 'vehicle', 'motion', 'alarm']
   String? aiCustomPrompt;
 
   // Exclusion Zone Mask (Grid cells where AI events should NOT be generated)
@@ -68,6 +70,7 @@ class CameraDevice {
     this.aiMinConfidence = 0.25,
     List<String>? aiTargetClasses,
     this.pushNotificationsEnabled = true,
+    List<String>? notificationEventTypes,
     this.aiCustomPrompt,
     List<int>? exclusionMask,
     this.exclusionZoneEnabled = true,
@@ -77,10 +80,42 @@ class CameraDevice {
     this.ownerEmail,
   }) : macAddress = normalizeMac(macAddress),
        aiTargetClasses = aiTargetClasses ?? ['person', 'vehicle', 'motion', 'alarm'],
+       notificationEventTypes = notificationEventTypes ?? ['person', 'vehicle', 'motion', 'alarm'],
        exclusionMask = exclusionMask != null ? List.unmodifiable(exclusionMask) : const [];
 
   /// Whether this camera has an active exclusion zone configured
   bool get hasExclusionZone => exclusionZoneEnabled && exclusionMask.isNotEmpty;
+
+  /// Checks if push notifications are enabled for this specific event type
+  bool isNotificationEnabledFor(CameraEventType type) {
+    if (!pushNotificationsEnabled) return false;
+    return notificationEventTypes.contains(type.name.toLowerCase());
+  }
+
+  /// Computes the actual RTSP playback URL for an event range
+  String playbackUrlForEvent(CameraEvent event) {
+    if (event.clipUrl != null && event.clipUrl!.trim().isNotEmpty) {
+      return event.clipUrl!.trim();
+    }
+
+    final targetHost = (remoteAccessMode == 'remote' && remoteHost != null && remoteHost!.trim().isNotEmpty)
+        ? remoteHost!.trim()
+        : ip;
+    final targetPort = (remoteAccessMode == 'remote' && remoteRtspPort != null)
+        ? remoteRtspPort!
+        : rtspPort;
+
+    return manufacturer.buildPlaybackRtspUrl(
+      ip: targetHost,
+      port: targetPort,
+      user: username,
+      password: password,
+      channel: channel,
+      startTime: event.timestamp,
+      endTime: event.timestamp.add(event.duration),
+      fallbackPath: customPath,
+    );
+  }
 
   /// Percentage of screen covered by the exclusion zone (0.0% to 100.0%)
   double get exclusionZonePercentage => (exclusionMask.length / ExclusionGrid.totalCells) * 100;
@@ -185,6 +220,7 @@ class CameraDevice {
       'aiMinConfidence': aiMinConfidence,
       'aiTargetClasses': aiTargetClasses,
       'pushNotificationsEnabled': pushNotificationsEnabled,
+      'notificationEventTypes': notificationEventTypes,
       'aiCustomPrompt': aiCustomPrompt,
       'exclusionMask': exclusionMask,
       'exclusionZoneEnabled': exclusionZoneEnabled,
@@ -221,6 +257,7 @@ class CameraDevice {
       aiMinConfidence: (json['aiMinConfidence'] as num?)?.toDouble() ?? 0.25,
       aiTargetClasses: (json['aiTargetClasses'] as List<dynamic>?)?.map((e) => e.toString()).toList(),
       pushNotificationsEnabled: json['pushNotificationsEnabled'] as bool? ?? true,
+      notificationEventTypes: (json['notificationEventTypes'] as List<dynamic>?)?.map((e) => e.toString()).toList(),
       aiCustomPrompt: json['aiCustomPrompt'] as String?,
       exclusionMask: (json['exclusionMask'] as List<dynamic>?)?.map((e) => (e as num).toInt()).toList(),
       exclusionZoneEnabled: json['exclusionZoneEnabled'] as bool? ?? true,
@@ -256,6 +293,7 @@ class CameraDevice {
     double? aiMinConfidence,
     List<String>? aiTargetClasses,
     bool? pushNotificationsEnabled,
+    List<String>? notificationEventTypes,
     String? aiCustomPrompt,
     List<int>? exclusionMask,
     bool? exclusionZoneEnabled,
@@ -289,6 +327,7 @@ class CameraDevice {
       aiMinConfidence: aiMinConfidence ?? this.aiMinConfidence,
       aiTargetClasses: aiTargetClasses ?? this.aiTargetClasses,
       pushNotificationsEnabled: pushNotificationsEnabled ?? this.pushNotificationsEnabled,
+      notificationEventTypes: notificationEventTypes ?? this.notificationEventTypes,
       aiCustomPrompt: aiCustomPrompt ?? this.aiCustomPrompt,
       exclusionMask: exclusionMask ?? this.exclusionMask,
       exclusionZoneEnabled: exclusionZoneEnabled ?? this.exclusionZoneEnabled,

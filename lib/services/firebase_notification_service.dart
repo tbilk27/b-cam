@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import '../models/camera_device.dart';
 import '../models/camera_event.dart';
 import 'deep_link_service.dart';
@@ -63,8 +64,28 @@ class FirebaseNotificationService extends ChangeNotifier {
     notifyListeners();
   }
 
+  static const MethodChannel _nativeChannel = MethodChannel('com.nexeoo.bcam/deeplink');
+
   /// Dispara notificação push com payload de Deeplink para o evento detectado
-  void sendLocalPushForEvent(CameraEvent event, CameraDevice camera) {
+  Future<void> sendLocalPushForEvent(CameraEvent event, CameraDevice camera) async {
+    // 1. Valida se a câmera possui notificações ativadas globalmente
+    if (!camera.pushNotificationsEnabled) {
+      DiagnosticLoggerService.instance.logInfo(
+        'FIREBASE_FCM',
+        'Notificação ignorada: notificações push desativadas para "${camera.name}".',
+      );
+      return;
+    }
+
+    // 2. Valida se o usuário habilitou notificações para esta categoria específica de evento
+    if (!camera.isNotificationEnabledFor(event.type)) {
+      DiagnosticLoggerService.instance.logInfo(
+        'FIREBASE_FCM',
+        'Notificação filtrada: categoria "${event.type.name}" não está habilitada nas regras de "${camera.name}".',
+      );
+      return;
+    }
+
     final deepLink = event.deepLinkUrl ?? 'bcam://event/${event.id}';
     final payload = PushNotificationPayload(
       id: 'notif-${event.id}',
@@ -88,6 +109,23 @@ class FirebaseNotificationService extends ChangeNotifier {
       'FIREBASE_FCM',
       'Push Notification despachada: "${payload.title}" -> Deeplink: "$deepLink"',
     );
+
+    // Dispara notificação nativa no painel de notificações do Android
+    try {
+      if (!kIsWeb && (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS)) {
+        await _nativeChannel.invokeMethod('showSystemNotification', {
+          'id': event.id.hashCode,
+          'title': payload.title,
+          'body': payload.body,
+          'deepLink': deepLink,
+        });
+      }
+    } catch (e) {
+      DiagnosticLoggerService.instance.logError(
+        'FIREBASE_FCM',
+        'Falha ao acionar notificação nativa no SO: $e',
+      );
+    }
   }
 
   /// Acionado quando o usuário toca na notificação recebida

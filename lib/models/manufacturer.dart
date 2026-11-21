@@ -187,6 +187,60 @@ enum CameraManufacturer {
     }
   }
 
+  /// Build complete RTSP Playback URL for NVR/DVR/SD card recorded video range
+  String buildPlaybackRtspUrl({
+    required String ip,
+    int? port,
+    String? user,
+    String? password,
+    int channel = 1,
+    required DateTime startTime,
+    required DateTime endTime,
+    String? fallbackPath,
+  }) {
+    final effectivePort = port ?? defaultRtspPort;
+    String path;
+
+    String pad(int n) => n.toString().padLeft(2, '0');
+
+    if (this == CameraManufacturer.intelbras ||
+        this == CameraManufacturer.intelbrasMibo ||
+        this == CameraManufacturer.intelbrasIC ||
+        this == CameraManufacturer.dahua) {
+      // Dahua / Intelbras NVR & IP Camera standard RTSP VCR Playback URL
+      final startStr = '${startTime.year}_${pad(startTime.month)}_${pad(startTime.day)}_${pad(startTime.hour)}_${pad(startTime.minute)}_${pad(startTime.second)}';
+      final endStr = '${endTime.year}_${pad(endTime.month)}_${pad(endTime.day)}_${pad(endTime.hour)}_${pad(endTime.minute)}_${pad(endTime.second)}';
+      path = '/cam/playback?channel=$channel&starttime=$startStr&endtime=$endStr';
+    } else if (this == CameraManufacturer.hikvision) {
+      // Hikvision standard RTSP playback URL
+      final sUtc = startTime.toUtc();
+      final eUtc = endTime.toUtc();
+      final startStr = '${sUtc.year}${pad(sUtc.month)}${pad(sUtc.day)}T${pad(sUtc.hour)}${pad(sUtc.minute)}${pad(sUtc.second)}Z';
+      final endStr = '${eUtc.year}${pad(eUtc.month)}${pad(eUtc.day)}T${pad(eUtc.hour)}${pad(eUtc.minute)}${pad(eUtc.second)}Z';
+      path = '/Streaming/tracks/${channel}01/?starttime=$startStr&endtime=$endStr';
+    } else {
+      // Fallback: If device has a custom path or live path
+      path = fallbackPath ?? defaultRtspPath;
+    }
+
+    if (!path.startsWith('/')) {
+      path = '/$path';
+    }
+
+    if (user != null && user.isNotEmpty) {
+      final encodedUser = Uri.encodeComponent(user);
+      final encodedPass = password != null && password.isNotEmpty
+          ? Uri.encodeComponent(password)
+          : '';
+      final authPart = encodedPass.isNotEmpty
+          ? '$encodedUser:$encodedPass@'
+          : '$encodedUser@';
+      return 'rtsp://$authPart$ip:$effectivePort$path';
+    } else {
+      return 'rtsp://$ip:$effectivePort$path';
+    }
+  }
+
   static CameraManufacturer fromId(String? id) {
     if (id == null) return CameraManufacturer.genericOnvif;
     final cleanId = id.toLowerCase().replaceAll('_', '');

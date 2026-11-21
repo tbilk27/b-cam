@@ -87,8 +87,9 @@ class _EventClipPlayerViewState extends State<EventClipPlayerView> {
 
   void _initPlayer() {
     final camera = widget.camera;
-    final streamUrl = widget.event.clipUrl ??
-        (camera != null && camera.isEnabled ? camera.streamUrl : null);
+    final streamUrl = camera != null && camera.isEnabled
+        ? camera.playbackUrlForEvent(widget.event)
+        : (widget.event.clipUrl ?? (camera?.streamUrl));
 
     if (streamUrl != null && streamUrl.isNotEmpty) {
       try {
@@ -123,16 +124,10 @@ class _EventClipPlayerViewState extends State<EventClipPlayerView> {
           }
         });
 
-        _positionSub = p.stream.position.listen((pos) {
-          if (mounted && pos.inSeconds <= _totalDurationSeconds && pos.inSeconds > 0) {
-            setState(() {
-              _currentSeconds = pos.inSeconds;
-            });
-          }
-        });
-
+        // Loop contínuo ao final do buffer do evento gravado
         _completedSub = p.stream.completed.listen((completed) {
           if (completed && mounted) {
+            setState(() => _currentSeconds = 0);
             p.seek(Duration.zero);
             p.play();
           }

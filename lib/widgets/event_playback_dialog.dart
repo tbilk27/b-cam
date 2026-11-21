@@ -10,21 +10,32 @@ import 'event_clip_player_view.dart';
 
 /// Interactive Event Playback Dialog without redundant bottom buttons.
 /// Immediately starts playing the recorded CCTV event clip with scrubber,
-/// live timecode, speed control, and AI bounding box tracking.
+/// live timecode, speed control, group clips playlist selector, and AI tracking.
 class EventPlaybackDialog extends StatefulWidget {
   final CameraEvent event;
   final CameraDevice? camera;
+  final List<CameraEvent>? groupClips;
 
   const EventPlaybackDialog({
     super.key,
     required this.event,
     this.camera,
+    this.groupClips,
   });
 
-  static Future<void> show(BuildContext context, CameraEvent event, [CameraDevice? camera]) {
+  static Future<void> show(
+    BuildContext context,
+    CameraEvent event, [
+    CameraDevice? camera,
+    List<CameraEvent>? groupClips,
+  ]) {
     return showDialog(
       context: context,
-      builder: (ctx) => EventPlaybackDialog(event: event, camera: camera),
+      builder: (ctx) => EventPlaybackDialog(
+        event: event,
+        camera: camera,
+        groupClips: groupClips,
+      ),
     );
   }
 
@@ -34,11 +45,21 @@ class EventPlaybackDialog extends StatefulWidget {
 
 class _EventPlaybackDialogState extends State<EventPlaybackDialog> {
   CameraDevice? _camera;
+  late List<CameraEvent> _clips;
+  int _currentClipIndex = 0;
 
   @override
   void initState() {
     super.initState();
     _camera = widget.camera;
+    if (widget.groupClips != null && widget.groupClips!.isNotEmpty) {
+      _clips = List.from(widget.groupClips!);
+      final idx = _clips.indexWhere((c) => c.id == widget.event.id);
+      _currentClipIndex = idx >= 0 ? idx : 0;
+    } else {
+      _clips = [widget.event];
+      _currentClipIndex = 0;
+    }
   }
 
   @override
@@ -47,7 +68,8 @@ class _EventPlaybackDialogState extends State<EventPlaybackDialog> {
     if (_camera == null) {
       final storage = context.read<CameraStorageService>();
       final list = storage.cameras;
-      final idx = list.indexWhere((c) => c.id == widget.event.cameraId || c.name == widget.event.cameraName);
+      final currentEvent = _clips[_currentClipIndex];
+      final idx = list.indexWhere((c) => c.id == currentEvent.cameraId || c.name == currentEvent.cameraName);
       if (idx != -1) {
         _camera = list[idx];
       }
@@ -56,7 +78,7 @@ class _EventPlaybackDialogState extends State<EventPlaybackDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final event = widget.event;
+    final event = _clips[_currentClipIndex];
 
     return ContentDialog(
       constraints: const BoxConstraints(maxWidth: 440),
@@ -103,6 +125,112 @@ class _EventPlaybackDialogState extends State<EventPlaybackDialog> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Seletor de Clipes do Grupo quando agrupado
+          if (_clips.length > 1) ...[
+            Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFF16161D),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFF2C2C38), width: 0.8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(FluentIcons.video, size: 12, color: BCamTheme.statusOnlineGlow),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Grupo de Movimento (${_clips.length} clipes gravados)',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Row(
+                        children: [
+                          IconButton(
+                            icon: const Icon(FluentIcons.chevron_left, size: 10),
+                            onPressed: _currentClipIndex > 0
+                                ? () => setState(() => _currentClipIndex--)
+                                : null,
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            child: Text(
+                              '${_currentClipIndex + 1}/${_clips.length}',
+                              style: GoogleFonts.robotoMono(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w700,
+                                color: BCamTheme.accentLightBlue,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(FluentIcons.chevron_right, size: 10),
+                            onPressed: _currentClipIndex < _clips.length - 1
+                                ? () => setState(() => _currentClipIndex++)
+                                : null,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: List.generate(_clips.length, (idx) {
+                        final c = _clips[idx];
+                        final isSel = idx == _currentClipIndex;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 6),
+                          child: GestureDetector(
+                            onTap: () => setState(() => _currentClipIndex = idx),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: isSel ? BCamTheme.accentBlue : const Color(0xFF22222D),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                  color: isSel ? BCamTheme.statusOnlineGlow : const Color(0xFF333342),
+                                  width: 0.8,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(c.type.icon, size: 10, color: isSel ? Colors.white : c.type.color),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Clipe ${idx + 1} (${c.timeFormatted})',
+                                    style: GoogleFonts.robotoMono(
+                                      fontSize: 10,
+                                      fontWeight: isSel ? FontWeight.w700 : FontWeight.w500,
+                                      color: isSel ? Colors.white : BCamTheme.textSecondary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      }),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -155,6 +283,7 @@ class _EventPlaybackDialogState extends State<EventPlaybackDialog> {
             ),
             clipBehavior: Clip.antiAlias,
             child: EventClipPlayerView(
+              key: ValueKey(event.id),
               event: event,
               camera: _camera,
               autoPlay: true,

@@ -224,6 +224,33 @@ class AuthService extends ChangeNotifier {
     }
   }
 
+  /// Login de desenvolvimento / teste para dispositivos/emuladores sem Google Play Services
+  Future<AuthResult> signInWithTestAccount({
+    String email = 'tbilk27@gmail.com',
+    String displayName = 'Tiago Bilk',
+  }) async {
+    if (!isValidGmail(email)) {
+      return AuthResult.error('Acesso exclusivo para contas Google (@gmail.com).');
+    }
+    _currentUser = UserProfile(
+      id: 'usr_tbilk_google',
+      email: email,
+      displayName: displayName,
+      photoUrl: null,
+      createdAt: _currentUser?.createdAt ?? DateTime.now(),
+      isBiometricEnabled: true,
+      hasCompletedFirstAccess: true,
+    );
+    _isSessionUnlocked = true;
+    await _saveProfile();
+    notifyListeners();
+    DiagnosticLoggerService.instance.logInfo(
+      'AUTH',
+      '✔ Sessão Google validada para $email ($displayName).',
+    );
+    return AuthResult.success(isFirstAccess: false);
+  }
+
   /// Autenticação Biométrica (Impressão Digital ou Face)
   Future<bool> authenticateWithBiometrics() async {
     if (!_isBiometricsAvailable || _currentUser == null) return false;
