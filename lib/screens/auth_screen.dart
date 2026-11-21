@@ -149,11 +149,11 @@ class _AuthScreenState extends State<AuthScreen> {
                   Text(
                     'b-cam PRO',
                     textAlign: TextAlign.center,
-                    style: GoogleFonts.syne(
-                      fontSize: 24,
+                    style: GoogleFonts.inter(
+                      fontSize: 23,
                       fontWeight: FontWeight.w800,
                       color: Colors.white,
-                      letterSpacing: 0.5,
+                      letterSpacing: -0.6,
                     ),
                   ),
                   const SizedBox(height: 4),

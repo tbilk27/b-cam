@@ -141,7 +141,7 @@ class _FirstAccessScreenState extends State<FirstAccessScreen> {
                       children: [
                         Text(
                           'Primeiro Acesso • b-cam PRO',
-                          style: GoogleFonts.syne(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white),
+                          style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white, letterSpacing: -0.2),
                         ),
                         Text(
                           user?.email ?? 'Conta Google',
@@ -186,7 +186,7 @@ class _FirstAccessScreenState extends State<FirstAccessScreen> {
                         children: [
                           Text(
                             'Bem-vindo, ${user?.displayName ?? "Usuário"}!',
-                            style: GoogleFonts.syne(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.white),
+                            style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white, letterSpacing: -0.3),
                           ),
                           const SizedBox(height: 6),
                           Text(

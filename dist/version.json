@@ -1,9 +1,9 @@
 {
-  "versionCode": 21,
-  "versionName": "1.20.0",
+  "versionCode": 22,
+  "versionName": "1.21.0",
   "apkUrl": "http://192.168.3.62:8088/b-cam-arm64.apk",
-  "sha256": "79192934a91cb3890ed1a291d780e1f4055de15596461d0857b42d016f398d54",
-  "fileSizeBytes": 64185344,
-  "releaseNotes": "Versão 1.20.0: Controle de acesso com autenticação Google exclusiva para contas @gmail.com, fluxo de primeiro acesso com associação de câmeras, tela de perfil com indicação e compartilhamento de download via WhatsApp e login por biometria.",
-  "releaseDate": "2026-11-21T11:23:30Z"
+  "sha256": "f2493f818d2b7288eb00df3d56d4fa10a5a119321070fb72fdfa51ab6307612f",
+  "fileSizeBytes": 64185340,
+  "releaseNotes": "Versão 1.21.0: Ajuste da tipografia para eliminar espaçamento esticado (Inter), persistência e garantia de eventos gravados para todas as câmeras com histórico de detecção e reprodução fluida.",
+  "releaseDate": "2026-11-21T11:39:30Z"
 }

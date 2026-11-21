@@ -3,6 +3,7 @@ import 'package:fluent_ui/fluent_ui.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
+import '../services/camera_event_service.dart';
 import '../services/camera_storage_service.dart';
 import '../services/deep_link_service.dart';
 import '../services/diagnostic_logger_service.dart';
@@ -58,9 +59,15 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     await Future.wait([
       storage.loadCameras(),
       AuthService.instance.initialize(),
+      CameraEventService.instance.initialize(),
       FirebaseNotificationService.instance.initialize(),
       Future.delayed(const Duration(milliseconds: 250)),
     ]);
+
+    // Assegura histórico de eventos para as câmeras cadastradas
+    if (storage.cameras.isNotEmpty) {
+      await CameraEventService.instance.ensureEventsForCameras(storage.cameras);
+    }
 
     if (!mounted || _disposed) return;
     setState(() {

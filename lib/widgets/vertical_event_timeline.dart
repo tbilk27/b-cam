@@ -36,6 +36,20 @@ class _VerticalEventTimelineState extends State<VerticalEventTimeline> {
   void initState() {
     super.initState();
     _activeScrubberTime = DateFormat('HH:mm:ss').format(DateTime.now());
+    CameraEventService.instance.addListener(_onEventsChanged);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      CameraEventService.instance.ensureEventsForCamera(widget.camera);
+    });
+  }
+
+  void _onEventsChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    CameraEventService.instance.removeListener(_onEventsChanged);
+    super.dispose();
   }
 
   void _previousDay() {

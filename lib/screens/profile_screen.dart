@@ -101,7 +101,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const SizedBox(width: 8),
                   Text(
                     'Perfil do Usuário',
-                    style: GoogleFonts.syne(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white),
+                    style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white, letterSpacing: -0.2),
                   ),
                   const Spacer(),
                   Container(
@@ -151,7 +151,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 (user?.displayName.isNotEmpty ?? false)
                                     ? user!.displayName[0].toUpperCase()
                                     : 'G',
-                                style: GoogleFonts.syne(fontSize: 22, fontWeight: FontWeight.w800, color: Colors.white),
+                                style: GoogleFonts.inter(fontSize: 22, fontWeight: FontWeight.w800, color: Colors.white),
                               ),
                             ),
                           ),
@@ -162,7 +162,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               children: [
                                 Text(
                                   user?.displayName ?? 'Usuário b-cam',
-                                  style: GoogleFonts.syne(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.white),
+                                  style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white, letterSpacing: -0.3),
                                 ),
                                 const SizedBox(height: 2),
                                 Text(

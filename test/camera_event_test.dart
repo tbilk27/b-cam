@@ -56,7 +56,7 @@ void main() {
       expect(events.any((e) => e.type == CameraEventType.person), true);
     });
 
-    test('CameraEventService returns clean empty timeline for unseeded cameras', () {
+    test('CameraEventService returns clean empty timeline for unseeded cameras when autoGenerate is disabled', () {
       final service = CameraEventService.instance;
       final camNew = CameraDevice(
         id: 'cam-unseeded-99',
@@ -67,8 +67,24 @@ void main() {
         location: 'Garagem',
       );
 
-      final events = service.getEventsForCamera(camNew);
+      final events = service.getEventsForCamera(camNew, autoGenerateIfEmpty: false);
       expect(events.isEmpty, true);
+    });
+
+    test('CameraEventService provisions recorded events for camera when requested', () {
+      final service = CameraEventService.instance;
+      final camNew = CameraDevice(
+        id: 'cam-auto-88',
+        name: 'Câmera Frente Teste',
+        ip: '192.168.3.88',
+        manufacturer: CameraManufacturer.intelbras,
+        username: 'admin',
+        location: 'Frente',
+      );
+
+      final events = service.getEventsForCamera(camNew, autoGenerateIfEmpty: true);
+      expect(events.isNotEmpty, true);
+      expect(events.length, greaterThanOrEqualTo(4));
     });
   });
 }

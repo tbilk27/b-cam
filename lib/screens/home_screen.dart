@@ -405,7 +405,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             : 'G';
                         return Text(
                           initial,
-                          style: GoogleFonts.syne(
+                          style: GoogleFonts.inter(
                             fontSize: 12,
                             fontWeight: FontWeight.w800,
                             color: Colors.white,
