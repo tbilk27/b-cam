@@ -206,6 +206,22 @@ class CameraStorageService extends ChangeNotifier {
     }
   }
 
+  /// Records when a camera was opened by the user, storing timestamp and optional snapshot path
+  Future<void> recordCameraAccess(String cameraId, {String? snapshotPath}) async {
+    final idx = _cameras.indexWhere((c) => c.id == cameraId);
+    if (idx != -1) {
+      final cam = _cameras[idx];
+      _cameras[idx] = cam.copyWith(
+        lastAccessed: DateTime.now(),
+        lastSnapshotPath: snapshotPath ?? cam.lastSnapshotPath,
+        lastSeen: DateTime.now(),
+        isOnline: true,
+      );
+      await _persist();
+      notifyListeners();
+    }
+  }
+
   Future<void> removeCamera(String id) async {
     _cameras.removeWhere((c) => c.id == id);
     await _persist();

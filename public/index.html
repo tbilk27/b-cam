@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>b-cam PRO • Download Oficial para Android | Powered by Bilk Sistemas</title>
+  
+  <!-- Open Graph / WhatsApp Preview Meta Tags -->
+  <meta property="og:title" content="b-cam PRO • Download do App para Celular" />
+  <meta property="og:description" content="Vigilância & Monitoramento CFTV Inteligente com IA • Powered by Bilk Sistemas. Baixe o APK oficial para Android." />
+  <meta property="og:image" content="https://bilkcam.web.app/b_cam_icon.jpg" />
+  <meta property="og:image:width" content="512" />
+  <meta property="og:image:height" content="512" />
+  <meta property="og:url" content="https://bilkcam.web.app" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="b-cam • Bilk Sistemas" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="b-cam PRO • Download do App para Celular" />
+  <meta name="twitter:description" content="Vigilância & Monitoramento CFTV Inteligente com IA • Powered by Bilk Sistemas." />
+  <meta name="twitter:image" content="https://bilkcam.web.app/b_cam_icon.jpg" />
+
+  <link rel="icon" type="image/jpeg" href="b_cam_icon.jpg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Roboto+Mono:wght@500;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #0C0C0F;
+      --card-bg: #15151B;
+      --card-border: #262630;
+      --accent: #0078D4;
+      --accent-glow: #00A2FF;
+      --cyan: #00F0FF;
+      --green: #00C853;
+      --text: #F0F0F5;
+      --text-muted: #8E8E98;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 32px 18px 48px;
+    }
+
+    .container {
+      max-width: 460px;
+      width: 100%;
+    }
+
+    /* Header */
+    .header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .logo-frame {
+      width: 88px;
+      height: 88px;
+      margin: 0 auto 16px;
+      border-radius: 22px;
+      overflow: hidden;
+      border: 1.5px solid #333340;
+      box-shadow: 0 8px 24px rgba(0, 120, 212, 0.25), 0 4px 12px rgba(0,0,0,0.6);
+      position: relative;
+    }
+
+    .logo-frame img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .app-title-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+
+    h1 {
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: #FFFFFF;
+    }
+
+    .badge-pro {
+      background: rgba(0, 120, 212, 0.2);
+      border: 1px solid var(--accent);
+      color: var(--accent-glow);
+      font-size: 10px;
+      font-weight: 800;
+      padding: 2px 7px;
+      border-radius: 4px;
+      letter-spacing: 0.5px;
+    }
+
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 12.5px;
+      font-weight: 500;
+      margin-bottom: 6px;
+    }
+
+    .powered-by {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      color: var(--cyan);
+      font-weight: 600;
+      letter-spacing: 0.3px;
+      background: rgba(0, 240, 255, 0.08);
+      border: 1px solid rgba(0, 240, 255, 0.25);
+      padding: 3px 10px;
+      border-radius: 20px;
+      margin-top: 4px;
+    }
+
+    /* Cards */
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    }
+
+    .card-title {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--cyan);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* Download Button */
+    .btn-download {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #0078D4 0%, #005A9E 100%);
+      color: #FFFFFF;
+      text-decoration: none;
+      padding: 16px 20px;
+      border-radius: 12px;
+      box-shadow: 0 6px 20px rgba(0, 120, 212, 0.45);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      cursor: pointer;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      text-align: center;
+    }
+
+    .btn-download:active {
+      transform: scale(0.98);
+      box-shadow: 0 2px 10px rgba(0, 120, 212, 0.3);
+    }
+
+    .btn-download .btn-main-text {
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-download .btn-sub-text {
+      font-size: 11px;
+      opacity: 0.85;
+      font-family: 'Roboto Mono', monospace;
+      margin-top: 4px;
+    }
+
+    /* Share WhatsApp Button */
+    .btn-share {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: #25D366;
+      color: #FFFFFF;
+      text-decoration: none;
+      padding: 12px;
+      border-radius: 10px;
+      font-size: 13.5px;
+      font-weight: 700;
+      margin-top: 12px;
+      transition: background 0.2s;
+    }
+
+    .btn-share:hover {
+      background: #20BA5C;
+    }
+
+    /* Meta Details Pills */
+    .meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 14px;
+      font-size: 11.5px;
+    }
+
+    .meta-box {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      padding: 10px 12px;
+    }
+
+    .meta-label {
+      color: var(--text-muted);
+      font-size: 10px;
+      text-transform: uppercase;
+      font-weight: 600;
+      margin-bottom: 3px;
+    }
+
+    .meta-value {
+      font-family: 'Roboto Mono', monospace;
+      font-weight: 600;
+      color: #FFFFFF;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* Steps List */
+    .steps-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .steps-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      font-size: 12.5px;
+      line-height: 1.45;
+      color: #D1D1DB;
+    }
+
+    .step-number {
+      width: 24px;
+      height: 24px;
+      min-width: 24px;
+      border-radius: 50%;
+      background: rgba(0, 120, 212, 0.2);
+      border: 1px solid var(--accent);
+      color: var(--accent-glow);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    /* QR Code Container */
+    .qr-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 14px 0 6px;
+    }
+
+    .qr-image {
+      width: 140px;
+      height: 140px;
+      background: #FFFFFF;
+      padding: 8px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    }
+
+    .qr-caption {
+      margin-top: 10px;
+      font-size: 11px;
+      color: var(--text-muted);
+      text-align: center;
+    }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      margin-top: 18px;
+      color: var(--text-muted);
+      font-size: 11px;
+      line-height: 1.6;
+    }
+
+    .footer a {
+      color: var(--cyan);
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header Institucional -->
+    <header class="header">
+      <div class="logo-frame">
+        <img src="b_cam_icon.jpg" alt="Logotipo b-cam">
+      </div>
+      <div class="app-title-row">
+        <h1>b-cam</h1>
+        <span class="badge-pro">PRO</span>
+      </div>
+      <p class="subtitle">Vigilância & Monitoramento CFTV Inteligente</p>
+      <div class="powered-by">
+        🛡️ Powered by Bilk Sistemas
+      </div>
+    </header>
+
+    <!-- Card de Download Principal -->
+    <section class="card">
+      <div class="card-title">📲 Instalação no Celular</div>
+      
+      <a href="https://github.com/tbilk27/b-cam/releases/latest/download/b-cam-arm64.apk" class="btn-download" download>
+        <span class="btn-main-text">
+          <span>⬇️</span> Baixar APK para Android
+        </span>
+        <span class="btn-sub-text">Versão 1.10.0 • Build 11 • 105 MB</span>
+      </a>
+
+      <a href="https://api.whatsapp.com/send?text=Baixe%20o%20aplicativo%20b-cam%20PRO%20(Powered%20by%20Bilk%20Sistemas)%20para%20Android:%20https://bcam.nexeoo.com" class="btn-share" target="_blank" rel="noopener">
+        <span>💬</span> Compartilhar via WhatsApp
+      </a>
+
+      <div class="meta-grid">
+        <div class="meta-box">
+          <div class="meta-label">Pacote Android</div>
+          <div class="meta-value">com.nexeoo.bcam</div>
+        </div>
+        <div class="meta-box">
+          <div class="meta-label">Domínio Oficial</div>
+          <div class="meta-value">bcam.nexeoo.com</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Card Como Instalar no Android -->
+    <section class="card">
+      <div class="card-title">📋 Como Instalar no Celular</div>
+      <ol class="steps-list">
+        <li>
+          <span class="step-number">1</span>
+          <div>Toque no botão azul <strong>"Baixar APK para Android"</strong> acima. O arquivo iniciará o download direto.</div>
+        </li>
+        <li>
+          <span class="step-number">2</span>
+          <div>Ao finalizar o download, toque na notificação ou acerte o arquivo nos seus <em>Downloads</em>.</div>
+        </li>
+        <li>
+          <span class="step-number">3</span>
+          <div>Se o Android solicitar confirmação de fontes desconhecidas para o navegador, ative a opção <strong>"Permitir desta fonte"</strong> e toque em <strong>Instalar</strong>.</div>
+        </li>
+        <li>
+          <span class="step-number">4</span>
+          <div>Abra o <strong>b-cam</strong> conectado à sua rede Wi-Fi e acompanhe suas câmeras em tempo real!</div>
+        </li>
+      </ol>
+    </section>
+
+    <!-- Card QR Code para Escanear com a Câmera -->
+    <section class="card">
+      <div class="card-title">📷 Escanear QR Code</div>
+      <div class="qr-container">
+        <img class="qr-image" src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=https://github.com/tbilk27/b-cam/releases/latest/download/b-cam-arm64.apk" alt="QR Code para Download">
+        <p class="qr-caption">Aponte a câmera do celular para este código para baixar o APK instantaneamente.</p>
+      </div>
+    </section>
+
+    <!-- Rodapé -->
+    <footer class="footer">
+      <p><strong>b-cam PRO</strong> • Vigilância de Redes Wi-Fi & IA</p>
+      <p>Desenvolvido com excelência por <a href="https://bcam.nexeoo.com">Bilk Sistemas</a></p>
+      <p style="margin-top: 4px; font-size: 10px; color: #5E5E68;">Domínio Autorizado: <code>nexeoo.com</code> / <code>bcam.nexeoo.com</code></p>
+    </footer>
+  </div>
+</body>
+</html>

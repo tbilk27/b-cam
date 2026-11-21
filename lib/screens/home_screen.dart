@@ -15,8 +15,8 @@ import '../services/firebase_notification_service.dart';
 import '../services/network_scanner_service.dart';
 import '../theme/fluent_theme.dart';
 import '../widgets/b_cam_logo.dart';
+import '../widgets/camera_snapshot_poster.dart';
 import '../widgets/event_playback_dialog.dart';
-import '../widgets/live_player_view.dart';
 import 'camera_detail_screen.dart';
 import 'camera_provisioning_screen.dart';
 import 'commission_screen.dart';
@@ -460,7 +460,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       width: 8,
                       height: 8,
                       decoration: BoxDecoration(
-                        color: camera.isEnabled ? BCamTheme.statusOnlineGlow : BCamTheme.statusWarning,
+                        color: (camera.isEnabled && camera.isOnline)
+                            ? BCamTheme.statusOnlineGlow
+                            : (camera.isEnabled ? BCamTheme.statusOffline : BCamTheme.statusWarning),
                         shape: BoxShape.circle,
                       ),
                     ),
@@ -480,40 +482,42 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ],
                 ),
-                IconButton(
-                  icon: const Icon(FluentIcons.more_vertical, size: 14),
-                  onPressed: () => _showCameraOptions(context, camera),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Prominent Online / Offline Status Badge
+                    _buildCameraOnlineIconBadge(camera),
+                    IconButton(
+                      icon: const Icon(FluentIcons.more_vertical, size: 14),
+                      onPressed: () => _showCameraOptions(context, camera),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
 
-          // Media Kit Live Video Player Surface (Tap to Open Details, Double Tap Fullscreen)
-          AspectRatio(
-            aspectRatio: 16 / 9,
-            child: GestureDetector(
-              onTap: () {
-                Navigator.of(context).push(
-                  FluentPageRoute(builder: (_) => CameraDetailScreen(camera: camera)),
-                );
-              },
-              onDoubleTap: () {
-                final all = storage.cameras;
-                final idx = all.indexOf(camera);
-                Navigator.of(context).push(
-                  FluentPageRoute(
-                    builder: (_) => FullscreenCameraViewer(
-                      cameras: all,
-                      initialIndex: idx >= 0 ? idx : 0,
-                    ),
+          // Lightweight Snapshot Poster (Last Accessed Image & Resource Optimization)
+          // Live RTSP playback starts smoothly when the user enters the camera.
+          CameraSnapshotPoster(
+            camera: camera,
+            onTap: () {
+              Navigator.of(context).push(
+                FluentPageRoute(builder: (_) => CameraDetailScreen(camera: camera)),
+              );
+            },
+            onDoubleTap: () {
+              final all = storage.cameras;
+              final idx = all.indexOf(camera);
+              Navigator.of(context).push(
+                FluentPageRoute(
+                  builder: (_) => FullscreenCameraViewer(
+                    cameras: all,
+                    initialIndex: idx >= 0 ? idx : 0,
                   ),
-                );
-              },
-              child: LivePlayerView(
-                key: ValueKey('${camera.id}_${camera.streamUrl}_$_refreshKey'),
-                camera: camera,
-              ),
-            ),
+                ),
+              );
+            },
           ),
 
           // Instagram-Style Quick Action Bar below Video
@@ -639,6 +643,81 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildCameraOnlineIconBadge(CameraDevice camera) {
+    if (!camera.isEnabled) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+          color: BCamTheme.statusWarning.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: BCamTheme.statusWarning.withValues(alpha: 0.5), width: 0.8),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(FluentIcons.clear_night, size: 10, color: BCamTheme.statusWarning),
+            const SizedBox(width: 4),
+            Text(
+              'SUSPENSA',
+              style: GoogleFonts.inter(fontSize: 8.5, fontWeight: FontWeight.w700, color: BCamTheme.statusWarning),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (camera.isOnline) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+        decoration: BoxDecoration(
+          color: const Color(0xFF00C853).withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: const Color(0xFF00C853).withValues(alpha: 0.6), width: 0.8),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 6,
+              height: 6,
+              decoration: const BoxDecoration(
+                color: Color(0xFF00E676),
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 4),
+            const Icon(FluentIcons.wifi, size: 10, color: Color(0xFF00E676)),
+            const SizedBox(width: 4),
+            Text(
+              'ONLINE',
+              style: GoogleFonts.inter(fontSize: 8.5, fontWeight: FontWeight.w800, color: Color(0xFF00E676), letterSpacing: 0.5),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFF3B30).withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFFF3B30).withValues(alpha: 0.5), width: 0.8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(FluentIcons.plug_disconnected, size: 10, color: Color(0xFFFF3B30)),
+          const SizedBox(width: 4),
+          Text(
+            'OFFLINE',
+            style: GoogleFonts.inter(fontSize: 8.5, fontWeight: FontWeight.w700, color: Color(0xFFFF3B30)),
+          ),
+        ],
       ),
     );
   }

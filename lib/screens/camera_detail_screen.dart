@@ -41,6 +41,11 @@ class _CameraDetailScreenState extends State<CameraDetailScreen> {
     _camera = widget.camera;
     _isSuspended = !_camera.isEnabled;
     CameraActionService.instance.addListener(_onActionUpdate);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<CameraStorageService>().recordCameraAccess(_camera.id);
+      }
+    });
   }
 
   @override

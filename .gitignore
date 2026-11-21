@@ -44,3 +44,4 @@ app.*.map.json
 *.aab
 dist/*.apk
 dist/*.log
+.firebase/

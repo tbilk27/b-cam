@@ -18,6 +18,8 @@ class CameraDevice {
   bool isOnline;
   bool isEnabled; // When false, camera is deactivated and reconnection attempts are suspended
   DateTime? lastSeen;
+  DateTime? lastAccessed;
+  String? lastSnapshotPath;
   bool isFavorite;
   String location;
   String? macAddress;
@@ -49,6 +51,8 @@ class CameraDevice {
     this.isOnline = true,
     this.isEnabled = true,
     this.lastSeen,
+    this.lastAccessed,
+    this.lastSnapshotPath,
     this.isFavorite = false,
     this.location = 'Geral',
     String? macAddress,
@@ -144,6 +148,8 @@ class CameraDevice {
       'isOnline': isOnline,
       'isEnabled': isEnabled,
       'lastSeen': lastSeen?.toIso8601String(),
+      'lastAccessed': lastAccessed?.toIso8601String(),
+      'lastSnapshotPath': lastSnapshotPath,
       'isFavorite': isFavorite,
       'location': location,
       'macAddress': macAddress,
@@ -174,6 +180,8 @@ class CameraDevice {
       isOnline: json['isOnline'] as bool? ?? true,
       isEnabled: json['isEnabled'] as bool? ?? true,
       lastSeen: json['lastSeen'] != null ? DateTime.tryParse(json['lastSeen'] as String) : null,
+      lastAccessed: json['lastAccessed'] != null ? DateTime.tryParse(json['lastAccessed'] as String) : null,
+      lastSnapshotPath: json['lastSnapshotPath'] as String?,
       isFavorite: json['isFavorite'] as bool? ?? false,
       location: json['location'] as String? ?? 'Geral',
       macAddress: json['macAddress'] as String?,
@@ -203,6 +211,8 @@ class CameraDevice {
     bool? isOnline,
     bool? isEnabled,
     DateTime? lastSeen,
+    DateTime? lastAccessed,
+    String? lastSnapshotPath,
     bool? isFavorite,
     String? location,
     String? macAddress,
@@ -230,6 +240,8 @@ class CameraDevice {
       isOnline: isOnline ?? this.isOnline,
       isEnabled: isEnabled ?? this.isEnabled,
       lastSeen: lastSeen ?? this.lastSeen,
+      lastAccessed: lastAccessed ?? this.lastAccessed,
+      lastSnapshotPath: lastSnapshotPath ?? this.lastSnapshotPath,
       isFavorite: isFavorite ?? this.isFavorite,
       location: location ?? this.location,
       macAddress: macAddress ?? this.macAddress,
