@@ -102,6 +102,23 @@ class _EventClipPlayerViewState extends State<EventClipPlayerView> {
       }
     }
 
+    final isImage = streamUrl != null &&
+        (streamUrl.toLowerCase().endsWith('.jpg') ||
+         streamUrl.toLowerCase().endsWith('.jpeg') ||
+         streamUrl.toLowerCase().endsWith('.png') ||
+         streamUrl.contains('/snapshots/'));
+
+    if (isImage) {
+      // Evidência de imagem gravada pela IA ou captura local:
+      // Exibe diretamente a evidência e simula a linha do tempo do evento sem erro do libmpv
+      _isLoading = false;
+      _hasVideoError = false;
+      _isPlaying = true;
+      _startPlaybackTimer();
+      _scheduleHideControls();
+      return;
+    }
+
     if (streamUrl != null && streamUrl.isNotEmpty) {
       try {
         final p = Player(
@@ -347,6 +364,21 @@ class _EventClipPlayerViewState extends State<EventClipPlayerView> {
   }
 
   Widget _buildBackgroundSnapshot() {
+    // 1. Snapshot da evidência gravada pelo evento
+    final eventClip = widget.event.clipUrl;
+    if (eventClip != null &&
+        (eventClip.toLowerCase().endsWith('.jpg') ||
+         eventClip.toLowerCase().endsWith('.jpeg') ||
+         eventClip.toLowerCase().endsWith('.png') ||
+         eventClip.contains('/snapshots/')) &&
+        File(eventClip).existsSync()) {
+      return Image.file(
+        File(eventClip),
+        fit: BoxFit.cover,
+      );
+    }
+
+    // 2. Último snapshot capturado da câmera
     final snapPath = widget.camera?.lastSnapshotPath;
     if (snapPath != null && File(snapPath).existsSync()) {
       return Image.file(

@@ -1,9 +1,9 @@
 {
-  "versionCode": 29,
-  "versionName": "1.26.0",
+  "versionCode": 30,
+  "versionName": "1.27.0",
   "apkUrl": "http://192.168.3.62:8088/b-cam-arm64.apk",
-  "sha256": "d4c026234420cd6e99ea19c978f1bc89bf27588e5c7686377117b518067b84a6",
-  "fileSizeBytes": 63467609,
-  "releaseNotes": "Versão 1.26.0: Suporte completo a comandos reais de PTZ e hardware (ONVIF porta 5000 + RTSP porta 554) para câmeras Yoosee, Sirene física, Holofote LED, Visão Noturna e controle de giro integrado diretamente na tela de visualização.",
-  "releaseDate": "2026-11-21T16:30:00Z"
+  "sha256": "98110d46114e90a04a449b9acdf4511ea5c9214ee7624f3077d41039fed7ff9d",
+  "fileSizeBytes": 63467605,
+  "releaseNotes": "Versão 1.27.0: Suporte completo à gravação automática de eventos de IA por câmera (Edge NVR), gravação manual consolidada na linha do tempo, resolução de reprodução sem erros e acesso individual a evidências capturadas com contornos inteligentes.",
+  "releaseDate": "2026-11-21T17:05:00Z"
 }

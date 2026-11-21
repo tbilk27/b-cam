@@ -4,7 +4,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 import '../models/camera_device.dart';
-import '../models/manufacturer.dart';
 import '../models/scan_result.dart';
 import '../services/camera_storage_service.dart';
 import '../services/network_scanner_service.dart';

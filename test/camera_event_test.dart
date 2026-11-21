@@ -86,5 +86,37 @@ void main() {
       expect(events.isNotEmpty, true);
       expect(events.length, greaterThanOrEqualTo(4));
     });
+
+    test('CameraEventService registers manual and AI snapshot evidence events properly', () {
+      final service = CameraEventService.instance;
+      final cam = CameraDevice(
+        id: 'cam-manual-rec',
+        name: 'Área Gourmet',
+        ip: '192.168.3.24',
+        manufacturer: CameraManufacturer.yoosee,
+        username: 'admin',
+        location: 'Gourmet',
+        aiDetectionEnabled: false, // AI disabled, but manual recording must still register
+      );
+
+      final recEvent = CameraEvent(
+        id: 'rec-test-1',
+        cameraId: cam.id,
+        cameraName: cam.name,
+        type: CameraEventType.recording,
+        timestamp: DateTime.now(),
+        duration: const Duration(seconds: 15),
+        description: 'Gravação manual de teste arquivada localmente.',
+        clipUrl: '/data/user/0/com.nexeoo.bcam/app_flutter/snapshots/snap_test.jpg',
+        confidence: 1.0,
+      );
+
+      final accepted = service.registerEvent(recEvent, camera: cam, forceAccept: true);
+      expect(accepted, isTrue);
+
+      final camEvents = service.getEventsForCamera(cam);
+      expect(camEvents.any((e) => e.id == 'rec-test-1'), isTrue);
+      expect(camEvents.firstWhere((e) => e.id == 'rec-test-1').clipUrl, contains('snap_test.jpg'));
+    });
   });
 }

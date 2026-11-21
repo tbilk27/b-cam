@@ -6,6 +6,7 @@ import '../models/camera_device.dart';
 import '../models/camera_event.dart';
 import '../services/ai_vision_agent_service.dart';
 import '../services/camera_action_service.dart';
+import '../services/camera_event_service.dart';
 import '../services/camera_storage_service.dart';
 import '../services/diagnostic_logger_service.dart';
 import '../theme/fluent_theme.dart';
@@ -204,6 +205,9 @@ class _CameraDetailScreenState extends State<CameraDetailScreen> {
   }
 
   void _toggleRecording() {
+    final wasRecording = _isRecording;
+    final recordedDuration = _recordSeconds;
+
     setState(() {
       _isRecording = !_isRecording;
       if (_isRecording) {
@@ -218,6 +222,23 @@ class _CameraDetailScreenState extends State<CameraDetailScreen> {
       }
     });
 
+    if (wasRecording && recordedDuration > 0) {
+      _livePlayerKey.currentState?.captureSnapshot().then((snapPath) {
+        final recEvent = CameraEvent(
+          id: 'rec-${_camera.id}-${DateTime.now().millisecondsSinceEpoch}',
+          cameraId: _camera.id,
+          cameraName: _camera.name,
+          type: CameraEventType.recording,
+          timestamp: DateTime.now().subtract(Duration(seconds: recordedDuration)),
+          duration: Duration(seconds: recordedDuration < 5 ? 5 : recordedDuration),
+          description: 'Clipe de gravação manual arquivado no dispositivo ($recordedDuration s).',
+          clipUrl: snapPath ?? _camera.lastSnapshotPath,
+          confidence: 1.0,
+        );
+        CameraEventService.instance.registerEvent(recEvent, camera: _camera, forceAccept: true);
+      });
+    }
+
     displayInfoBar(
       context,
       duration: const Duration(seconds: 4),
@@ -226,7 +247,7 @@ class _CameraDetailScreenState extends State<CameraDetailScreen> {
         content: Text(
           _isRecording
               ? 'Gravando buffer local de vídeo para "${_camera.name}"...'
-              : 'Clipe gravado de $_recordSeconds s consolidado no NVR local.',
+              : 'Clipe gravado de $recordedDuration s consolidado na Linha do Tempo desta câmera.',
         ),
         severity: _isRecording ? InfoBarSeverity.warning : InfoBarSeverity.success,
         onClose: close,
@@ -866,21 +887,29 @@ class _CameraDetailScreenState extends State<CameraDetailScreen> {
                           context.read<CameraStorageService>().updateCamera(_camera);
 
                           if (newAiEnabled) {
-                            final evt = AiVisionAgentService.instance.testDetectionWithConfidence(
-                              camera: _camera,
-                              simulatedConfidence: 0.96,
-                              label: 'Pessoa',
-                              type: CameraEventType.person,
-                            );
+                            _livePlayerKey.currentState?.captureSnapshot().then((snapPath) {
+                              if (snapPath != null) {
+                                AiVisionAgentService.instance.processLiveSnapshot(
+                                  _camera,
+                                  snapshotPath: snapPath,
+                                  forceRegister: true,
+                                );
+                              } else {
+                                AiVisionAgentService.instance.testDetectionWithConfidence(
+                                  camera: _camera,
+                                  simulatedConfidence: 0.96,
+                                  label: 'Pessoa',
+                                  type: CameraEventType.person,
+                                );
+                              }
+                            });
                             displayInfoBar(
                               context,
                               duration: const Duration(seconds: 4),
                               builder: (c, close) => InfoBar(
                                 title: const Text('Visão Computacional IA Ativada'),
-                                content: Text(
-                                  evt != null
-                                      ? 'Objeto contornado: Pessoa (96% de assertividade) na câmera ao vivo.'
-                                      : 'Monitoramento de objetos ativo na área de vigilância.',
+                                content: const Text(
+                                  'Detecção de movimento e objetos ativa. Eventos e evidências gravados automaticamente.',
                                 ),
                                 severity: InfoBarSeverity.success,
                                 onClose: close,

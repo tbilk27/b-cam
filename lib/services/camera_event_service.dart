@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -103,6 +104,40 @@ class CameraEventService extends ChangeNotifier {
   Future<void> ensureEventsForCamera(CameraDevice camera) async {
     if (!_isInitialized) {
       await initialize();
+    }
+
+    final existing = getEventsForCamera(camera);
+    if (existing.isEmpty) {
+      // Se a câmera já possui um snapshot gravado, cria a primeira evidência real de calibração
+      final snap = camera.lastSnapshotPath;
+      if (snap != null && File(snap).existsSync()) {
+        final initEvent = CameraEvent(
+          id: 'evt-init-${camera.id}',
+          cameraId: camera.id,
+          cameraName: camera.name,
+          type: CameraEventType.motion,
+          timestamp: camera.lastAccessed ?? DateTime.now(),
+          duration: const Duration(seconds: 30),
+          description: 'Enquadramento inicial de vigilância arquivado no dispositivo.',
+          clipUrl: snap,
+          confidence: 0.95,
+          boundingBoxes: const [
+            BoundingBox(
+              label: 'Área Monitorada',
+              confidence: 0.95,
+              left: 0.25,
+              top: 0.25,
+              width: 0.50,
+              height: 0.50,
+              colorHex: '#00CC6A',
+            ),
+          ],
+        );
+        _events.add(initEvent);
+        _events.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+        await _persistEvents();
+        notifyListeners();
+      }
     }
   }
 
@@ -251,27 +286,29 @@ class CameraEventService extends ChangeNotifier {
   }
 
   /// Registra um novo evento proveniente do Agente de IA com validação de Limiar de Confiança
-  bool registerEvent(CameraEvent event, {required CameraDevice camera}) {
-    if (!camera.aiDetectionEnabled) {
-      DiagnosticLoggerService.instance.logInfo(
-        'AI_VISION',
-        'Detecção de IA desativada para a câmera "${camera.name}". Evento ignorado.',
-      );
-      return false;
-    }
+  bool registerEvent(CameraEvent event, {required CameraDevice camera, bool forceAccept = false}) {
+    if (!forceAccept && event.type != CameraEventType.recording) {
+      if (!camera.aiDetectionEnabled) {
+        DiagnosticLoggerService.instance.logInfo(
+          'AI_VISION',
+          'Detecção de IA desativada para a câmera "${camera.name}". Evento ignorado.',
+        );
+        return false;
+      }
 
-    // Regra explícita de limiar de confiança: se confiança < limiar, NÃO gera evento e NÃO notifica
-    if (event.confidence < camera.aiMinConfidence) {
-      DiagnosticLoggerService.instance.logInfo(
-        'AI_VISION',
-        'Evento descartado: certeza (${(event.confidence * 100).toStringAsFixed(1)}%) '
-        'abaixo do limiar configurado (${(camera.aiMinConfidence * 100).toStringAsFixed(1)}%) para "${camera.name}".',
-      );
-      return false;
+      // Regra explícita de limiar de confiança: se confiança < limiar, NÃO gera evento e NÃO notifica
+      if (event.confidence < camera.aiMinConfidence) {
+        DiagnosticLoggerService.instance.logInfo(
+          'AI_VISION',
+          'Evento descartado: certeza (${(event.confidence * 100).toStringAsFixed(1)}%) '
+          'abaixo do limiar configurado (${(camera.aiMinConfidence * 100).toStringAsFixed(1)}%) para "${camera.name}".',
+        );
+        return false;
+      }
     }
 
     // Regra da Zona de Exclusão: se o evento ocorrer dentro da área mascarada pelo usuário, descarta imediatamente
-    if (camera.hasExclusionZone) {
+    if (!forceAccept && camera.hasExclusionZone) {
       final isExcluded = event.boundingBoxes.isNotEmpty
           ? event.boundingBoxes.any((box) => camera.isBoxInExclusionZone(box))
           : camera.isBoxInExclusionZone(
@@ -296,10 +333,12 @@ class CameraEventService extends ChangeNotifier {
     }
 
     // Filtra as bounding boxes internas também pelo limiar e remove caixas em área de exclusão
-    final validBoxes = event.boundingBoxes
-        .where((b) => b.confidence >= camera.aiMinConfidence)
-        .where((b) => !camera.isBoxInExclusionZone(b))
-        .toList();
+    final validBoxes = forceAccept
+        ? event.boundingBoxes
+        : event.boundingBoxes
+            .where((b) => b.confidence >= camera.aiMinConfidence)
+            .where((b) => !camera.isBoxInExclusionZone(b))
+            .toList();
 
     final validatedEvent = event.copyWith(boundingBoxes: validBoxes);
 

@@ -89,6 +89,7 @@ class LivePlayerViewState extends State<LivePlayerView>
   int _secondsRemaining = 0;
   Timer? _countdownTimer;
   Timer? _watchdogTimer;
+  Timer? _aiSurveillanceTimer;
 
   // Camera state & local copy for immediate credential healing
   late CameraDevice _effectiveCamera;
@@ -238,6 +239,8 @@ class LivePlayerViewState extends State<LivePlayerView>
             );
           }
 
+          _startAiSurveillanceLoop();
+
           // Dispara captura automática do frame após 3 segundos de estabilização do fluxo
           if (!_hasAutoCaptured) {
             _hasAutoCaptured = true;
@@ -248,6 +251,14 @@ class LivePlayerViewState extends State<LivePlayerView>
                   try {
                     final storage = Provider.of<CameraStorageService>(context, listen: false);
                     await storage.recordCameraAccess(widget.camera.id, snapshotPath: path);
+
+                    // Processa e registra o evento real se a IA estiver ativa na câmera
+                    if (_effectiveCamera.aiDetectionEnabled) {
+                      await AiVisionAgentService.instance.processLiveSnapshot(
+                        _effectiveCamera,
+                        snapshotPath: path,
+                      );
+                    }
                   } catch (_) {}
                 }
               }
@@ -550,6 +561,22 @@ class LivePlayerViewState extends State<LivePlayerView>
     }
   }
 
+  void _startAiSurveillanceLoop() {
+    _aiSurveillanceTimer?.cancel();
+    _aiSurveillanceTimer = Timer.periodic(const Duration(seconds: 25), (_) async {
+      if (!mounted || !_effectiveCamera.isEnabled || !_effectiveCamera.aiDetectionEnabled) return;
+      if (!(_player?.state.playing ?? false)) return;
+
+      final path = await captureSnapshot();
+      if (path != null && mounted) {
+        await AiVisionAgentService.instance.processLiveSnapshot(
+          _effectiveCamera,
+          snapshotPath: path,
+        );
+      }
+    });
+  }
+
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
@@ -557,6 +584,7 @@ class LivePlayerViewState extends State<LivePlayerView>
     CameraEventService.instance.removeListener(_onAiVisionUpdate);
     _cancelAutoReconnect();
     _watchdogTimer?.cancel();
+    _aiSurveillanceTimer?.cancel();
     _clockTimer?.cancel();
     _errorSub?.cancel();
     _bufferingSub?.cancel();

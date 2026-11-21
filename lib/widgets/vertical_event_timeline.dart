@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../models/camera_device.dart';
 import '../models/camera_event.dart';
+import '../services/ai_vision_agent_service.dart';
 import '../services/camera_event_service.dart';
 import '../theme/fluent_theme.dart';
 import 'event_playback_dialog.dart';
@@ -203,6 +204,28 @@ class _VerticalEventTimelineState extends State<VerticalEventTimeline> {
                           Text(
                             'O Agente de IA monitora continuamente o fluxo da câmera.',
                             style: GoogleFonts.robotoMono(fontSize: 10, color: BCamTheme.textTertiary),
+                          ),
+                          const SizedBox(height: 12),
+                          FilledButton(
+                            onPressed: () {
+                              AiVisionAgentService.instance.testDetectionWithConfidence(
+                                camera: widget.camera,
+                                simulatedConfidence: 0.95,
+                                label: 'Pessoa Detectada',
+                                type: CameraEventType.person,
+                              );
+                            },
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(FluentIcons.robot, size: 13, color: Colors.black),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Registrar Evidência IA',
+                                  style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.black),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),

@@ -3,7 +3,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import '../theme/fluent_theme.dart';
-import '../widgets/b_cam_logo.dart';
 import 'first_access_screen.dart';
 import 'home_screen.dart';
 
