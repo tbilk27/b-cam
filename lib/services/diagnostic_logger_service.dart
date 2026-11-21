@@ -270,17 +270,31 @@ class DiagnosticLoggerService extends ChangeNotifier {
     );
   }
 
-  Future<void> _writeToFile(LogEntry entry) async {
+  final List<String> _writeQueue = [];
+  bool _isWritingToFile = false;
+
+  void _writeToFile(LogEntry entry) {
+    _writeQueue.add('${entry.toFormattedString()}\n');
+    _flushWriteQueue();
+  }
+
+  Future<void> _flushWriteQueue() async {
+    if (_isWritingToFile || _logFile == null || _writeQueue.isEmpty) return;
+    _isWritingToFile = true;
     try {
-      if (_logFile != null) {
+      while (_writeQueue.isNotEmpty) {
+        final chunk = _writeQueue.join();
+        _writeQueue.clear();
         await _logFile!.writeAsString(
-          '${entry.toFormattedString()}\n',
+          chunk,
           mode: FileMode.append,
-          flush: false,
+          flush: true,
         );
       }
     } catch (e) {
       debugPrint('Erro ao persistir log: $e');
+    } finally {
+      _isWritingToFile = false;
     }
   }
 

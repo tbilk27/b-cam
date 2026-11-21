@@ -55,6 +55,7 @@ class LivePlayerViewState extends State<LivePlayerView>
   StreamSubscription? _bufferingSub;
   StreamSubscription? _completedSub;
   StreamSubscription? _playingSub;
+  StreamSubscription? _widthSub;
   bool _hasAutoCaptured = false;
 
   /// Captura o frame atual em reprodução no Player e salva no armazenamento persistente
@@ -102,8 +103,7 @@ class LivePlayerViewState extends State<LivePlayerView>
 
   bool get _isLikelyAuthError {
     final msg = _errorMessage?.toLowerCase() ?? '';
-    return msg.contains('failed to recognize file format') ||
-        msg.contains('unauthorized') ||
+    return msg.contains('unauthorized') ||
         msg.contains('401') ||
         msg.contains('authentication') ||
         _effectiveCamera.password == 'admin' ||
@@ -179,6 +179,29 @@ class LivePlayerViewState extends State<LivePlayerView>
       _player = p;
       _controller = VideoController(p);
 
+      _widthSub = p.stream.width.listen((width) {
+        if (width != null && width > 0 && mounted) {
+          _cancelAutoReconnect();
+          setState(() {
+            _hasError = false;
+            _errorMessage = null;
+            _isLoading = false;
+            _reconnectAttempt = 0;
+          });
+          if (_usingCloudRelay) {
+            DiagnosticLoggerService.instance.logInfo(
+              'CLOUD_RELAY',
+              '✔ Conexão ativa com sucesso via Cloud Relay para "${widget.camera.name}".',
+            );
+          } else {
+            DiagnosticLoggerService.instance.logInfo(
+              'RTSP_PLAYER',
+              '✔ Fluxo RTSP ativo (${width}x${p.state.height}) para "${widget.camera.name}".',
+            );
+          }
+        }
+      });
+
       _errorSub = p.stream.error.listen((error) {
         // Filter out benign non-fatal seek/stream notifications from libmpv
         if (error.contains('Cannot seek') ||
@@ -197,6 +220,31 @@ class LivePlayerViewState extends State<LivePlayerView>
           'Erro de reprodução na câmera "${widget.camera.name}" (${widget.camera.ip})',
           details: 'libmpv: $error | URL: ${widget.camera.maskedStreamUrl}',
         );
+
+        // Auto-healing: Se falhar no fluxo principal (HD / H.265 / Smart Codec / 3MP), comuta automaticamente para o fluxo secundário (SD / H.264)
+        final isCodecOrFormatError = error.contains('Could not open codec') ||
+            error.contains('Cannot open codec') ||
+            error.contains('codec') ||
+            error.contains('Failed to recognize file format');
+
+        if (isCodecOrFormatError && _effectiveCamera.subType == 0) {
+          DiagnosticLoggerService.instance.logWarn(
+            'RTSP_PLAYER',
+            '⚠️ Codec/formato HD incompatível na câmera "${widget.camera.name}". Ativando fallback automático para Sub Stream (SD / H.264)...',
+          );
+          _effectiveCamera = _effectiveCamera.copyWith(subType: 1);
+          if (mounted) {
+            try {
+              context.read<CameraStorageService>().updateCamera(_effectiveCamera);
+            } catch (_) {}
+          }
+          _cancelAutoReconnect();
+          _reconnectAttempt = 0;
+          _usingCloudRelay = false;
+          _playStream();
+          return;
+        }
+
         if (mounted) {
           setState(() {
             _hasError = true;
@@ -301,14 +349,26 @@ class LivePlayerViewState extends State<LivePlayerView>
     }
     _reconnectAttempt++;
 
-    // Se a primeira tentativa na LAN local falhar e o acesso remoto não estiver expressamente desativado,
-    // comuta automaticamente para o Cloud Relay para conexão externa
-    if (!_usingCloudRelay && _effectiveCamera.remoteAccessMode != 'local' && _reconnectAttempt >= 1) {
-      _usingCloudRelay = true;
-      DiagnosticLoggerService.instance.logInfo(
-        'CLOUD_RELAY',
-        'Alternando conexão de "${widget.camera.name}" para a infraestrutura Cloud Relay (fora da LAN local)...',
-      );
+    // Só comuta para nuvem se houver um host remoto expressamente configurado
+    // ou se a nuvem global estiver forçada (evita loop infinito em nuvem quando na LAN)
+    final hasCustomRemoteHost = _effectiveCamera.remoteHost != null && _effectiveCamera.remoteHost!.trim().isNotEmpty;
+    final canUseCloud = _effectiveCamera.remoteAccessMode == 'remote' ||
+        (_effectiveCamera.remoteAccessMode == 'auto' && (hasCustomRemoteHost || CloudRelayService.instance.globalMode == CloudNetworkMode.alwaysCloud));
+
+    if (canUseCloud && _effectiveCamera.remoteAccessMode != 'local') {
+      // Alterna entre LAN local e relay remoto nas tentativas ímpares/pares
+      final shouldCloud = (_reconnectAttempt % 2 == 1);
+      if (_usingCloudRelay != shouldCloud) {
+        _usingCloudRelay = shouldCloud;
+        DiagnosticLoggerService.instance.logInfo(
+          'CLOUD_RELAY',
+          _usingCloudRelay
+              ? 'Alternando conexão de "${widget.camera.name}" para a infraestrutura Cloud Relay...'
+              : 'Retornando conexão de "${widget.camera.name}" para a LAN local (${_effectiveCamera.ip})...',
+        );
+      }
+    } else {
+      _usingCloudRelay = false;
     }
 
     // Exponential / stepped backoff: 2s -> 4s -> 7s -> 10s (max)
@@ -555,7 +615,11 @@ class LivePlayerViewState extends State<LivePlayerView>
         _reconnectAttempt = 0;
         _playStream();
       }
-    } else if (widget.camera.isEnabled && oldWidget.camera.streamUrl != widget.camera.streamUrl) {
+    } else if (widget.camera.isEnabled &&
+        (oldWidget.camera.streamUrl != widget.camera.streamUrl ||
+            oldWidget.camera.ip != widget.camera.ip ||
+            oldWidget.camera.subType != widget.camera.subType ||
+            oldWidget.camera.password != widget.camera.password)) {
       _reconnectAttempt = 0;
       _playStream();
     }
@@ -590,6 +654,7 @@ class LivePlayerViewState extends State<LivePlayerView>
     _bufferingSub?.cancel();
     _completedSub?.cancel();
     _playingSub?.cancel();
+    _widthSub?.cancel();
     _player?.dispose();
     super.dispose();
   }

@@ -246,6 +246,29 @@ Registro cronológico mantido pelo **Líder de Projeto & Orquestrador Geral**.
 
 ---
 
+## 📅 Sprint 2.1 • Resolução de Incompatibilidade de Codec HD (H.265), Failover Cloud Relay e Reconciliação DHCP
+- **Data**: 2026-11-21
+- **Solicitante**: Usuário ("veja o log anexo. este celular não consegue conectar-se as camreas; implemente a correção")
+- **Diagnóstico do Log Móvel (`b_cam_diagnostic.log`)**:
+  1. `libmpv: Could not open codec` na Intelbras Frente Portão (`192.168.3.74`): decodificador de hardware móvel falhou ao inicializar o codec H.265 / HEVC 3MP (2304x1296) com Smart Codec ativo no fluxo principal (`subtype=0`).
+  2. `libmpv: Failed to recognize file format` na Yoosee (`192.168.3.23`): a câmera alterou seu endereço IP para `192.168.3.24` via DHCP, deixando o endpoint anterior inerte.
+  3. Comutação cega para Cloud Relay (`cloud.bilkcam.web.app:8554`): em falhas na LAN, o player comutava na primeira tentativa para um gateway de nuvem sem relay RTSP ativo, travando o reconector em loop.
+- **Implementações & Correções Realizadas**:
+  - **Auto-Fallback para Sub Stream (`subtype=1`)**:
+    - Em `LivePlayerView`, ao detectar erro de codec (`Could not open codec`, `Failed to recognize file format`), se a câmera estiver no fluxo principal (`subType == 0`), ela comuta instantaneamente para o Sub Stream (SD / H.264) e persiste a preferência de compatibilidade no armazenamento.
+  - **Roteamento Inteligente de Conectividade**:
+    - Bloqueou a comutação indevida para Cloud Relay quando o usuário não tiver configurado um host remoto real e estiver na rede local. Caso o acesso remoto seja suportado, alterna estrategicamente entre LAN e nuvem nas retentativas.
+  - **Auto-Reconciliação no Radar da HomeScreen & Storage**:
+    - Integrado o callback do Radar de Rede para reconciliar automaticamente dispositivos detectados com IP alterado via DHCP por endereço MAC e heurística de fabricante.
+  - **Estabilidade de Telemetria e Logs**:
+    - Fila sequencial (FIFO) de gravação no arquivo de diagnóstico `b_cam_diagnostic.log` eliminando sobreposição/truncamento de linhas.
+- **Validação QA**:
+  - `flutter analyze`: 0 erros.
+  - `flutter test`: 65/65 testes unitários e de widget aprovados (100% de sucesso).
+  - Deploy OTA autônomo executado com sucesso para o Xiaomi Redmi Note 10S (`192.168.3.13:5555`) e emulador local na versão **v1.29.0+32**.
+
+---
+
 ## 🚀 Backlog Priorizado (Próximos Passos)
 
 - [ ] **EPIC-01: Controle PTZ Real via ONVIF SOAP**:

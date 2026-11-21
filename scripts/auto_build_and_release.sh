@@ -61,7 +61,7 @@ cat <<EOF > dist/version.json
   "apkUrl": "http://192.168.3.62:8088/b-cam-arm64.apk",
   "sha256": "$APK_SHA256",
   "fileSizeBytes": $APK_SIZE,
-  "releaseNotes": "Versão 1.16.0: OSD de data e hora em tempo real na live, persistência automática de snapshot na capa ao sair da câmera, e eliminação de destaques falsos em vídeos de eventos.",
+  "releaseNotes": "Versão 1.29.0: Auto-fallback de codec HD para Sub Stream (SD/H.264), correção de roteamento Cloud Relay na LAN e reconciliação automática de IP via DHCP no radar.",
   "releaseDate": "$TIMESTAMP"
 }
 EOF

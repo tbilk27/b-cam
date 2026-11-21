@@ -108,8 +108,19 @@ class _HomeScreenState extends State<HomeScreen> {
           _radarDiscovered.addAll(progress.foundCameras);
         });
       },
-      onDone: () {
-        if (mounted) setState(() => _isRadarScanning = false);
+      onDone: () async {
+        if (mounted) {
+          try {
+            final healed = await context.read<CameraStorageService>().autoReconcileDevices(_radarDiscovered);
+            if (healed > 0) {
+              DiagnosticLoggerService.instance.logInfo(
+                'RADAR',
+                'Radar automático reconciliou o IP de $healed câmera(s) alterada(s) via DHCP.',
+              );
+            }
+          } catch (_) {}
+          setState(() => _isRadarScanning = false);
+        }
       },
       onError: (_) {
         if (mounted) setState(() => _isRadarScanning = false);

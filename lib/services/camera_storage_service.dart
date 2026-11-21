@@ -50,36 +50,43 @@ class CameraStorageService extends ChangeNotifier {
         _cameras.clear();
         bool needsSave = false;
         for (final item in decoded) {
-          final cam = CameraDevice.fromJson(item as Map<String, dynamic>);
+          var cam = CameraDevice.fromJson(item as Map<String, dynamic>);
           // Filter out false positive Mac computer (192.168.3.62 AirPlay port 5000)
           if (cam.ip == '192.168.3.62' && cam.manufacturer == CameraManufacturer.yoosee) {
             needsSave = true;
             continue;
           }
-          // Self-heal known local cameras configured with default 'admin' password
-          if (cam.ip == '192.168.3.74' && (cam.password == 'admin' || cam.password.isEmpty)) {
-            _cameras.add(cam.copyWith(
-              password: 'Zs29364835',
-              manufacturer: CameraManufacturer.intelbras,
-            ));
+          // Self-heal known local cameras configured with default 'admin' password and attach MAC
+          if (cam.ip == '192.168.3.74') {
+            if (cam.password == 'admin' || cam.password.isEmpty || cam.macAddress == null) {
+              cam = cam.copyWith(
+                password: (cam.password == 'admin' || cam.password.isEmpty) ? 'Zs29364835' : cam.password,
+                manufacturer: CameraManufacturer.intelbras,
+                macAddress: cam.macAddress ?? '98:2A:0A:89:56:62',
+              );
+              needsSave = true;
+            }
+          } else if (cam.ip == '192.168.3.23') {
+            if (cam.password == 'admin' || cam.password.isEmpty || cam.macAddress == null) {
+              cam = cam.copyWith(
+                password: (cam.password == 'admin' || cam.password.isEmpty) ? 'Compras10@' : cam.password,
+                manufacturer: CameraManufacturer.yoosee,
+                macAddress: cam.macAddress ?? '98:03:CF:DC:00:0A',
+              );
+              needsSave = true;
+            }
+          } else if (cam.ip == '192.168.3.24') {
+            if (cam.password == 'admin' || cam.password.isEmpty || cam.macAddress == null) {
+              cam = cam.copyWith(
+                password: (cam.password == 'admin' || cam.password.isEmpty) ? 'Compras10@' : cam.password,
+                manufacturer: CameraManufacturer.yoosee,
+                macAddress: cam.macAddress ?? '98:03:CF:DB:FD:5A',
+              );
+              needsSave = true;
+            }
+          } else if (cam.ip == '192.168.3.22' && cam.macAddress == null) {
+            cam = cam.copyWith(macAddress: '18:0D:2C:5D:96:FE');
             needsSave = true;
-            continue;
-          }
-          if (cam.ip == '192.168.3.23' && (cam.password == 'admin' || cam.password.isEmpty)) {
-            _cameras.add(cam.copyWith(
-              password: 'Compras10@',
-              manufacturer: CameraManufacturer.yoosee,
-            ));
-            needsSave = true;
-            continue;
-          }
-          if (cam.ip == '192.168.3.24' && (cam.password == 'admin' || cam.password.isEmpty)) {
-            _cameras.add(cam.copyWith(
-              password: 'Compras10@',
-              manufacturer: CameraManufacturer.yoosee,
-            ));
-            needsSave = true;
-            continue;
           }
           _cameras.add(cam);
         }
@@ -208,25 +215,65 @@ class CameraStorageService extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Automatically reconcile all cameras discovered in a scan by their MAC Address
+  /// Automatically reconcile all cameras discovered in a scan by their MAC Address or heuristic match
   Future<int> autoReconcileDevices(List<ScanResult> discovered) async {
     int healedCount = 0;
     for (final scan in discovered) {
-      if (scan.macAddress == null) continue;
-      final idx = _cameras.indexWhere((c) => c.matchesMac(scan.macAddress));
-      if (idx != -1) {
-        final existing = _cameras[idx];
-        if (existing.ip != scan.ip) {
-          DiagnosticLoggerService.instance.logInfo(
-            'DHCP_RECONCILE',
-            'Câmera "${existing.name}" (MAC: ${existing.macAddress}) atualizou IP de ${existing.ip} para ${scan.ip}',
-          );
-          _cameras[idx] = existing.copyWith(
-            ip: scan.ip,
-            isOnline: true,
-            lastSeen: DateTime.now(),
-          );
-          healedCount++;
+      bool reconciled = false;
+
+      // 1. Reconciliação direta por endereço MAC
+      if (scan.macAddress != null) {
+        final idx = _cameras.indexWhere((c) => c.matchesMac(scan.macAddress));
+        if (idx != -1) {
+          final existing = _cameras[idx];
+          if (existing.ip != scan.ip) {
+            DiagnosticLoggerService.instance.logInfo(
+              'DHCP_RECONCILE',
+              'Câmera "${existing.name}" (MAC: ${existing.macAddress}) atualizou IP de ${existing.ip} para ${scan.ip}',
+            );
+            _cameras[idx] = existing.copyWith(
+              ip: scan.ip,
+              isOnline: true,
+              lastSeen: DateTime.now(),
+            );
+            healedCount++;
+          }
+          reconciled = true;
+        } else {
+          // Se a câmera tem o mesmo IP mas não tinha MAC registrado, associa o MAC
+          final sameIpIdx = _cameras.indexWhere((c) => c.ip == scan.ip);
+          if (sameIpIdx != -1 && _cameras[sameIpIdx].macAddress == null) {
+            _cameras[sameIpIdx] = _cameras[sameIpIdx].copyWith(macAddress: scan.macAddress);
+            healedCount++;
+            reconciled = true;
+          }
+        }
+      }
+
+      // 2. Reconciliação heurística: se não reconciliou por MAC e não há câmera no IP descoberto,
+      // busca câmera do mesmo fabricante que precise de atualização de IP
+      if (!reconciled && !_cameras.any((c) => c.ip == scan.ip)) {
+        final matchingCameras = _cameras.where((c) =>
+          c.manufacturer == scan.detectedManufacturer ||
+          (c.isMibo && scan.detectedManufacturer == CameraManufacturer.intelbrasMibo)
+        ).toList();
+
+        if (matchingCameras.length == 1) {
+          final target = matchingCameras.first;
+          final targetIdx = _cameras.indexWhere((c) => c.id == target.id);
+          if (targetIdx != -1 && target.ip != scan.ip) {
+            DiagnosticLoggerService.instance.logInfo(
+              'DHCP_RECONCILE',
+              'Auto-reconciliação heurística (${scan.detectedManufacturer.displayName}): Câmera "${target.name}" atualizou IP de ${target.ip} para ${scan.ip}',
+            );
+            _cameras[targetIdx] = target.copyWith(
+              ip: scan.ip,
+              macAddress: scan.macAddress ?? target.macAddress,
+              isOnline: true,
+              lastSeen: DateTime.now(),
+            );
+            healedCount++;
+          }
         }
       }
     }

@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:bcam/models/camera_device.dart';
 import 'package:bcam/models/camera_event.dart';
 import 'package:bcam/models/manufacturer.dart';
+import 'package:bcam/models/scan_result.dart';
 import 'package:bcam/services/camera_event_service.dart';
 import 'package:bcam/services/camera_storage_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -210,6 +211,94 @@ void main() {
       expect(storage.cameras[0].id, 'c1');
       expect(storage.cameras[1].id, 'c3');
       expect(storage.cameras[2].id, 'c2');
+    });
+  });
+
+  group('DHCP Reconciliation & Sub Stream Fallback Tests', () {
+    test('autoReconcileDevices reconciles camera by MAC address change of IP', () async {
+      SharedPreferences.setMockInitialValues({});
+      final storage = CameraStorageService();
+      await storage.loadCameras();
+
+      final yoosee = CameraDevice(
+        id: 'yoosee-1',
+        name: 'Yoosee Jardim',
+        ip: '192.168.3.23',
+        macAddress: '98:03:CF:DB:FD:5A',
+        manufacturer: CameraManufacturer.yoosee,
+      );
+      await storage.addCamera(yoosee);
+
+      final scanResult = ScanResult(
+        ip: '192.168.3.24',
+        macAddress: '98:03:CF:DB:FD:5A',
+        openPorts: [554, 5000],
+        detectedManufacturer: CameraManufacturer.yoosee,
+        confidence: 0.98,
+        detectionSource: 'Porta 5000 / Bilian Yoosee MAC',
+        suggestedName: 'Yoosee Gourmet (24)',
+        suggestedRtspUrl: 'rtsp://192.168.3.24:554/onvif1',
+      );
+
+      final healed = await storage.autoReconcileDevices([scanResult]);
+      expect(healed, 1);
+      expect(storage.cameras.first.ip, '192.168.3.24');
+    });
+
+    test('autoReconcileDevices heuristic matching updates single matching camera when MAC is missing', () async {
+      SharedPreferences.setMockInitialValues({});
+      final storage = CameraStorageService();
+      await storage.loadCameras();
+
+      final intelbras = CameraDevice(
+        id: 'intelbras-portao',
+        name: 'Frente Portão',
+        ip: '192.168.3.70',
+        manufacturer: CameraManufacturer.intelbras,
+      );
+      await storage.addCamera(intelbras);
+
+      final scanResult = ScanResult(
+        ip: '192.168.3.74',
+        macAddress: '98:2A:0A:89:56:62',
+        openPorts: [554, 37777, 80],
+        detectedManufacturer: CameraManufacturer.intelbras,
+        confidence: 0.95,
+        detectionSource: 'Porta Dahua/Intelbras 37777',
+        suggestedName: 'Intelbras Frente (74)',
+        suggestedRtspUrl: 'rtsp://192.168.3.74:554/cam/realmonitor?channel=1&subtype=0',
+      );
+
+      final healed = await storage.autoReconcileDevices([scanResult]);
+      expect(healed, 1);
+      expect(storage.cameras.first.ip, '192.168.3.74');
+      expect(storage.cameras.first.macAddress, '98:2A:0A:89:56:62');
+    });
+
+    test('Sub stream fallback generates valid H.264 sub stream URLs', () {
+      final intelbras = CameraDevice(
+        id: 'intelbras-1',
+        name: 'Frente Portão',
+        ip: '192.168.3.74',
+        manufacturer: CameraManufacturer.intelbras,
+        subType: 0,
+      );
+      expect(intelbras.streamUrl, contains('subtype=0'));
+
+      final fallbackIntelbras = intelbras.copyWith(subType: 1);
+      expect(fallbackIntelbras.streamUrl, contains('subtype=1'));
+
+      final yoosee = CameraDevice(
+        id: 'yoosee-1',
+        name: 'Yoosee',
+        ip: '192.168.3.24',
+        manufacturer: CameraManufacturer.yoosee,
+        subType: 0,
+      );
+      expect(yoosee.streamUrl, contains('/onvif1'));
+
+      final fallbackYoosee = yoosee.copyWith(subType: 1);
+      expect(fallbackYoosee.streamUrl, contains('/onvif2'));
     });
   });
 }
