@@ -8,8 +8,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
 
     expect(find.byType(FluentApp), findsOneWidget);
-    expect(find.text('b-cam'), findsOneWidget);
-    expect(find.text('SURVEILLANCE RADAR'), findsOneWidget);
+    expect(find.byType(Image), findsWidgets);
     expect(find.text('Bilk Sistemas'), findsOneWidget);
 
     // Conclui a sequência de inicialização

@@ -123,42 +123,40 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
             children: [
               const Spacer(),
 
-              // Logo Emblema Canônico com Respiração e Rim Glow
+              // Logo Oficial Neon b-cam SURVEILLANCE RADAR com Respiração e Rim Glow
               AnimatedBuilder(
                 animation: _animController,
                 builder: (context, child) {
                   return Transform.scale(
                     scale: _scaleAnimation.value,
                     child: Container(
-                      width: 104,
-                      height: 104,
+                      constraints: const BoxConstraints(maxWidth: 340),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
                       decoration: BoxDecoration(
-                        color: BCamTheme.darkSurface,
-                        borderRadius: BorderRadius.circular(28),
-                        border: Border.all(
-                          color: BCamTheme.accentBlue.withValues(alpha: _glowAnimation.value),
-                          width: 2.0,
-                        ),
+                        borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
-                            color: BCamTheme.accentBlue.withValues(alpha: _glowAnimation.value * 0.5),
-                            blurRadius: 20,
+                            color: const Color(0xFF00E5FF).withValues(alpha: _glowAnimation.value * 0.30),
+                            blurRadius: 32,
                             spreadRadius: 2,
                           ),
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.6),
-                            blurRadius: 16,
-                            offset: const Offset(0, 8),
+                            color: const Color(0xFFFF007F).withValues(alpha: _glowAnimation.value * 0.22),
+                            blurRadius: 36,
+                            spreadRadius: 1,
                           ),
                         ],
                       ),
                       child: ClipRRect(
-                        borderRadius: BorderRadius.circular(26),
-                        child: Image.asset(
-                          'assets/images/b_cam_icon.jpg',
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => const Center(
-                            child: Icon(FluentIcons.video, size: 48, color: BCamTheme.accentLightBlue),
+                        borderRadius: BorderRadius.circular(18),
+                        child: AspectRatio(
+                          aspectRatio: 1024 / 571,
+                          child: Image.asset(
+                            'assets/images/b_cam_neon_logo.jpg',
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) => const Center(
+                              child: Icon(FluentIcons.video, size: 64, color: BCamTheme.accentLightBlue),
+                            ),
                           ),
                         ),
                       ),
@@ -167,55 +165,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                 },
               ),
 
-              const SizedBox(height: 24),
-
-              // Wordmark b-cam PRO
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    'b-cam',
-                    style: GoogleFonts.inter(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w800,
-                      color: BCamTheme.textPrimary,
-                      letterSpacing: -0.6,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: BCamTheme.accentBlue.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(5),
-                      border: Border.all(color: BCamTheme.accentBlue.withValues(alpha: 0.7), width: 1.0),
-                    ),
-                    child: Text(
-                      'PRO',
-                      style: GoogleFonts.inter(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
-                        color: BCamTheme.accentLightBlue,
-                        letterSpacing: 0.8,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 6),
-
-              Text(
-                'SURVEILLANCE RADAR',
-                style: GoogleFonts.inter(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: BCamTheme.textSecondary,
-                  letterSpacing: 2.0,
-                ),
-              ),
-
-              const SizedBox(height: 48),
+              const SizedBox(height: 44),
 
               // Barra de Progresso e Status
               SizedBox(
@@ -247,7 +197,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      'v1.10.0 • Build 11 • Inteligência Artificial & Visão Computacional',
+                      'v1.23.1 • Build 26 • Inteligência Artificial & Visão Computacional',
                       style: GoogleFonts.robotoMono(
                         fontSize: 10,
                         color: BCamTheme.textTertiary,

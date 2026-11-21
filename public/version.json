@@ -1,9 +1,9 @@
 {
-  "versionCode": 25,
-  "versionName": "1.23.0",
+  "versionCode": 26,
+  "versionName": "1.23.1",
   "apkUrl": "http://192.168.3.62:8088/b-cam-arm64.apk",
-  "sha256": "7c3fc9750cc869d755eb7f15afc3d30fc8b6e094eb5746d1d3a1d4717971f3e5",
-  "fileSizeBytes": 64316412,
-  "releaseNotes": "Versão 1.23.0: Envio e compartilhamento de vídeos de eventos gravados via WhatsApp diretamente pela tela de eventos, reprodução e timeline, com captura instantânea de frame e link de visualização.",
-  "releaseDate": "2026-11-21T13:06:00Z"
+  "sha256": "4b90783ceecef2d1008804ed09f200fff443ae55f9d60a6a0f923769b1cdbf84",
+  "fileSizeBytes": 63107208,
+  "releaseNotes": "Vers\u00e3o 1.23.1: Nova identidade visual com logo neon vibrante b-cam SURVEILLANCE RADAR na tela Splash e tela de Login.",
+  "releaseDate": "2026-11-21T13:30:00Z"
 }

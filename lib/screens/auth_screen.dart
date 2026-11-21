@@ -124,39 +124,42 @@ class _AuthScreenState extends State<AuthScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Logo Canônico Central
+                  // Logo Oficial Neon b-cam SURVEILLANCE RADAR
                   Center(
                     child: Container(
-                      padding: const EdgeInsets.all(18),
+                      constraints: const BoxConstraints(maxWidth: 320),
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
                       decoration: BoxDecoration(
-                        color: BCamTheme.darkSurface,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: BCamTheme.accentBlue.withValues(alpha: 0.35), width: 1.5),
+                        borderRadius: BorderRadius.circular(18),
                         boxShadow: [
                           BoxShadow(
-                            color: BCamTheme.accentBlue.withValues(alpha: 0.2),
+                            color: const Color(0xFF00E5FF).withValues(alpha: 0.22),
                             blurRadius: 24,
                             spreadRadius: 2,
                           ),
+                          BoxShadow(
+                            color: const Color(0xFFFF007F).withValues(alpha: 0.16),
+                            blurRadius: 28,
+                            spreadRadius: 1,
+                          ),
                         ],
                       ),
-                      child: const BCamLogo(size: 44, showText: false),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: AspectRatio(
+                          aspectRatio: 1024 / 571,
+                          child: Image.asset(
+                            'assets/images/b_cam_neon_logo.jpg',
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) => const Center(
+                              child: Icon(FluentIcons.video, size: 48, color: BCamTheme.accentLightBlue),
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 20),
-
-                  // Título e Subtítulo
-                  Text(
-                    'b-cam PRO',
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.inter(
-                      fontSize: 23,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white,
-                      letterSpacing: -0.6,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 12),
                   Text(
                     'Vigilância Inteligente & Controle de Acesso',
                     textAlign: TextAlign.center,
@@ -166,7 +169,7 @@ class _AuthScreenState extends State<AuthScreen> {
                       color: BCamTheme.textSecondary,
                     ),
                   ),
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 24),
 
                   // Card de Autenticação
                   Container(
