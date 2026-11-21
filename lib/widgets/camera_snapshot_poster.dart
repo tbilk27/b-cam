@@ -2,11 +2,8 @@ import 'dart:io';
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:provider/provider.dart';
 import '../models/camera_device.dart';
-import '../services/ai_vision_agent_service.dart';
 import '../theme/fluent_theme.dart';
-import 'bounding_box_overlay.dart';
 
 /// High-efficiency snapshot poster displayed on the HomeScreen.
 /// Instead of running an active RTSP decoding session (which drains CPU, GPU,
@@ -39,9 +36,6 @@ class CameraSnapshotPoster extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final aiService = Provider.of<AiVisionAgentService>(context, listen: false);
-    final detections = aiService.getLiveDetectionsForCamera(camera);
-
     return AspectRatio(
       aspectRatio: 16 / 9,
       child: GestureDetector(
@@ -64,16 +58,7 @@ class CameraSnapshotPoster extends StatelessWidget {
               // 2. Subtle CCTV Scanlines
               _buildCctvScanlines(),
 
-              // 3. AI Bounding Box of the Last Event/Detection (if any)
-              if (camera.isEnabled && detections.isNotEmpty)
-                IgnorePointer(
-                  child: BoundingBoxOverlay(
-                    boundingBoxes: detections,
-                    child: const SizedBox.expand(),
-                  ),
-                ),
-
-              // 4. Overlays & Badges (Visual only, non-blocking for gestures)
+              // 3. Overlays & Badges (Visual only, non-blocking for gestures)
               IgnorePointer(
                 child: Stack(
                   fit: StackFit.expand,

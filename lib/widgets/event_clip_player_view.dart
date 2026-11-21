@@ -1,27 +1,33 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:math';
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:media_kit/media_kit.dart';
+import 'package:media_kit_video/media_kit_video.dart';
 import '../models/bounding_box.dart';
 import '../models/camera_device.dart';
 import '../models/camera_event.dart';
+import '../services/diagnostic_logger_service.dart';
 import '../theme/fluent_theme.dart';
 import 'bounding_box_overlay.dart';
 
-/// Interactive CCTV Event Video Clip Player.
-/// Plays recorded buffers and event clips with timeline scrubbing, speed control,
-/// timecode OSD, and dynamic AI bounding box tracking across the scene.
+/// Real CCTV Event Video Clip Player with native hardware decoding.
+/// Plays recorded camera streams / buffers via media_kit, with timeline scrubbing,
+/// speed control, timecode OSD, audio toggle, and dynamic AI bounding box tracking.
 class EventClipPlayerView extends StatefulWidget {
   final CameraEvent event;
   final CameraDevice? camera;
   final bool autoPlay;
+  final VoidCallback? onOpenLive;
 
   const EventClipPlayerView({
     super.key,
     required this.event,
     this.camera,
     this.autoPlay = true,
+    this.onOpenLive,
   });
 
   @override
@@ -29,7 +35,12 @@ class EventClipPlayerView extends StatefulWidget {
 }
 
 class _EventClipPlayerViewState extends State<EventClipPlayerView> {
-  late bool _isPlaying;
+  Player? _player;
+  VideoController? _controller;
+  bool _isPlaying = false;
+  bool _isLoading = true;
+  bool _hasVideoError = false;
+  bool _isMuted = true;
   int _currentSeconds = 0;
   late int _totalDurationSeconds;
   double _playbackSpeed = 1.0;
@@ -37,21 +48,30 @@ class _EventClipPlayerViewState extends State<EventClipPlayerView> {
   bool _showControls = true;
   Timer? _hideControlsTimer;
 
+  StreamSubscription? _errorSub;
+  StreamSubscription? _playingSub;
+  StreamSubscription? _bufferingSub;
+  StreamSubscription? _completedSub;
+  StreamSubscription? _positionSub;
+
   @override
   void initState() {
     super.initState();
     _totalDurationSeconds = max(5, widget.event.duration.inSeconds);
     _isPlaying = widget.autoPlay;
-    if (_isPlaying) {
-      _startPlaybackTimer();
-    }
-    _scheduleHideControls();
+    _initPlayer();
   }
 
   @override
   void dispose() {
     _playbackTimer?.cancel();
     _hideControlsTimer?.cancel();
+    _errorSub?.cancel();
+    _playingSub?.cancel();
+    _bufferingSub?.cancel();
+    _completedSub?.cancel();
+    _positionSub?.cancel();
+    _player?.dispose();
     super.dispose();
   }
 
@@ -62,6 +82,103 @@ class _EventClipPlayerViewState extends State<EventClipPlayerView> {
         if (mounted) setState(() => _showControls = false);
       });
     }
+  }
+
+  void _initPlayer() {
+    final camera = widget.camera;
+    final streamUrl = widget.event.clipUrl ??
+        (camera != null && camera.isEnabled ? camera.streamUrl : null);
+
+    if (streamUrl != null && streamUrl.isNotEmpty) {
+      try {
+        final p = Player(
+          configuration: const PlayerConfiguration(
+            bufferSize: 1024 * 1024 * 4,
+          ),
+        );
+        _player = p;
+        _controller = VideoController(
+          p,
+          configuration: const VideoControllerConfiguration(
+            enableHardwareAcceleration: true,
+          ),
+        );
+
+        _playingSub = p.stream.playing.listen((playing) {
+          if (mounted) {
+            setState(() {
+              _isPlaying = playing;
+              if (playing) {
+                _isLoading = false;
+                _hasVideoError = false;
+              }
+            });
+          }
+        });
+
+        _bufferingSub = p.stream.buffering.listen((buffering) {
+          if (mounted) {
+            setState(() => _isLoading = buffering);
+          }
+        });
+
+        _positionSub = p.stream.position.listen((pos) {
+          if (mounted && pos.inSeconds <= _totalDurationSeconds && pos.inSeconds > 0) {
+            setState(() {
+              _currentSeconds = pos.inSeconds;
+            });
+          }
+        });
+
+        _completedSub = p.stream.completed.listen((completed) {
+          if (completed && mounted) {
+            p.seek(Duration.zero);
+            p.play();
+          }
+        });
+
+        _errorSub = p.stream.error.listen((err) {
+          if (err.contains('Cannot seek') ||
+              err.contains('force-seekable') ||
+              err.contains('Seeking is not supported')) {
+            return;
+          }
+          DiagnosticLoggerService.instance.logInfo(
+            'EVENT_PLAYER',
+            'libmpv evento informativo em gravação (${widget.event.cameraName}): $err',
+          );
+          if (mounted) {
+            setState(() {
+              _hasVideoError = true;
+              _isLoading = false;
+            });
+          }
+        });
+
+        p.setVolume(_isMuted ? 0 : 100);
+        p.open(
+          Media(
+            streamUrl,
+            httpHeaders: const {'User-Agent': 'b-cam/1.0'},
+          ),
+          play: widget.autoPlay,
+        );
+      } catch (e) {
+        DiagnosticLoggerService.instance.logError(
+          'EVENT_PLAYER',
+          'Falha ao iniciar player de vídeo: $e',
+        );
+        _hasVideoError = true;
+        _isLoading = false;
+      }
+    } else {
+      _isLoading = false;
+    }
+
+    if (_isPlaying) {
+      _startPlaybackTimer();
+    }
+    _scheduleHideControls();
   }
 
   void _startPlaybackTimer() {
@@ -76,8 +193,8 @@ class _EventClipPlayerViewState extends State<EventClipPlayerView> {
         if (_currentSeconds < _totalDurationSeconds) {
           _currentSeconds++;
         } else {
-          // Loop playback smoothly
           _currentSeconds = 0;
+          _player?.seek(Duration.zero);
         }
       });
     });
@@ -87,14 +204,21 @@ class _EventClipPlayerViewState extends State<EventClipPlayerView> {
     setState(() {
       _isPlaying = !_isPlaying;
       _showControls = true;
-      if (_isPlaying) {
-        _startPlaybackTimer();
-        _scheduleHideControls();
-      } else {
-        _playbackTimer?.cancel();
-        _hideControlsTimer?.cancel();
-      }
     });
+
+    if (_isPlaying) {
+      if (_player != null) {
+        _player!.play();
+      }
+      _startPlaybackTimer();
+      _scheduleHideControls();
+    } else {
+      if (_player != null) {
+        _player!.pause();
+      }
+      _playbackTimer?.cancel();
+      _hideControlsTimer?.cancel();
+    }
   }
 
   void _cyclePlaybackSpeed() {
@@ -107,19 +231,30 @@ class _EventClipPlayerViewState extends State<EventClipPlayerView> {
         _playbackSpeed = 1.0;
       }
       _showControls = true;
-      if (_isPlaying) {
-        _startPlaybackTimer();
-        _scheduleHideControls();
-      }
     });
+
+    _player?.setRate(_playbackSpeed);
+    if (_isPlaying) {
+      _startPlaybackTimer();
+      _scheduleHideControls();
+    }
   }
 
   void _seekTo(double value) {
+    final secs = value.round().clamp(0, _totalDurationSeconds);
     setState(() {
-      _currentSeconds = value.round().clamp(0, _totalDurationSeconds);
+      _currentSeconds = secs;
       _showControls = true;
     });
+    _player?.seek(Duration(seconds: secs));
     _scheduleHideControls();
+  }
+
+  void _toggleMute() {
+    setState(() {
+      _isMuted = !_isMuted;
+    });
+    _player?.setVolume(_isMuted ? 0 : 100);
   }
 
   String _formatTime(int totalSecs) {
@@ -134,37 +269,14 @@ class _EventClipPlayerViewState extends State<EventClipPlayerView> {
     return DateFormat('HH:mm:ss').format(currentTime);
   }
 
-  /// Calculates dynamically interpolated bounding boxes following object movement
-  List<BoundingBox> _interpolatedBoundingBoxes() {
-    final originalBoxes = widget.event.boundingBoxes;
-    if (originalBoxes.isEmpty) {
-      // Synthesize a bounding box matching the event type
-      final progress = _totalDurationSeconds > 0 ? _currentSeconds / _totalDurationSeconds : 0.0;
-      final isVehicle = widget.event.type == CameraEventType.vehicle;
-
-      final startX = isVehicle ? 0.10 : 0.35;
-      final deltaX = isVehicle ? 0.35 * progress : sin(progress * pi) * 0.15;
-      final posX = (startX + deltaX).clamp(0.05, 0.75);
-
-      return [
-        BoundingBox(
-          label: widget.event.type.label,
-          confidence: widget.event.confidence,
-          left: posX,
-          top: isVehicle ? 0.45 : 0.28,
-          width: isVehicle ? 0.38 : 0.22,
-          height: isVehicle ? 0.32 : 0.54,
-          colorHex: widget.event.type.color == BCamTheme.statusWarning
-              ? '#FFB900'
-              : (widget.event.type.color == BCamTheme.statusOnlineGlow ? '#0078D4' : '#00CC6A'),
-        ),
-      ];
-    }
+  /// Only returns the actual bounding box of this recorded event (no synthetic fallback)
+  List<BoundingBox> _eventBoundingBoxes() {
+    if (widget.event.boundingBoxes.isEmpty) return const [];
 
     final progress = _totalDurationSeconds > 0 ? _currentSeconds / _totalDurationSeconds : 0.0;
-    return originalBoxes.map((box) {
-      final offsetX = sin(progress * pi * 2) * 0.04;
-      final offsetY = cos(progress * pi * 2) * 0.02;
+    return widget.event.boundingBoxes.map((box) {
+      final offsetX = sin(progress * pi * 2) * 0.03;
+      final offsetY = cos(progress * pi * 2) * 0.015;
       return box.copyWith(
         left: (box.left + offsetX).clamp(0.02, 0.90),
         top: (box.top + offsetY).clamp(0.02, 0.90),
@@ -172,10 +284,65 @@ class _EventClipPlayerViewState extends State<EventClipPlayerView> {
     }).toList();
   }
 
+  Widget _buildBackgroundSnapshot() {
+    final snapPath = widget.camera?.lastSnapshotPath;
+    if (snapPath != null && File(snapPath).existsSync()) {
+      return Image.file(
+        File(snapPath),
+        fit: BoxFit.cover,
+      );
+    }
+
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: RadialGradient(
+          center: Alignment.center,
+          radius: 1.1,
+          colors: [
+            Color(0xFF1E1E26),
+            Color(0xFF0F0F14),
+            Color(0xFF09090C),
+          ],
+        ),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              widget.event.type.icon,
+              size: 40,
+              color: widget.event.type.color.withValues(alpha: 0.35),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              widget.event.cameraName.toUpperCase(),
+              style: GoogleFonts.robotoMono(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: const Color(0x66FFFFFF),
+                letterSpacing: 2.0,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'REPRODUÇÃO DE GRAVAÇÃO CFTV',
+              style: GoogleFonts.inter(
+                fontSize: 9.5,
+                fontWeight: FontWeight.w600,
+                color: BCamTheme.textTertiary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final event = widget.event;
-    final boxes = _interpolatedBoundingBoxes();
+    final boxes = _eventBoundingBoxes();
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -190,56 +357,64 @@ class _EventClipPlayerViewState extends State<EventClipPlayerView> {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            // 1. CCTV Video Feed Canvas with AI Bounding Boxes & Assertiveness Marking
-            BoundingBoxOverlay(
-              boundingBoxes: boxes,
-              minConfidenceThreshold: 0.20,
-              showLabels: true,
-              child: Container(
-                decoration: const BoxDecoration(
-                  gradient: RadialGradient(
-                    center: Alignment.center,
-                    radius: 1.1,
-                    colors: [
-                      Color(0xFF1E1E26),
-                      Color(0xFF0F0F14),
-                      Color(0xFF09090C),
-                    ],
+            // 1. Video Canvas: Native Decoder or High-Res Snapshot Frame
+            if (_controller != null && !_hasVideoError)
+              Stack(
+                fit: StackFit.expand,
+                children: [
+                  _buildBackgroundSnapshot(),
+                  Video(
+                    controller: _controller!,
+                    fit: BoxFit.cover,
+                    controls: NoVideoControls,
                   ),
-                ),
+                ],
+              )
+            else
+              _buildBackgroundSnapshot(),
+
+            // 2. Loading / Buffering Indicator
+            if (_isLoading)
+              Container(
+                color: Colors.black.withValues(alpha: 0.45),
                 child: Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
-                        event.type.icon,
-                        size: 38,
-                        color: event.type.color.withValues(alpha: 0.28),
-                      ),
-                      const SizedBox(height: 6),
+                      const ProgressRing(strokeWidth: 3),
+                      const SizedBox(height: 8),
                       Text(
-                        event.cameraName.toUpperCase(),
-                        style: GoogleFonts.robotoMono(
+                        'Conectando ao NVR / Gravação...',
+                        style: GoogleFonts.inter(
                           fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0x40FFFFFF),
-                          letterSpacing: 2.0,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
                         ),
                       ),
                     ],
                   ),
                 ),
               ),
-            ),
 
-            // 2. Subtle CCTV Scanline Lines Overlay
+            // 3. AI Bounding Box for Event (Only if event has detections)
+            if (boxes.isNotEmpty)
+              IgnorePointer(
+                child: BoundingBoxOverlay(
+                  boundingBoxes: boxes,
+                  minConfidenceThreshold: 0.20,
+                  showLabels: true,
+                  child: const SizedBox.expand(),
+                ),
+              ),
+
+            // 4. Subtle CCTV Scanlines
             IgnorePointer(
               child: CustomPaint(
                 painter: _CctvScanlinePainter(),
               ),
             ),
 
-            // 3. Top Security OSD Header (Always visible or in controls)
+            // 5. Top CCTV OSD Bar
             Positioned(
               top: 8,
               left: 10,
@@ -247,11 +422,11 @@ class _EventClipPlayerViewState extends State<EventClipPlayerView> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Play State Indicator + Buffer Tag
+                  // Play State Indicator + Buffer Source
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3.5),
                     decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.75),
+                      color: Colors.black.withValues(alpha: 0.8),
                       borderRadius: BorderRadius.circular(4),
                       border: Border.all(
                         color: _isPlaying ? BCamTheme.statusOnlineGlow : BCamTheme.statusWarning,
@@ -279,12 +454,13 @@ class _EventClipPlayerViewState extends State<EventClipPlayerView> {
                     ),
                   ),
 
-                  // CCTV Real Timecode OSD
+                  // Real CCTV Date & Timecode OSD
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3.5),
                     decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.75),
+                      color: Colors.black.withValues(alpha: 0.8),
                       borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.15), width: 0.5),
                     ),
                     child: Text(
                       '${event.dateFormatted}  ${_timecodeString()}',
@@ -300,32 +476,33 @@ class _EventClipPlayerViewState extends State<EventClipPlayerView> {
               ),
             ),
 
-            // 4. Center Play/Pause Large Pulse Button (when paused or briefly on tap)
-            if (!_isPlaying || _showControls)
+            // 6. Center Pulse Play Button (Visible when paused)
+            if (!_isPlaying)
               Center(
                 child: GestureDetector(
                   onTap: _togglePlayPause,
                   child: Container(
-                    width: 50,
-                    height: 50,
+                    width: 58,
+                    height: 58,
                     decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.7),
+                      color: Colors.black.withValues(alpha: 0.75),
                       shape: BoxShape.circle,
                       border: Border.all(
                         color: BCamTheme.accentLightBlue,
-                        width: 1.5,
+                        width: 2.0,
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: BCamTheme.accentLightBlue.withValues(alpha: 0.35),
-                          blurRadius: 12,
+                          color: BCamTheme.accentLightBlue.withValues(alpha: 0.4),
+                          blurRadius: 16,
+                          spreadRadius: 2,
                         ),
                       ],
                     ),
-                    child: Center(
+                    child: const Center(
                       child: Icon(
-                        _isPlaying ? FluentIcons.pause : FluentIcons.play,
-                        size: 22,
+                        FluentIcons.play,
+                        size: 26,
                         color: BCamTheme.accentLightBlue,
                       ),
                     ),
@@ -333,7 +510,7 @@ class _EventClipPlayerViewState extends State<EventClipPlayerView> {
                 ),
               ),
 
-            // 5. Bottom Interactive Scrubber and Toolbar Overlay
+            // 7. Bottom Controls & Scrubber Overlay
             if (_showControls)
               Positioned(
                 bottom: 0,
@@ -346,8 +523,8 @@ class _EventClipPlayerViewState extends State<EventClipPlayerView> {
                       begin: Alignment.bottomCenter,
                       end: Alignment.topCenter,
                       colors: [
-                        Colors.black.withValues(alpha: 0.88),
-                        Colors.black.withValues(alpha: 0.60),
+                        Colors.black.withValues(alpha: 0.92),
+                        Colors.black.withValues(alpha: 0.65),
                         Colors.transparent,
                       ],
                     ),
@@ -368,18 +545,18 @@ class _EventClipPlayerViewState extends State<EventClipPlayerView> {
                         ),
                       ),
 
-                      // Time + Controls Row
+                      // Controls Bar
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          // Play/Pause Small + Time Counter
+                          // Play/Pause + Time Counter
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               IconButton(
                                 icon: Icon(
                                   _isPlaying ? FluentIcons.pause : FluentIcons.play,
-                                  size: 14,
+                                  size: 15,
                                   color: Colors.white,
                                 ),
                                 onPressed: _togglePlayPause,
@@ -396,10 +573,22 @@ class _EventClipPlayerViewState extends State<EventClipPlayerView> {
                             ],
                           ),
 
-                          // Speed Control Button (1.0x, 2.0x, 4.0x) + Restart
+                          // Controls: Audio Mute + Speed + Restart
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
+                              // Mute / Unmute
+                              IconButton(
+                                icon: Icon(
+                                  _isMuted ? FluentIcons.volume_disabled : FluentIcons.volume3,
+                                  size: 13,
+                                  color: Colors.white,
+                                ),
+                                onPressed: _toggleMute,
+                              ),
+                              const SizedBox(width: 4),
+
+                              // Playback Speed
                               GestureDetector(
                                 onTap: _cyclePlaybackSpeed,
                                 child: Container(
@@ -419,7 +608,9 @@ class _EventClipPlayerViewState extends State<EventClipPlayerView> {
                                   ),
                                 ),
                               ),
-                              const SizedBox(width: 8),
+                              const SizedBox(width: 6),
+
+                              // Restart
                               IconButton(
                                 icon: const Icon(FluentIcons.repeat_all, size: 13, color: Colors.white),
                                 onPressed: () {
@@ -446,7 +637,7 @@ class _CctvScanlinePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final linePaint = Paint()
-      ..color = const Color(0x0AFFFFFF)
+      ..color = const Color(0x08FFFFFF)
       ..strokeWidth = 1.0;
 
     for (double y = 0; y < size.height; y += 4.0) {

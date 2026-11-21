@@ -113,6 +113,22 @@ void main() {
         aiMinConfidence: 0.25,
       );
 
+      // Sem detecções ativas, retorna lista vazia (sem marcar históricos inexistentes)
+      expect(AiVisionAgentService.instance.getLiveDetectionsForCamera(camera).isEmpty, isTrue);
+
+      // Com detecção ativa configurada
+      AiVisionAgentService.instance.setLiveDetections(camera.id, [
+        const BoundingBox(
+          label: 'Pessoa',
+          confidence: 0.94,
+          left: 0.35,
+          top: 0.30,
+          width: 0.20,
+          height: 0.50,
+          colorHex: '#0078D4',
+        ),
+      ]);
+
       final liveBoxes = AiVisionAgentService.instance.getLiveDetectionsForCamera(camera);
       expect(liveBoxes.isNotEmpty, isTrue);
       expect(liveBoxes.first.confidence >= 0.25, isTrue);

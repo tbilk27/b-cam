@@ -1,5 +1,5 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/widgets.dart';
 import '../models/bounding_box.dart';
 import '../models/camera_device.dart';
 import '../models/camera_event.dart';
@@ -15,85 +15,53 @@ class AiVisionAgentService extends ChangeNotifier {
   String? get geminiApiKey => _geminiApiKey;
 
   final Map<String, List<BoundingBox>> _liveDetections = {};
+  final Map<String, Timer> _liveDetectionExpiryTimers = {};
 
   void setGeminiApiKey(String? key) {
     _geminiApiKey = key;
     notifyListeners();
   }
 
-  /// Retorna as detecções ativas da câmera para renderização em tempo real na câmera ao vivo
+  /// Retorna as detecções ativas da câmera para renderização em tempo real na câmera ao vivo.
+  /// Retorna apenas objetos detectados ativamente no momento, sem marcar históricos ou objetos inexistentes.
   List<BoundingBox> getLiveDetectionsForCamera(CameraDevice camera) {
     if (!camera.aiDetectionEnabled) return const [];
 
-    // 1. Detecções em tempo real armazenadas em cache
+    // Detecções em tempo real ativas
     if (_liveDetections.containsKey(camera.id) && _liveDetections[camera.id]!.isNotEmpty) {
       final valid = _liveDetections[camera.id]!
           .where((b) => b.confidence >= camera.aiMinConfidence)
           .where((b) => !camera.isBoxInExclusionZone(b))
           .toList();
-      if (valid.isNotEmpty) return valid;
-    }
-
-    // 2. Busca eventos registrados com bounding boxes em áreas válidas (não-excluídas)
-    final events = CameraEventService.instance.getEventsForCamera(camera);
-    if (events.isNotEmpty) {
-      for (final ev in events) {
-        if (ev.boundingBoxes.isNotEmpty) {
-          final nonExcluded = ev.boundingBoxes
-              .where((b) => b.confidence >= camera.aiMinConfidence)
-              .where((b) => !camera.isBoxInExclusionZone(b))
-              .toList();
-          if (nonExcluded.isNotEmpty) {
-            return nonExcluded;
-          }
-        }
-      }
-    }
-
-    // 3. Fallback inteligente gerado em área livre de exclusão
-    final isEntrance = camera.location.toLowerCase().contains('port') ||
-        camera.location.toLowerCase().contains('entrad') ||
-        camera.name.toLowerCase().contains('frente') ||
-        camera.name.toLowerCase().contains('ic5');
-    final isVehicle = camera.location.toLowerCase().contains('gara') ||
-        camera.location.toLowerCase().contains('estacion');
-
-    final candidatePositions = [
-      const Offset(0.38, 0.30),
-      const Offset(0.18, 0.42),
-      const Offset(0.60, 0.32),
-      const Offset(0.48, 0.45),
-      const Offset(0.15, 0.22),
-      const Offset(0.68, 0.50),
-    ];
-
-    for (final pos in candidatePositions) {
-      final box = BoundingBox(
-        label: isEntrance ? 'Pessoa' : (isVehicle ? 'Veículo' : 'Movimento'),
-        confidence: 0.95,
-        left: pos.dx,
-        top: pos.dy,
-        width: isEntrance ? 0.22 : 0.36,
-        height: isEntrance ? 0.54 : 0.36,
-        colorHex: isEntrance ? '#0078D4' : (isVehicle ? '#FFB900' : '#00CC6A'),
-      );
-
-      if (box.confidence >= camera.aiMinConfidence && !camera.isBoxInExclusionZone(box)) {
-        return [box];
-      }
+      return valid;
     }
 
     return const [];
   }
 
-  /// Define ou atualiza as detecções em tempo real para uma câmera
-  void setLiveDetections(String cameraId, List<BoundingBox> boxes) {
-    _liveDetections[cameraId] = List.from(boxes);
+  /// Define ou atualiza as detecções em tempo real para uma câmera com tempo de expiração automático
+  void setLiveDetections(
+    String cameraId,
+    List<BoundingBox> boxes, {
+    Duration duration = const Duration(seconds: 8),
+  }) {
+    _liveDetectionExpiryTimers[cameraId]?.cancel();
+
+    if (boxes.isEmpty) {
+      _liveDetections.remove(cameraId);
+    } else {
+      _liveDetections[cameraId] = List.from(boxes);
+      _liveDetectionExpiryTimers[cameraId] = Timer(duration, () {
+        clearLiveDetections(cameraId);
+      });
+    }
     notifyListeners();
   }
 
   /// Limpa as detecções em tempo real de uma câmera
   void clearLiveDetections(String cameraId) {
+    _liveDetectionExpiryTimers[cameraId]?.cancel();
+    _liveDetectionExpiryTimers.remove(cameraId);
     _liveDetections.remove(cameraId);
     notifyListeners();
   }
@@ -179,8 +147,7 @@ class AiVisionAgentService extends ChangeNotifier {
 
     final accepted = CameraEventService.instance.registerEvent(event, camera: camera);
     if (accepted) {
-      _liveDetections[camera.id] = [box];
-      notifyListeners();
+      setLiveDetections(camera.id, [box], duration: const Duration(seconds: 8));
       return event;
     }
     return null;

@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../models/camera_device.dart';
 import '../models/camera_event.dart';
+import '../screens/camera_detail_screen.dart';
 import '../services/camera_storage_service.dart';
 import '../theme/fluent_theme.dart';
 import 'event_clip_player_view.dart';
@@ -77,9 +78,24 @@ class _EventPlaybackDialogState extends State<EventPlaybackDialog> {
               ],
             ),
           ),
-          IconButton(
-            icon: const Icon(FluentIcons.chrome_close, size: 13, color: Color(0xB3FFFFFF)),
-            onPressed: () => Navigator.of(context).pop(),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (_camera != null)
+                IconButton(
+                  icon: const Icon(FluentIcons.video, size: 14, color: BCamTheme.accentLightBlue),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    Navigator.of(context).push(
+                      FluentPageRoute(builder: (_) => CameraDetailScreen(camera: _camera!)),
+                    );
+                  },
+                ),
+              IconButton(
+                icon: const Icon(FluentIcons.chrome_close, size: 13, color: Color(0xB3FFFFFF)),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ],
           ),
         ],
       ),
