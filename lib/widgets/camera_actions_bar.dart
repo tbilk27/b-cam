@@ -166,71 +166,74 @@ class _CameraActionsBarState extends State<CameraActionsBar> {
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: BCamTheme.darkBorder, width: 0.8),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          // 1. Sirene
-          _buildActionButton(
-            icon: FluentIcons.ringer,
-            label: 'Sirene',
-            isActive: isSiren,
-            activeColor: const Color(0xFFFF3B30),
-            onTap: _toggleSiren,
-          ),
-
-          // 2. Luz / Holofote
-          _buildActionButton(
-            icon: isLight ? FluentIcons.lightbulb : FluentIcons.light,
-            label: 'Holofote',
-            isActive: isLight,
-            activeColor: const Color(0xFFFFCC00),
-            onTap: _toggleSpotlight,
-          ),
-
-          // 3. Falar (Interfone Push-to-Talk)
-          GestureDetector(
-            onLongPressStart: (_) => _actionService.startTalking(widget.camera),
-            onLongPressEnd: (_) => _actionService.stopTalking(widget.camera),
-            child: _buildActionButton(
-              icon: isTalking ? FluentIcons.microphone : FluentIcons.record2,
-              label: isTalking ? 'Falando...' : 'Segure p/ Falar',
-              isActive: isTalking,
-              activeColor: BCamTheme.statusOnlineGlow,
-              onTap: () {
-                displayInfoBar(
-                  context,
-                  builder: (c, close) => InfoBar(
-                    title: const Text('Interfone'),
-                    content: const Text('Mantenha o botão pressionado para falar no alto-falante da câmera.'),
-                    severity: InfoBarSeverity.info,
-                    onClose: close,
-                  ),
-                );
-              },
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            // 1. Sirene
+            _buildActionButton(
+              icon: FluentIcons.ringer,
+              label: 'Sirene',
+              isActive: isSiren,
+              activeColor: const Color(0xFFFF3B30),
+              onTap: _toggleSiren,
             ),
-          ),
 
-          // 4. Ouvir (Microfone da Câmera)
-          _buildActionButton(
-            icon: isListening ? FluentIcons.volume3 : FluentIcons.volume0,
-            label: isListening ? 'Ouvindo' : 'Mudo',
-            isActive: isListening,
-            activeColor: BCamTheme.accentLightBlue,
-            onTap: _toggleListen,
-          ),
+            // 2. Luz / Holofote
+            _buildActionButton(
+              icon: isLight ? FluentIcons.lightbulb : FluentIcons.light,
+              label: 'Holofote',
+              isActive: isLight,
+              activeColor: const Color(0xFFFFCC00),
+              onTap: _toggleSpotlight,
+            ),
 
-          // 5. Visão Noturna
-          _buildActionButton(
-            icon: FluentIcons.clear_night,
-            label: nightMode == NightVisionMode.auto
-                ? 'Noturna: Auto'
-                : (nightMode == NightVisionMode.color ? 'Noturna: Cor' : 'Noturna: IR'),
-            isActive: nightMode != NightVisionMode.off,
-            activeColor: BCamTheme.accentLightBlue,
-            badge: nightMode == NightVisionMode.color ? 'COR' : (nightMode == NightVisionMode.ir ? 'IR' : null),
-            onTap: _showNightVisionPicker,
-          ),
-        ],
+            // 3. Falar (Interfone Push-to-Talk)
+            GestureDetector(
+              onLongPressStart: (_) => _actionService.startTalking(widget.camera),
+              onLongPressEnd: (_) => _actionService.stopTalking(widget.camera),
+              child: _buildActionButton(
+                icon: isTalking ? FluentIcons.microphone : FluentIcons.record2,
+                label: isTalking ? 'Falando...' : 'Segure p/ Falar',
+                isActive: isTalking,
+                activeColor: BCamTheme.statusOnlineGlow,
+                onTap: () {
+                  displayInfoBar(
+                    context,
+                    builder: (c, close) => InfoBar(
+                      title: const Text('Interfone'),
+                      content: const Text('Mantenha o botão pressionado para falar no alto-falante da câmera.'),
+                      severity: InfoBarSeverity.info,
+                      onClose: close,
+                    ),
+                  );
+                },
+              ),
+            ),
+
+            // 4. Ouvir (Microfone da Câmera)
+            _buildActionButton(
+              icon: isListening ? FluentIcons.volume3 : FluentIcons.volume0,
+              label: isListening ? 'Ouvindo' : 'Mudo',
+              isActive: isListening,
+              activeColor: BCamTheme.accentLightBlue,
+              onTap: _toggleListen,
+            ),
+
+            // 5. Visão Noturna
+            _buildActionButton(
+              icon: FluentIcons.clear_night,
+              label: nightMode == NightVisionMode.auto
+                  ? 'Noturna: Auto'
+                  : (nightMode == NightVisionMode.color ? 'Noturna: Cor' : 'Noturna: IR'),
+              isActive: nightMode != NightVisionMode.off,
+              activeColor: BCamTheme.accentLightBlue,
+              badge: nightMode == NightVisionMode.color ? 'COR' : (nightMode == NightVisionMode.ir ? 'IR' : null),
+              onTap: _showNightVisionPicker,
+            ),
+          ],
+        ),
       ),
     );
   }

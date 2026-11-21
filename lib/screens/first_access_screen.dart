@@ -202,10 +202,15 @@ class _FirstAccessScreenState extends State<FirstAccessScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          'Câmeras para Associar (${_selectedCameraIds.length}/${cameras.length})',
-                          style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w700, color: Colors.white),
+                        Expanded(
+                          child: Text(
+                            'Câmeras para Associar (${_selectedCameraIds.length}/${cameras.length})',
+                            style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w700, color: Colors.white),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
+                        const SizedBox(width: 8),
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [

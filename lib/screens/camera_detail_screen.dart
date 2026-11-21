@@ -475,93 +475,96 @@ class _CameraDetailScreenState extends State<CameraDetailScreen> {
           const SizedBox(width: 4),
 
           // Right: Action Buttons (Favorite, Exclusion Zone, Telemetry, Settings, Fullscreen)
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Favorite Star
-              IconButton(
-                style: ButtonStyle(
-                  backgroundColor: WidgetStateProperty.all(const Color(0x22FFFFFF)),
-                ),
-                icon: Icon(
-                  _camera.isFavorite ? FluentIcons.favorite_star_fill : FluentIcons.favorite_star,
-                  size: 14,
-                  color: _camera.isFavorite ? BCamTheme.statusWarning : Colors.white,
-                ),
-                onPressed: () {
-                  setState(() {
-                    _camera = _camera.copyWith(isFavorite: !_camera.isFavorite);
-                  });
-                  context.read<CameraStorageService>().toggleFavorite(_camera.id);
-                },
-              ),
-              const SizedBox(width: 3),
-
-              // Zona Exclusão Quick Button
-              IconButton(
-                style: ButtonStyle(
-                  backgroundColor: WidgetStateProperty.all(
-                    _camera.hasExclusionZone ? const Color(0x4DFF3B30) : const Color(0x22FFFFFF),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Favorite Star
+                IconButton(
+                  style: ButtonStyle(
+                    backgroundColor: WidgetStateProperty.all(const Color(0x22FFFFFF)),
                   ),
-                ),
-                icon: Icon(
-                  FluentIcons.blocked2,
-                  size: 14,
-                  color: _camera.hasExclusionZone ? const Color(0xFFFF6961) : Colors.white,
-                ),
-                onPressed: _openExclusionZoneScreen,
-              ),
-              const SizedBox(width: 3),
-
-              // PTZ Quick Button (Pan / Tilt / Zoom)
-              IconButton(
-                style: ButtonStyle(
-                  backgroundColor: WidgetStateProperty.all(
-                    _showPtzOverlay ? BCamTheme.statusOnlineGlow.withValues(alpha: 0.3) : const Color(0x22FFFFFF),
+                  icon: Icon(
+                    _camera.isFavorite ? FluentIcons.favorite_star_fill : FluentIcons.favorite_star,
+                    size: 14,
+                    color: _camera.isFavorite ? BCamTheme.statusWarning : Colors.white,
                   ),
+                  onPressed: () {
+                    setState(() {
+                      _camera = _camera.copyWith(isFavorite: !_camera.isFavorite);
+                    });
+                    context.read<CameraStorageService>().toggleFavorite(_camera.id);
+                  },
                 ),
-                icon: Icon(
-                  FluentIcons.game,
-                  size: 14,
-                  color: _showPtzOverlay ? BCamTheme.statusOnlineGlow : Colors.white,
-                ),
-                onPressed: () {
-                  setState(() {
-                    _showPtzOverlay = !_showPtzOverlay;
-                  });
-                },
-              ),
-              const SizedBox(width: 3),
+                const SizedBox(width: 3),
 
-              // Diagnostics / Telemetry
-              IconButton(
-                style: ButtonStyle(
-                  backgroundColor: WidgetStateProperty.all(const Color(0x22FFFFFF)),
+                // Zona Exclusão Quick Button
+                IconButton(
+                  style: ButtonStyle(
+                    backgroundColor: WidgetStateProperty.all(
+                      _camera.hasExclusionZone ? const Color(0x4DFF3B30) : const Color(0x22FFFFFF),
+                    ),
+                  ),
+                  icon: Icon(
+                    FluentIcons.blocked2,
+                    size: 14,
+                    color: _camera.hasExclusionZone ? const Color(0xFFFF6961) : Colors.white,
+                  ),
+                  onPressed: _openExclusionZoneScreen,
                 ),
-                icon: const Icon(FluentIcons.diagnostic, size: 14, color: Colors.white),
-                onPressed: _showTelemetryModal,
-              ),
-              const SizedBox(width: 3),
+                const SizedBox(width: 3),
 
-              // Camera Settings
-              IconButton(
-                style: ButtonStyle(
-                  backgroundColor: WidgetStateProperty.all(const Color(0x22FFFFFF)),
+                // PTZ Quick Button (Pan / Tilt / Zoom)
+                IconButton(
+                  style: ButtonStyle(
+                    backgroundColor: WidgetStateProperty.all(
+                      _showPtzOverlay ? BCamTheme.statusOnlineGlow.withValues(alpha: 0.3) : const Color(0x22FFFFFF),
+                    ),
+                  ),
+                  icon: Icon(
+                    FluentIcons.game,
+                    size: 14,
+                    color: _showPtzOverlay ? BCamTheme.statusOnlineGlow : Colors.white,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _showPtzOverlay = !_showPtzOverlay;
+                    });
+                  },
                 ),
-                icon: const Icon(FluentIcons.settings, size: 14, color: Colors.white),
-                onPressed: _openCameraSettings,
-              ),
-              const SizedBox(width: 3),
+                const SizedBox(width: 3),
 
-              // Full Screen Viewer
-              IconButton(
-                style: ButtonStyle(
-                  backgroundColor: WidgetStateProperty.all(const Color(0x22FFFFFF)),
+                // Diagnostics / Telemetry
+                IconButton(
+                  style: ButtonStyle(
+                    backgroundColor: WidgetStateProperty.all(const Color(0x22FFFFFF)),
+                  ),
+                  icon: const Icon(FluentIcons.diagnostic, size: 14, color: Colors.white),
+                  onPressed: _showTelemetryModal,
                 ),
-                icon: const Icon(FluentIcons.full_screen, size: 14, color: Colors.white),
-                onPressed: _openFullScreen,
-              ),
-            ],
+                const SizedBox(width: 3),
+
+                // Camera Settings
+                IconButton(
+                  style: ButtonStyle(
+                    backgroundColor: WidgetStateProperty.all(const Color(0x22FFFFFF)),
+                  ),
+                  icon: const Icon(FluentIcons.settings, size: 14, color: Colors.white),
+                  onPressed: _openCameraSettings,
+                ),
+                const SizedBox(width: 3),
+
+                // Full Screen Viewer
+                IconButton(
+                  style: ButtonStyle(
+                    backgroundColor: WidgetStateProperty.all(const Color(0x22FFFFFF)),
+                  ),
+                  icon: const Icon(FluentIcons.full_screen, size: 14, color: Colors.white),
+                  onPressed: _openFullScreen,
+                ),
+              ],
+            ),
           ),
         ],
       ),

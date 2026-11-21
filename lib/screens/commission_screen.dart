@@ -246,15 +246,21 @@ class _CommissionScreenState extends State<CommissionScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Row(
-                              children: [
-                                const Icon(FluentIcons.video, size: 16, color: BCamTheme.accentLightBlue),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Teste de Reprodução em Tempo Real',
-                                  style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: BCamTheme.textPrimary),
-                                ),
-                              ],
+                            Expanded(
+                              child: Row(
+                                children: [
+                                  const Icon(FluentIcons.video, size: 16, color: BCamTheme.accentLightBlue),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'Teste de Reprodução em Tempo Real',
+                                      style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: BCamTheme.textPrimary),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                             IconButton(
                               icon: const Icon(FluentIcons.chrome_close, size: 14),
@@ -413,14 +419,18 @@ class _CommissionScreenState extends State<CommissionScreen> {
                                             : BCamTheme.statusWarning,
                                       ),
                                       const SizedBox(width: 6),
-                                      Text(
-                                        _cameraEnabled ? 'Câmera Ativa / Habilitada' : 'Câmera Desativada (Suspensa)',
-                                        style: GoogleFonts.inter(
-                                          fontSize: 12.5,
-                                          fontWeight: FontWeight.w700,
-                                          color: _cameraEnabled
-                                              ? BCamTheme.statusOnlineGlow
-                                              : BCamTheme.statusWarning,
+                                      Expanded(
+                                        child: Text(
+                                          _cameraEnabled ? 'Câmera Ativa / Habilitada' : 'Câmera Desativada (Suspensa)',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 12.5,
+                                            fontWeight: FontWeight.w700,
+                                            color: _cameraEnabled
+                                                ? BCamTheme.statusOnlineGlow
+                                                : BCamTheme.statusWarning,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
                                         ),
                                       ),
                                     ],
@@ -886,19 +896,26 @@ class _CommissionScreenState extends State<CommissionScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Mapeamento de Eventos por IA',
-                                style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: BCamTheme.textPrimary),
-                              ),
-                              Text(
-                                'Identifica pessoas, veículos e interpreta a cena',
-                                style: GoogleFonts.inter(fontSize: 10.5, color: BCamTheme.textSecondary),
-                              ),
-                            ],
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Mapeamento de Eventos por IA',
+                                  style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: BCamTheme.textPrimary),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                Text(
+                                  'Identifica pessoas, veículos e interpreta a cena',
+                                  style: GoogleFonts.inter(fontSize: 10.5, color: BCamTheme.textSecondary),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
                           ),
+                          const SizedBox(width: 8),
                           ToggleSwitch(
                             checked: _aiDetectionEnabled,
                             onChanged: (val) => setState(() => _aiDetectionEnabled = val),
@@ -957,19 +974,26 @@ class _CommissionScreenState extends State<CommissionScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Notificações Push (Firebase FCM)',
-                                style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: BCamTheme.textPrimary),
-                              ),
-                              Text(
-                                'Envia aviso imediato com Deeplink para o clipe',
-                                style: GoogleFonts.inter(fontSize: 10.5, color: BCamTheme.textSecondary),
-                              ),
-                            ],
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Notificações Push (Firebase FCM)',
+                                  style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: BCamTheme.textPrimary),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                Text(
+                                  'Envia aviso imediato com Deeplink para o clipe',
+                                  style: GoogleFonts.inter(fontSize: 10.5, color: BCamTheme.textSecondary),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
                           ),
+                          const SizedBox(width: 8),
                           ToggleSwitch(
                             checked: _pushNotificationsEnabled,
                             onChanged: (val) => setState(() => _pushNotificationsEnabled = val),

@@ -132,5 +132,61 @@ void main() {
       expect(unreg.length, 1);
       expect(unreg.first.ip, '192.168.3.23');
     });
+
+    test('autoReconcileDevices does not hijack existing online camera IP heuristically', () async {
+      SharedPreferences.setMockInitialValues({});
+      final storage = CameraStorageService();
+      await storage.loadCameras();
+
+      // Commission camera at .23
+      await storage.addCamera(CameraDevice(
+        id: 'yoosee-23',
+        name: 'Yoosee 23',
+        ip: '192.168.3.23',
+        manufacturer: CameraManufacturer.yoosee,
+        macAddress: '98:03:CF:DC:00:0A',
+      ));
+
+      // Scan discovers BOTH .23 and a new Yoosee at .24
+      final scanResults = <ScanResult>[
+        ScanResult(
+          ip: '192.168.3.23',
+          openPorts: [554],
+          detectedManufacturer: CameraManufacturer.yoosee,
+          detectionSource: 'Port 5000',
+          suggestedName: 'Yoosee 23',
+          suggestedRtspUrl: 'rtsp://192.168.3.23:554/onvif1',
+          macAddress: '98:03:CF:DC:00:0A',
+        ),
+        ScanResult(
+          ip: '192.168.3.24',
+          openPorts: [554],
+          detectedManufacturer: CameraManufacturer.yoosee,
+          detectionSource: 'Port 5000',
+          suggestedName: 'Yoosee 24',
+          suggestedRtspUrl: 'rtsp://192.168.3.24:554/onvif1',
+          macAddress: '98:03:CF:DB:FD:5A',
+        ),
+      ];
+
+      await storage.autoReconcileDevices(scanResults);
+
+      // Verify that yoosee-23 kept its IP 192.168.3.23 and was NOT hijacked to .24
+      final cam23 = storage.cameras.firstWhere((c) => c.id == 'yoosee-23');
+      expect(cam23.ip, '192.168.3.23');
+    });
+
+    test('loadCameras self-heals Yoosee password to Compras10@', () async {
+      // Setup SharedPreferences with an existing Yoosee camera having lowercase password 'compras10'
+      final savedJson = '[{"id":"yoosee-test","name":"Yoosee","ip":"192.168.3.23","rtspPort":554,"manufacturer":"yoosee","username":"admin","password":"compras10"}]';
+      SharedPreferences.setMockInitialValues({'bcam_saved_cameras_v2': savedJson});
+
+      final storage = CameraStorageService();
+      await storage.loadCameras();
+
+      final cam = storage.cameras.firstWhere((c) => c.ip == '192.168.3.23');
+      expect(cam.password, 'Compras10@');
+      expect(cam.macAddress, '98:03:CF:DC:00:0A');
+    });
   });
 }

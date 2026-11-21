@@ -437,23 +437,30 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Row(
-                              children: [
-                                Container(
-                                  width: 8,
-                                  height: 8,
-                                  decoration: const BoxDecoration(
-                                    color: BCamTheme.statusOnlineGlow,
-                                    shape: BoxShape.circle,
+                            Expanded(
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 8,
+                                    height: 8,
+                                    decoration: const BoxDecoration(
+                                      color: BCamTheme.statusOnlineGlow,
+                                      shape: BoxShape.circle,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Servidor HTTP de Diagnóstico Ativo',
-                                  style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w600, color: BCamTheme.textPrimary),
-                                ),
-                              ],
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'Servidor HTTP de Diagnóstico Ativo',
+                                      style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w600, color: BCamTheme.textPrimary),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
+                            const SizedBox(width: 8),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
@@ -670,32 +677,41 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: BoxDecoration(
-                                color: BCamTheme.accentBlue.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(6),
+                        Expanded(
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: BCamTheme.accentBlue.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: const Icon(FluentIcons.cloud_download, size: 16, color: BCamTheme.accentLightBlue),
                               ),
-                              child: const Icon(FluentIcons.cloud_download, size: 16, color: BCamTheme.accentLightBlue),
-                            ),
-                            const SizedBox(width: 10),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Atualização In-App (OTA)',
-                                  style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w600, color: BCamTheme.textPrimary),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Atualização In-App (OTA)',
+                                      style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w600, color: BCamTheme.textPrimary),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    Text(
+                                      'Versão atual: v${AppUpdateService.appVersionName} • Build ${AppUpdateService.appVersionCode}',
+                                      style: GoogleFonts.robotoMono(fontSize: 10.5, color: BCamTheme.textSecondary),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
                                 ),
-                                Text(
-                                  'Versão atual: v${AppUpdateService.appVersionName} • Build ${AppUpdateService.appVersionCode}',
-                                  style: GoogleFonts.robotoMono(fontSize: 10.5, color: BCamTheme.textSecondary),
-                                ),
-                              ],
-                            ),
-                          ],
+                              ),
+                            ],
+                          ),
                         ),
+                        const SizedBox(width: 8),
                         FilledButton(
                           onPressed: _checkAndShowUpdateDialog,
                           child: Row(

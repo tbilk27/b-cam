@@ -321,6 +321,30 @@ class MainActivity : FlutterFragmentActivity() {
                         result.error("NOTIFICATION_ERROR", e.localizedMessage, null)
                     }
                 }
+                "installApk" -> {
+                    val filePath = call.argument<String>("filePath")
+                    try {
+                        val file = filePath?.let { File(it) }
+                        if (file != null && file.exists()) {
+                            val apkUri = FileProvider.getUriForFile(
+                                this@MainActivity,
+                                "${applicationContext.packageName}.fileprovider",
+                                file
+                            )
+                            val intent = Intent(Intent.ACTION_VIEW).apply {
+                                setDataAndType(apkUri, "application/vnd.android.package-archive")
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            startActivity(intent)
+                            result.success(true)
+                        } else {
+                            result.error("FILE_NOT_FOUND", "Arquivo APK não encontrado em $filePath", null)
+                        }
+                    } catch (e: Exception) {
+                        result.error("INSTALL_ERROR", e.localizedMessage, null)
+                    }
+                }
                 else -> {
                     result.notImplemented()
                 }

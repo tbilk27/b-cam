@@ -10,6 +10,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import '../models/bounding_box.dart';
 import '../models/camera_device.dart';
+import '../models/manufacturer.dart';
 import '../services/ai_vision_agent_service.dart';
 import '../services/camera_event_service.dart';
 import '../services/camera_storage_service.dart';
@@ -106,6 +107,9 @@ class LivePlayerViewState extends State<LivePlayerView>
     return msg.contains('unauthorized') ||
         msg.contains('401') ||
         msg.contains('authentication') ||
+        msg.contains('authorization') ||
+        (widget.camera.manufacturer == CameraManufacturer.yoosee &&
+            (msg.contains('file format') || msg.contains('bad request'))) ||
         _effectiveCamera.password == 'admin' ||
         _effectiveCamera.password.isEmpty;
   }

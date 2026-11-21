@@ -311,72 +311,76 @@ class _ExclusionZoneScreenState extends State<ExclusionZoneScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Row 1: Tool Selection (Pincel vs Borracha) & Enable Toggle
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            Button(
-                              style: ButtonStyle(
-                                backgroundColor: WidgetStateProperty.all(
-                                  _currentTool == MaskTool.paint ? const Color(0xD9FF3B30) : BCamTheme.darkCard,
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Button(
+                                style: ButtonStyle(
+                                  backgroundColor: WidgetStateProperty.all(
+                                    _currentTool == MaskTool.paint ? const Color(0xD9FF3B30) : BCamTheme.darkCard,
+                                  ),
+                                ),
+                                onPressed: () => setState(() => _currentTool = MaskTool.paint),
+                                child: Row(
+                                  children: [
+                                    const Icon(FluentIcons.edit, size: 13),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'Pincel (Excluir)',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 11.5,
+                                        fontWeight: _currentTool == MaskTool.paint ? FontWeight.w700 : FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              onPressed: () => setState(() => _currentTool = MaskTool.paint),
-                              child: Row(
-                                children: [
-                                  const Icon(FluentIcons.edit, size: 13),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    'Pincel (Excluir)',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 11.5,
-                                      fontWeight: _currentTool == MaskTool.paint ? FontWeight.w700 : FontWeight.w500,
-                                    ),
+                              const SizedBox(width: 8),
+                              Button(
+                                style: ButtonStyle(
+                                  backgroundColor: WidgetStateProperty.all(
+                                    _currentTool == MaskTool.erase ? BCamTheme.accentBlue : BCamTheme.darkCard,
                                   ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Button(
-                              style: ButtonStyle(
-                                backgroundColor: WidgetStateProperty.all(
-                                  _currentTool == MaskTool.erase ? BCamTheme.accentBlue : BCamTheme.darkCard,
+                                ),
+                                onPressed: () => setState(() => _currentTool = MaskTool.erase),
+                                child: Row(
+                                  children: [
+                                    const Icon(FluentIcons.erase_tool, size: 13),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'Borracha',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 11.5,
+                                        fontWeight: _currentTool == MaskTool.erase ? FontWeight.w700 : FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              onPressed: () => setState(() => _currentTool = MaskTool.erase),
-                              child: Row(
-                                children: [
-                                  const Icon(FluentIcons.erase_tool, size: 13),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    'Borracha',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 11.5,
-                                      fontWeight: _currentTool == MaskTool.erase ? FontWeight.w700 : FontWeight.w500,
-                                    ),
-                                  ),
-                                ],
+                            ],
+                          ),
+                          const SizedBox(width: 12),
+                          // Exclusion Master Toggle
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Ativa',
+                                style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600),
                               ),
-                            ),
-                          ],
-                        ),
-                        // Exclusion Master Toggle
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              'Ativa',
-                              style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600),
-                            ),
-                            const SizedBox(width: 6),
-                            ToggleSwitch(
-                              checked: _exclusionEnabled,
-                              onChanged: (val) => setState(() => _exclusionEnabled = val),
-                            ),
-                          ],
-                        ),
-                      ],
+                              const SizedBox(width: 6),
+                              ToggleSwitch(
+                                checked: _exclusionEnabled,
+                                onChanged: (val) => setState(() => _exclusionEnabled = val),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
 
                     const SizedBox(height: 12),

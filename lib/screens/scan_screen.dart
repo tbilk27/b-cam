@@ -333,9 +333,13 @@ class _ScanScreenState extends State<ScanScreen> {
                         children: [
                           Row(
                             children: [
-                              Text(
-                                scan.detectedManufacturer.displayName,
-                                style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700),
+                              Flexible(
+                                child: Text(
+                                  scan.detectedManufacturer.displayName,
+                                  style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
                               const SizedBox(width: 8),
                               Container(
@@ -356,6 +360,8 @@ class _ScanScreenState extends State<ScanScreen> {
                           Text(
                             'IP: ${scan.ip}  •  Portas: ${scan.openPorts.join(', ')}',
                             style: GoogleFonts.robotoMono(fontSize: 11, color: BCamTheme.textSecondary),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                           if (scan.macAddress != null)
                             Padding(
@@ -367,11 +373,15 @@ class _ScanScreenState extends State<ScanScreen> {
                                   color: BCamTheme.accentLightBlue,
                                   fontWeight: FontWeight.w600,
                                 ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           Text(
                             'Origem: ${scan.detectionSource} (${(scan.confidence * 100).toInt()}% precisão)',
                             style: GoogleFonts.inter(fontSize: 10.5, color: BCamTheme.textTertiary),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),

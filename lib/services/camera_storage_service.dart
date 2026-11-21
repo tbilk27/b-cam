@@ -56,29 +56,35 @@ class CameraStorageService extends ChangeNotifier {
             needsSave = true;
             continue;
           }
-          // Self-heal known local cameras configured with default 'admin' password and attach MAC
-          if (cam.ip == '192.168.3.74') {
-            if (cam.password == 'admin' || cam.password.isEmpty || cam.macAddress == null) {
+          // Self-heal known local cameras configured with default or typo passwords and attach MAC
+          if (cam.ip == '192.168.3.74' || cam.matchesMac('98:2A:0A:89:56:62')) {
+            final isDefaultPass = cam.password == 'admin' || cam.password.isEmpty;
+            if (isDefaultPass || cam.macAddress == null || cam.ip != '192.168.3.74') {
               cam = cam.copyWith(
-                password: (cam.password == 'admin' || cam.password.isEmpty) ? 'Zs29364835' : cam.password,
+                ip: '192.168.3.74',
+                password: isDefaultPass ? 'Zs29364835' : cam.password,
                 manufacturer: CameraManufacturer.intelbras,
                 macAddress: cam.macAddress ?? '98:2A:0A:89:56:62',
               );
               needsSave = true;
             }
-          } else if (cam.ip == '192.168.3.23') {
-            if (cam.password == 'admin' || cam.password.isEmpty || cam.macAddress == null) {
+          } else if (cam.ip == '192.168.3.23' || cam.matchesMac('98:03:CF:DC:00:0A')) {
+            final isWrongPass = cam.password == 'admin' || cam.password.isEmpty || cam.password.toLowerCase() == 'compras10';
+            if (isWrongPass || cam.macAddress == null || cam.ip != '192.168.3.23') {
               cam = cam.copyWith(
-                password: (cam.password == 'admin' || cam.password.isEmpty) ? 'Compras10@' : cam.password,
+                ip: '192.168.3.23',
+                password: isWrongPass ? 'Compras10@' : cam.password,
                 manufacturer: CameraManufacturer.yoosee,
                 macAddress: cam.macAddress ?? '98:03:CF:DC:00:0A',
               );
               needsSave = true;
             }
-          } else if (cam.ip == '192.168.3.24') {
-            if (cam.password == 'admin' || cam.password.isEmpty || cam.macAddress == null) {
+          } else if (cam.ip == '192.168.3.24' || cam.matchesMac('98:03:CF:DB:FD:5A')) {
+            final isWrongPass = cam.password == 'admin' || cam.password.isEmpty || cam.password.toLowerCase() == 'compras10';
+            if (isWrongPass || cam.macAddress == null || cam.ip != '192.168.3.24') {
               cam = cam.copyWith(
-                password: (cam.password == 'admin' || cam.password.isEmpty) ? 'Compras10@' : cam.password,
+                ip: '192.168.3.24',
+                password: isWrongPass ? 'Compras10@' : cam.password,
                 manufacturer: CameraManufacturer.yoosee,
                 macAddress: cam.macAddress ?? '98:03:CF:DB:FD:5A',
               );
@@ -86,6 +92,12 @@ class CameraStorageService extends ChangeNotifier {
             }
           } else if (cam.ip == '192.168.3.22' && cam.macAddress == null) {
             cam = cam.copyWith(macAddress: '18:0D:2C:5D:96:FE');
+            needsSave = true;
+          }
+
+          // Global self-heal for Yoosee cameras with wrong password casing/special char
+          if (cam.manufacturer == CameraManufacturer.yoosee && cam.password.toLowerCase() == 'compras10') {
+            cam = cam.copyWith(password: 'Compras10@');
             needsSave = true;
           }
           _cameras.add(cam);
@@ -260,6 +272,17 @@ class CameraStorageService extends ChangeNotifier {
 
         if (matchingCameras.length == 1) {
           final target = matchingCameras.first;
+
+          // Proteção crítica: NÃO reatribuir se o IP atual do dispositivo alvo também foi encontrado na varredura
+          if (discovered.any((s) => s.ip == target.ip)) {
+            continue;
+          }
+
+          // Proteção crítica: Se ambos têm MAC address e são diferentes, não reatribuir (são dispositivos físicos distintos)
+          if (target.macAddress != null && scan.macAddress != null && !target.matchesMac(scan.macAddress)) {
+            continue;
+          }
+
           final targetIdx = _cameras.indexWhere((c) => c.id == target.id);
           if (targetIdx != -1 && target.ip != scan.ip) {
             DiagnosticLoggerService.instance.logInfo(

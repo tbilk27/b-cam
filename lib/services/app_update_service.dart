@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:fluent_ui/fluent_ui.dart';
+import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'diagnostic_logger_service.dart';
 
@@ -40,10 +41,10 @@ class AppUpdateService extends ChangeNotifier {
   AppUpdateService._internal();
 
   // Current App Version (Defined in pubspec.yaml)
-  static const int appVersionCode = 2;
-  static const String appVersionName = '1.1.0';
+  static const int appVersionCode = 33;
+  static const String appVersionName = '1.30.0';
 
-  String _updateServerUrl = 'http://192.168.3.62:8088';
+  String _updateServerUrl = 'https://bilkcam.web.app';
   String get updateServerUrl => _updateServerUrl;
 
   bool _isChecking = false;
@@ -65,59 +66,70 @@ class AppUpdateService extends ChangeNotifier {
     _isChecking = true;
     notifyListeners();
 
+    final urlsToTry = <String>[
+      if (_updateServerUrl.endsWith('.json'))
+        _updateServerUrl
+      else if (_updateServerUrl.contains('web.app'))
+        '$_updateServerUrl/version.json'
+      else
+        '$_updateServerUrl/api/version',
+      if (!_updateServerUrl.contains('web.app')) 'https://bilkcam.web.app/version.json',
+    ];
+
     DiagnosticLoggerService.instance.logInfo(
       'APP_UPDATE',
-      'Consultando servidor de atualizações: "$_updateServerUrl/api/version"...',
+      'Consultando servidores de atualizações: ${urlsToTry.join(', ')}...',
     );
 
-    try {
-      final client = HttpClient()..connectionTimeout = const Duration(seconds: 4);
-      final request = await client.getUrl(Uri.parse('$_updateServerUrl/api/version'));
-      final response = await request.close();
+    for (final url in urlsToTry) {
+      try {
+        final client = HttpClient()..connectionTimeout = const Duration(seconds: 4);
+        final request = await client.getUrl(Uri.parse(url));
+        final response = await request.close();
 
-      if (response.statusCode == 200) {
-        final body = await response.transform(utf8.decoder).join();
-        final json = jsonDecode(body) as Map<String, dynamic>;
+        if (response.statusCode == 200) {
+          final body = await response.transform(utf8.decoder).join();
+          final json = jsonDecode(body) as Map<String, dynamic>;
 
-        final remoteCode = (json['versionCode'] as num?)?.toInt() ?? appVersionCode;
-        final remoteName = json['versionName'] as String? ?? appVersionName;
-        final apkUrl = json['apkUrl'] as String? ?? '$_updateServerUrl/dist/b-cam-latest.apk';
-        final releaseNotes = json['releaseNotes'] as String? ?? 'Melhorias de desempenho e estabilidade de conexão.';
-        final sha256 = json['sha256'] as String?;
-        final size = (json['fileSizeBytes'] as num?)?.toInt();
+          final remoteCode = (json['versionCode'] as num?)?.toInt() ?? appVersionCode;
+          final remoteName = json['versionName'] as String? ?? appVersionName;
+          final apkUrl = json['apkUrl'] as String? ?? 'https://bilkcam.web.app/dist/b-cam-latest.apk';
+          final releaseNotes = json['releaseNotes'] as String? ?? 'Melhorias de desempenho e estabilidade de conexão.';
+          final sha256 = json['sha256'] as String?;
+          final size = (json['fileSizeBytes'] as num?)?.toInt();
 
-        final info = AppVersionInfo(
-          currentVersionCode: appVersionCode,
-          currentVersionName: appVersionName,
-          remoteVersionCode: remoteCode,
-          remoteVersionName: remoteName,
-          apkUrl: apkUrl,
-          releaseNotes: releaseNotes,
-          sha256: sha256,
-          fileSizeBytes: size,
-        );
+          final info = AppVersionInfo(
+            currentVersionCode: appVersionCode,
+            currentVersionName: appVersionName,
+            remoteVersionCode: remoteCode,
+            remoteVersionName: remoteName,
+            apkUrl: apkUrl,
+            releaseNotes: releaseNotes,
+            sha256: sha256,
+            fileSizeBytes: size,
+          );
 
-        DiagnosticLoggerService.instance.logInfo(
+          DiagnosticLoggerService.instance.logInfo(
+            'APP_UPDATE',
+            'Manifesto recebido de "$url": Atual: v$appVersionName (code: $appVersionCode) | Remoto: v$remoteName (code: $remoteCode). '
+            'Disponível: ${info.hasUpdate}',
+          );
+
+          _isChecking = false;
+          notifyListeners();
+          return info;
+        }
+      } catch (e) {
+        DiagnosticLoggerService.instance.logWarn(
           'APP_UPDATE',
-          'Manifesto recebido: Atual: v$appVersionName (code: $appVersionCode) | Remoto: v$remoteName (code: $remoteCode). '
-          'Disponível: ${info.hasUpdate}',
+          'Falha ao checar atualizações em "$url": $e',
         );
-
-        _isChecking = false;
-        notifyListeners();
-        return info;
-      } else {
-        throw Exception('Servidor respondeu com código ${response.statusCode}');
       }
-    } catch (e) {
-      DiagnosticLoggerService.instance.logWarn(
-        'APP_UPDATE',
-        'Falha ao checar atualizações em "$_updateServerUrl": $e. Utilizando versão local estável.',
-      );
-      _isChecking = false;
-      notifyListeners();
-      return null;
     }
+
+    _isChecking = false;
+    notifyListeners();
+    return null;
   }
 
   /// Baixa o binário do APK e aciona o instalador de pacotes do Android
@@ -191,6 +203,20 @@ class AppUpdateService extends ChangeNotifier {
       'APP_UPDATE',
       'Acionando instalador de pacotes para "${apkFile.path}"...',
     );
+
+    try {
+      const channel = MethodChannel('com.nexeoo.bcam/deeplink');
+      final result = await channel.invokeMethod<bool>('installApk', {'filePath': apkFile.path});
+      if (result == true) {
+        DiagnosticLoggerService.instance.logInfo('APP_UPDATE', 'Instalador nativo acionado via MethodChannel.');
+        return true;
+      }
+    } catch (e) {
+      DiagnosticLoggerService.instance.logWarn(
+        'APP_UPDATE',
+        'Falha ao acionar instalador via MethodChannel: $e. Tentando pm install...',
+      );
+    }
 
     try {
       // Tenta execução via script local ou shell se permitido

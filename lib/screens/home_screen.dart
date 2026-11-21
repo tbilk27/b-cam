@@ -329,7 +329,9 @@ class _HomeScreenState extends State<HomeScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           // Left: Brand Wordmark / Logo • Powered by Bilk Sistemas
-          const BCamLogo(size: 26, showText: true, showPoweredBy: true),
+          const Flexible(
+            child: BCamLogo(size: 26, showText: true, showPoweredBy: true),
+          ),
 
           // Right: Action Command Icons
           Row(
@@ -528,34 +530,43 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: (camera.isEnabled && camera.isOnline)
-                            ? BCamTheme.statusOnlineGlow
-                            : (camera.isEnabled ? BCamTheme.statusOffline : BCamTheme.statusWarning),
-                        shape: BoxShape.circle,
+                Expanded(
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: (camera.isEnabled && camera.isOnline)
+                              ? BCamTheme.statusOnlineGlow
+                              : (camera.isEnabled ? BCamTheme.statusOffline : BCamTheme.statusWarning),
+                          shape: BoxShape.circle,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          camera.name,
-                          style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              camera.name,
+                              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              '${camera.location} • ${camera.ip}',
+                              style: GoogleFonts.inter(fontSize: 10.5, color: BCamTheme.textSecondary),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
                         ),
-                        Text(
-                          '${camera.location} • ${camera.ip}',
-                          style: GoogleFonts.inter(fontSize: 10.5, color: BCamTheme.textSecondary),
-                        ),
-                      ],
-                    ),
-                  ],
+                      ),
+                    ],
+                  ),
                 ),
+                const SizedBox(width: 8),
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [

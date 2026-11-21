@@ -1,9 +1,9 @@
 {
-  "versionCode": 32,
-  "versionName": "1.29.0",
+  "versionCode": 33,
+  "versionName": "1.30.0",
   "apkUrl": "https://github.com/tbilk27/b-cam/releases/latest/download/b-cam-arm64.apk",
-  "sha256": "b5b1f980033cb961df01d63c925b3fd5d94c25e71409e931679b90f9a4b96a5c",
+  "sha256": "f35b0d0f1d06c1ed6e737e6edf0cfa1114fc3bff9a385b369155d91af48e3d62",
   "fileSizeBytes": 34969183,
-  "releaseNotes": "Vers\u00e3o 1.29.0: Auto-fallback de codec HD para Sub Stream (SD/H.264), corre\u00e7\u00e3o de roteamento Cloud Relay na LAN e reconcilia\u00e7\u00e3o autom\u00e1tica de IP via DHCP no radar.",
-  "releaseDate": "2026-11-21T18:24:45Z"
+  "releaseNotes": "Versão 1.30.0: Correção de autenticação e loop de reconexão Yoosee (401/400), proteção contra substituição de IP DHCP no radar, limitação de escala de fontes do sistema e eliminação de overflow de textos em todas as telas.",
+  "releaseDate": "2026-11-21T18:55:00Z"
 }

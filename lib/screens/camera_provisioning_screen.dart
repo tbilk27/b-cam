@@ -565,6 +565,8 @@ class _CameraProvisioningScreenState extends State<CameraProvisioningScreen> {
                   fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                   color: isSelected ? Colors.white : BCamTheme.textSecondary,
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 2),
               Text(
@@ -573,6 +575,8 @@ class _CameraProvisioningScreenState extends State<CameraProvisioningScreen> {
                   fontSize: 9,
                   color: isSelected ? Colors.white.withValues(alpha: 0.8) : BCamTheme.textTertiary,
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
