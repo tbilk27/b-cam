@@ -126,11 +126,24 @@ class CameraEventService extends ChangeNotifier {
     return filtered;
   }
 
-  /// Gera eventos realistas de gravação e detecção para uma câmera
+  /// Gera eventos realistas de gravação e detecção exclusivos e variados para uma câmera
   List<CameraEvent> _generateEventsForCamera(CameraDevice camera) {
     final now = DateTime.now();
     final safeId = camera.id.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '');
     final prefix = safeId.length > 8 ? safeId.substring(0, 8) : safeId;
+
+    // Semente única baseada na identidade física da câmera para horários e posições descorrelacionados
+    final seed = (camera.id + camera.ip + (camera.macAddress ?? '') + camera.name).hashCode.abs();
+    final m1 = (seed % 19) + 4; // 4 a 22 min atrás
+    final m2 = ((seed ~/ 7) % 43) + 26; // 26 a 68 min atrás
+    final m3 = ((seed ~/ 13) % 75) + 85; // 1h25 a 2h40 atrás
+    final m4 = ((seed ~/ 19) % 150) + 210; // 3h30 a 6h00 atrás
+    final m5 = ((seed ~/ 29) % 240) + 460; // 7h40 a 11h40 atrás
+
+    final d1 = 25 + (seed % 35); // 25s a 60s
+    final d2 = 20 + ((seed ~/ 3) % 40);
+    final d4 = 30 + ((seed ~/ 5) % 45);
+    final d5 = 18 + ((seed ~/ 7) % 30);
 
     return [
       CameraEvent(
@@ -138,32 +151,49 @@ class CameraEventService extends ChangeNotifier {
         cameraId: camera.id,
         cameraName: camera.name,
         type: CameraEventType.motion,
-        timestamp: now.subtract(const Duration(minutes: 12)),
-        duration: const Duration(seconds: 45),
+        timestamp: now.subtract(Duration(minutes: m1)),
+        duration: Duration(seconds: d1),
         description: 'Movimento detectado no setor ${camera.location}.',
-        clipUrl: camera.streamUrl,
-        confidence: 0.89,
+        confidence: 0.88 + ((seed % 10) * 0.01),
+        boundingBoxes: [
+          BoundingBox(
+            label: 'Movimento Detectado',
+            confidence: 0.88 + ((seed % 10) * 0.01),
+            left: 0.20 + ((seed % 15) * 0.01),
+            top: 0.28 + ((seed % 10) * 0.01),
+            width: 0.46,
+            height: 0.40,
+          ),
+        ],
       ),
       CameraEvent(
         id: 'evt-$prefix-2',
         cameraId: camera.id,
         cameraName: camera.name,
         type: CameraEventType.person,
-        timestamp: now.subtract(const Duration(minutes: 48)),
-        duration: const Duration(seconds: 35),
+        timestamp: now.subtract(Duration(minutes: m2)),
+        duration: Duration(seconds: d2),
         description: 'Detecção de presença humana na área monitorada.',
-        clipUrl: camera.streamUrl,
-        confidence: 0.94,
+        confidence: 0.93 + ((seed % 6) * 0.01),
+        boundingBoxes: [
+          BoundingBox(
+            label: 'Pessoa',
+            confidence: 0.93 + ((seed % 6) * 0.01),
+            left: 0.36 + ((seed % 12) * 0.01),
+            top: 0.22,
+            width: 0.26,
+            height: 0.58,
+          ),
+        ],
       ),
       CameraEvent(
         id: 'evt-$prefix-3',
         cameraId: camera.id,
         cameraName: camera.name,
         type: CameraEventType.recording,
-        timestamp: now.subtract(const Duration(hours: 2, minutes: 15)),
+        timestamp: now.subtract(Duration(minutes: m3)),
         duration: const Duration(minutes: 15),
         description: 'Bloco de gravação contínua arquivado no armazenamento local.',
-        clipUrl: camera.streamUrl,
         confidence: 1.0,
       ),
       CameraEvent(
@@ -171,22 +201,40 @@ class CameraEventService extends ChangeNotifier {
         cameraId: camera.id,
         cameraName: camera.name,
         type: CameraEventType.vehicle,
-        timestamp: now.subtract(const Duration(hours: 4, minutes: 20)),
-        duration: const Duration(seconds: 52),
+        timestamp: now.subtract(Duration(minutes: m4)),
+        duration: Duration(seconds: d4),
         description: 'Passagem ou manobra de veículo identificada pelo sensor.',
-        clipUrl: camera.streamUrl,
-        confidence: 0.91,
+        confidence: 0.91 + ((seed % 8) * 0.01),
+        boundingBoxes: [
+          BoundingBox(
+            label: 'Veículo',
+            confidence: 0.91 + ((seed % 8) * 0.01),
+            left: 0.24 + ((seed % 10) * 0.01),
+            top: 0.32,
+            width: 0.50,
+            height: 0.36,
+          ),
+        ],
       ),
       CameraEvent(
         id: 'evt-$prefix-5',
         cameraId: camera.id,
         cameraName: camera.name,
         type: CameraEventType.motion,
-        timestamp: now.subtract(const Duration(hours: 9, minutes: 30)),
-        duration: const Duration(seconds: 28),
+        timestamp: now.subtract(Duration(minutes: m5)),
+        duration: Duration(seconds: d5),
         description: 'Atividade noturna registrada no enquadramento.',
-        clipUrl: camera.streamUrl,
-        confidence: 0.85,
+        confidence: 0.85 + ((seed % 7) * 0.01),
+        boundingBoxes: [
+          BoundingBox(
+            label: 'Movimento Noturno',
+            confidence: 0.85 + ((seed % 7) * 0.01),
+            left: 0.18 + ((seed % 15) * 0.01),
+            top: 0.24 + ((seed % 10) * 0.01),
+            width: 0.44,
+            height: 0.38,
+          ),
+        ],
       ),
     ];
   }

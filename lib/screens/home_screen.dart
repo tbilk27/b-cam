@@ -443,42 +443,57 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final uniqueLocations = allCameras.map((c) => c.location.toUpperCase()).toSet().toList();
 
-    return ListView(
-      padding: const EdgeInsets.only(bottom: 24),
-      children: [
-        // Filter Pills Bar (Instagram story style bubbles)
-          Container(
-            height: 42,
-            margin: const EdgeInsets.symmetric(vertical: 6),
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              children: [
-                _buildFilterPill('TODAS', allCameras.length),
-                _buildFilterPill('FAVORITAS', storage.favoriteCameras.length),
-                if (storage.disabledCameras.isNotEmpty)
-                  _buildFilterPill('DESATIVADAS', storage.disabledCameras.length),
-                ...uniqueLocations.map((loc) {
-                  final count = allCameras.where((c) => c.location.toUpperCase() == loc).length;
-                  return _buildFilterPill(loc, count);
-                }),
-              ],
-            ),
-          ),
+    final filterPillsBar = Container(
+      height: 42,
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        children: [
+          _buildFilterPill('TODAS', allCameras.length),
+          _buildFilterPill('FAVORITAS', storage.favoriteCameras.length),
+          if (storage.disabledCameras.isNotEmpty)
+            _buildFilterPill('DESATIVADAS', storage.disabledCameras.length),
+          ...uniqueLocations.map((loc) {
+            final count = allCameras.where((c) => c.location.toUpperCase() == loc).length;
+            return _buildFilterPill(loc, count);
+          }),
+        ],
+      ),
+    );
 
-          // Camera Cards Feed
-          if (filteredCameras.isEmpty)
-            _buildEmptyCameraFeed(allCameras.isEmpty)
-          else
-            ...filteredCameras.map((camera) {
-              return _buildCameraFeedCard(camera, storage);
-            }),
+    if (filteredCameras.isEmpty) {
+      return ListView(
+        padding: const EdgeInsets.only(bottom: 24),
+        children: [
+          filterPillsBar,
+          _buildEmptyCameraFeed(allCameras.isEmpty),
         ],
       );
+    }
+
+    return ReorderableListView.builder(
+      padding: const EdgeInsets.only(bottom: 28),
+      header: filterPillsBar,
+      itemCount: filteredCameras.length,
+      onReorder: (oldIndex, newIndex) async {
+        await storage.reorderCameras(oldIndex, newIndex, currentList: filteredCameras);
+      },
+      itemBuilder: (context, index) {
+        final camera = filteredCameras[index];
+        return _buildCameraFeedCard(
+          camera,
+          storage,
+          key: ValueKey(camera.id),
+          index: index,
+        );
+      },
+    );
   }
 
-  Widget _buildCameraFeedCard(CameraDevice camera, CameraStorageService storage) {
+  Widget _buildCameraFeedCard(CameraDevice camera, CameraStorageService storage, {Key? key, int? index}) {
     return Container(
+      key: key ?? ValueKey(camera.id),
       margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
         color: const Color(0xFF15151B),
@@ -531,6 +546,22 @@ class _HomeScreenState extends State<HomeScreen> {
                       icon: const Icon(FluentIcons.more_vertical, size: 14),
                       onPressed: () => _showCameraOptions(context, camera),
                     ),
+                    if (index != null)
+                      ReorderableDragStartListener(
+                        index: index,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.05),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Icon(
+                            FluentIcons.gripper_bar_vertical,
+                            size: 16,
+                            color: Colors.white.withValues(alpha: 0.6),
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ],
@@ -964,11 +995,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showQuickAddCameraDialog(ScanResult res) {
+    final isMibo = res.detectedManufacturer == CameraManufacturer.intelbrasMibo ||
+        res.detectedManufacturer == CameraManufacturer.intelbrasIC;
     final nameCtrl = TextEditingController(text: '${res.detectedManufacturer.displayName} (${res.ip.split(".").last})');
     final userCtrl = TextEditingController(text: 'admin');
-    final passCtrl = TextEditingController(
-      text: res.detectedManufacturer == CameraManufacturer.intelbras ? 'Zs29364835' : (res.detectedManufacturer == CameraManufacturer.yoosee ? 'Compras10@' : ''),
-    );
+    final passCtrl = TextEditingController(text: '');
     bool obscure = true;
 
     showDialog(
@@ -1042,14 +1073,14 @@ class _HomeScreenState extends State<HomeScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Senha RTSP',
+                              isMibo ? 'Código de Verificação' : 'Senha RTSP',
                               style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w600, color: BCamTheme.textSecondary),
                             ),
                             const SizedBox(height: 4),
                             TextBox(
                               controller: passCtrl,
                               obscureText: obscure,
-                              placeholder: 'Senha da câmera',
+                              placeholder: isMibo ? 'Etiqueta (ex: RWKINH)' : 'Senha da câmera',
                               suffix: IconButton(
                                 icon: Icon(obscure ? FluentIcons.view : FluentIcons.hide, size: 14),
                                 onPressed: () => setDialogState(() => obscure = !obscure),
@@ -1060,42 +1091,21 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 10),
-                  Text(
-                    'Atalhos rápidos da rede local:',
-                    style: GoogleFonts.inter(fontSize: 10.5, color: BCamTheme.textTertiary),
-                  ),
-                  const SizedBox(height: 4),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: [
-                      Button(
-                        onPressed: () => setDialogState(() => passCtrl.text = 'Zs29364835'),
-                        child: Text('Zs29364835', style: GoogleFonts.robotoMono(fontSize: 10.5)),
+                  if (isMibo) ...[
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1E281E),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: const Color(0xFF00C853).withValues(alpha: 0.4)),
                       ),
-                      Button(
-                        onPressed: () => setDialogState(() => passCtrl.text = 'Compras10@'),
-                        child: Text('Compras10@', style: GoogleFonts.robotoMono(fontSize: 10.5)),
+                      child: Text(
+                        'Linha Intelbras Mibo: use a Chave de Acesso da etiqueta. Desative a Criptografia de Vídeo no app Mibo.',
+                        style: GoogleFonts.inter(fontSize: 10.5, color: const Color(0xFFD4EDDA), height: 1.3),
                       ),
-                      Button(
-                        onPressed: () => setDialogState(() => passCtrl.text = 'compras10'),
-                        child: Text('compras10', style: GoogleFonts.robotoMono(fontSize: 10.5)),
-                      ),
-                      Button(
-                        onPressed: () => setDialogState(() => passCtrl.text = 'admin'),
-                        child: Text('admin', style: GoogleFonts.robotoMono(fontSize: 10.5)),
-                      ),
-                      Button(
-                        onPressed: () => setDialogState(() => passCtrl.text = '123456'),
-                        child: Text('123456', style: GoogleFonts.robotoMono(fontSize: 10.5)),
-                      ),
-                      Button(
-                        onPressed: () => setDialogState(() => passCtrl.text = ''),
-                        child: Text('(sem senha)', style: GoogleFonts.robotoMono(fontSize: 10.5)),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ],
               ),
               actions: [

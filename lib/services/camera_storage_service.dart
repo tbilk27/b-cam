@@ -119,6 +119,39 @@ class CameraStorageService extends ChangeNotifier {
     );
   }
 
+  /// Reordena as câmeras persistindo a nova ordem definida pelo usuário via arrastar e soltar
+  Future<void> reorderCameras(int oldIndex, int newIndex, {List<CameraDevice>? currentList}) async {
+    final list = currentList ?? _cameras;
+    if (oldIndex < 0 || oldIndex >= list.length) return;
+    if (newIndex < 0 || newIndex > list.length) return;
+
+    if (oldIndex < newIndex) {
+      newIndex -= 1;
+    }
+    final movedCamera = list[oldIndex];
+    final realOldIdx = _cameras.indexWhere((c) => c.id == movedCamera.id);
+    if (realOldIdx == -1) return;
+
+    _cameras.removeAt(realOldIdx);
+
+    int realNewIdx;
+    if (newIndex >= list.length) {
+      realNewIdx = _cameras.length;
+    } else {
+      final targetCamera = list[newIndex];
+      realNewIdx = _cameras.indexWhere((c) => c.id == targetCamera.id);
+      if (realNewIdx == -1) realNewIdx = _cameras.length;
+    }
+
+    _cameras.insert(realNewIdx, movedCamera);
+    await _persist();
+    notifyListeners();
+    DiagnosticLoggerService.instance.logInfo(
+      'STORAGE',
+      'Ordem das câmeras atualizada pelo usuário via arrastar e soltar ("${movedCamera.name}" de $realOldIdx para $realNewIdx).',
+    );
+  }
+
   /// Associa câmeras selecionadas (ou todas) à conta Google do usuário
   Future<void> associateCamerasToUser(String email, {List<String>? cameraIds}) async {
     bool changed = false;

@@ -192,6 +192,8 @@ class _CommissionScreenState extends State<CommissionScreen> {
   @override
   Widget build(BuildContext context) {
     final previewDevice = _buildTempDevice();
+    final isMibo = _selectedManufacturer == CameraManufacturer.intelbrasMibo ||
+        _selectedManufacturer == CameraManufacturer.intelbrasIC;
 
     return SafeArea(
       child: ScaffoldPage(
@@ -694,24 +696,93 @@ class _CommissionScreenState extends State<CommissionScreen> {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        'Senha do Fluxo RTSP',
+                        isMibo
+                            ? 'Código de Verificação da Etiqueta (Chave de Acesso)'
+                            : 'Senha do Fluxo RTSP',
                         style: GoogleFonts.inter(fontSize: 12, color: BCamTheme.textSecondary),
                       ),
                       const SizedBox(height: 4),
                       TextFormBox(
                         controller: _passController,
                         obscureText: true,
-                        placeholder: 'Deixe em branco se não houver senha',
+                        placeholder: isMibo
+                            ? 'Código de 6 a 8 letras maiúsculas da etiqueta (ex: RWKINH)'
+                            : 'Deixe em branco se não houver senha',
                       ),
-                      if (_selectedManufacturer == CameraManufacturer.intelbrasMibo ||
-                          _selectedManufacturer == CameraManufacturer.intelbrasIC) ...[
+                      if (isMibo) ...[
                         const SizedBox(height: 12),
-                        const InfoBar(
-                          title: Text('Dica Intelbras Linha iC / Mibo'),
-                          content: Text(
-                            'No app Mibo, desative a opção "Criptografia de imagem" para liberar o fluxo RTSP direto, ou use a chave de validação indicada na etiqueta do dispositivo (Código de Verificação).',
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF162319),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFF00C853).withValues(alpha: 0.5), width: 1.0),
                           ),
-                          severity: InfoBarSeverity.warning,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(FluentIcons.info, size: 14, color: Color(0xFF00E5FF)),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Diretrizes Técnicas - Intelbras Mibo',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                '• Código de Verificação: A senha NUNCA é a da sua conta de e-mail do app. Utilize a Chave de Acesso (Verification Code) de 6 a 8 letras maiúsculas impressa na etiqueta física da câmera.\n'
+                                '• Criptografia de Vídeo: É OBRIGATÓRIO desativar a "Criptografia de Vídeo" no aplicativo oficial Mibo (Mibo / Mibo Smart / Mibo Cam). Com criptografia ativa, o fluxo retornará erro 401 ou tela preta.\n'
+                                '• Protocolo: O streaming é feito via RTSP sobre TCP na porta 554 com autenticação Digest. Não tente acessar via navegador web (porta HTTP 80 retorna 404).',
+                                style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFFE0E0E0), height: 1.45),
+                              ),
+                              const SizedBox(height: 10),
+                              Text(
+                                'Alternar Formato de Firmware Mibo:',
+                                style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: BCamTheme.accentLightBlue),
+                              ),
+                              const SizedBox(height: 6),
+                              Row(
+                                children: [
+                                  Button(
+                                    style: ButtonStyle(
+                                      backgroundColor: WidgetStateProperty.all(
+                                        _selectedManufacturer == CameraManufacturer.intelbrasMibo
+                                            ? BCamTheme.accentBlue
+                                            : BCamTheme.darkCard,
+                                      ),
+                                    ),
+                                    onPressed: () => setState(() => _selectedManufacturer = CameraManufacturer.intelbrasMibo),
+                                    child: Text(
+                                      'Linha iM (iM3, iM4, iM5)',
+                                      style: GoogleFonts.inter(fontSize: 11),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Button(
+                                    style: ButtonStyle(
+                                      backgroundColor: WidgetStateProperty.all(
+                                        _selectedManufacturer == CameraManufacturer.intelbrasIC
+                                            ? BCamTheme.accentBlue
+                                            : BCamTheme.darkCard,
+                                      ),
+                                    ),
+                                    onPressed: () => setState(() => _selectedManufacturer = CameraManufacturer.intelbrasIC),
+                                    child: Text(
+                                      'Linha iC (iC3, iC5)',
+                                      style: GoogleFonts.inter(fontSize: 11),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ],

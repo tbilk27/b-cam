@@ -119,9 +119,7 @@ class _ScanScreenState extends State<ScanScreen> {
         webPort: scan.detectedManufacturer.defaultWebPort,
         manufacturer: scan.detectedManufacturer,
         username: 'admin',
-        password: scan.detectedManufacturer == CameraManufacturer.intelbras
-            ? 'Zs29364835'
-            : (scan.detectedManufacturer == CameraManufacturer.yoosee ? 'Compras10@' : ''),
+        password: '',
         channel: 1,
         subType: 0,
         location: 'Rede Local',

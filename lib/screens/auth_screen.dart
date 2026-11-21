@@ -124,37 +124,15 @@ class _AuthScreenState extends State<AuthScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Logo Oficial Neon b-cam SURVEILLANCE RADAR
+                  // Logo Oficial Neon b-cam SURVEILLANCE RADAR (Sem fundo na tela de login)
                   Center(
-                    child: Container(
-                      constraints: const BoxConstraints(maxWidth: 320),
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(18),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF00E5FF).withValues(alpha: 0.22),
-                            blurRadius: 24,
-                            spreadRadius: 2,
-                          ),
-                          BoxShadow(
-                            color: const Color(0xFFFF007F).withValues(alpha: 0.16),
-                            blurRadius: 28,
-                            spreadRadius: 1,
-                          ),
-                        ],
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
-                        child: AspectRatio(
-                          aspectRatio: 1024 / 571,
-                          child: Image.asset(
-                            'assets/images/b_cam_neon_logo.jpg',
-                            fit: BoxFit.contain,
-                            errorBuilder: (context, error, stackTrace) => const Center(
-                              child: Icon(FluentIcons.video, size: 48, color: BCamTheme.accentLightBlue),
-                            ),
-                          ),
+                    child: SizedBox(
+                      width: 290,
+                      child: Image.asset(
+                        'assets/images/b_cam_neon_logo_transparent.png',
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) => const Center(
+                          child: Icon(FluentIcons.video, size: 48, color: BCamTheme.accentLightBlue),
                         ),
                       ),
                     ),

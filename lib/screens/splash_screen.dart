@@ -197,7 +197,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      'v1.23.1 • Build 26 • Inteligência Artificial & Visão Computacional',
+                      'v1.24.0 • Build 27 • Inteligência Artificial & Visão Computacional',
                       style: GoogleFonts.robotoMono(
                         fontSize: 10,
                         color: BCamTheme.textTertiary,

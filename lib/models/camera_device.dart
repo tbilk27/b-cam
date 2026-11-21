@@ -92,9 +92,16 @@ class CameraDevice {
     return notificationEventTypes.contains(type.name.toLowerCase());
   }
 
-  /// Computes the actual RTSP playback URL for an event range
+  /// Whether this camera belongs to the Intelbras Mibo product line (iC / iM series)
+  bool get isMibo =>
+      manufacturer == CameraManufacturer.intelbrasMibo ||
+      manufacturer == CameraManufacturer.intelbrasIC;
+
+  /// Computes the actual RTSP playback URL for an event range (never returns live stream)
   String playbackUrlForEvent(CameraEvent event) {
-    if (event.clipUrl != null && event.clipUrl!.trim().isNotEmpty) {
+    if (event.clipUrl != null &&
+        event.clipUrl!.trim().isNotEmpty &&
+        event.clipUrl!.trim() != streamUrl) {
       return event.clipUrl!.trim();
     }
 

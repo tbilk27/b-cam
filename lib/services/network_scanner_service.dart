@@ -204,7 +204,11 @@ class NetworkScannerService {
     double confidence = 0.75;
     String? banner;
 
-    if (openPorts.contains(37777)) {
+    if (resolvedMac != null && resolvedMac.toUpperCase().startsWith('18:0D:2C')) {
+      manufacturer = CameraManufacturer.intelbrasMibo;
+      detectionSource = 'MAC Intelbras Mibo (18:0D:2C)';
+      confidence = 0.98;
+    } else if (openPorts.contains(37777)) {
       manufacturer = CameraManufacturer.intelbras;
       detectionSource = 'Porta Dahua/Intelbras 37777';
       confidence = 0.95;

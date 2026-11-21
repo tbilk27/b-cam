@@ -323,6 +323,7 @@ class LivePlayerViewState extends State<LivePlayerView>
     _cancelAutoReconnect();
     final passCtrl = TextEditingController(text: _effectiveCamera.password);
     bool obscure = true;
+    final isMibo = _effectiveCamera.isMibo;
 
     fluent.showDialog(
       context: context,
@@ -332,11 +333,15 @@ class LivePlayerViewState extends State<LivePlayerView>
             return fluent.ContentDialog(
               title: Row(
                 children: [
-                  const Icon(fluent.FluentIcons.password_field, size: 18, color: Color(0xFFFF9500)),
+                  Icon(
+                    fluent.FluentIcons.password_field,
+                    size: 18,
+                    color: isMibo ? const Color(0xFF00C853) : const Color(0xFFFF9500),
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Credenciais: ${_effectiveCamera.name}',
+                      isMibo ? 'Código de Verificação: ${_effectiveCamera.name}' : 'Credenciais: ${_effectiveCamera.name}',
                       style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -348,51 +353,38 @@ class LivePlayerViewState extends State<LivePlayerView>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'A câmera (${_effectiveCamera.ip}) recusou o acesso. Informe a senha configurada no dispositivo:',
+                    isMibo
+                        ? 'Câmeras Intelbras Mibo exigem o Código de Verificação da etiqueta física da câmera:'
+                        : 'A câmera (${_effectiveCamera.ip}) recusou o acesso. Informe a senha configurada no dispositivo:',
                     style: GoogleFonts.inter(fontSize: 12, color: BCamTheme.textSecondary),
                   ),
                   const SizedBox(height: 12),
                   fluent.TextBox(
                     controller: passCtrl,
                     obscureText: obscure,
-                    placeholder: 'Senha da câmera (ex: Zs29364835 ou Compras10@)',
+                    placeholder: isMibo
+                        ? 'Código de Verificação da etiqueta (ex: RWKINH)'
+                        : 'Senha da câmera',
                     suffix: fluent.IconButton(
                       icon: Icon(obscure ? fluent.FluentIcons.view : fluent.FluentIcons.hide, size: 14),
                       onPressed: () => setDialogState(() => obscure = !obscure),
                     ),
                   ),
-                  const SizedBox(height: 10),
-                  Text(
-                    'Atalhos rápidos da rede:',
-                    style: GoogleFonts.inter(fontSize: 10.5, color: BCamTheme.textTertiary),
-                  ),
-                  const SizedBox(height: 6),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: [
-                      fluent.Button(
-                        onPressed: () => setDialogState(() => passCtrl.text = 'Zs29364835'),
-                        child: Text('Zs29364835', style: GoogleFonts.robotoMono(fontSize: 10.5)),
+                  if (isMibo) ...[
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF162319),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: const Color(0xFF00C853).withValues(alpha: 0.4)),
                       ),
-                      fluent.Button(
-                        onPressed: () => setDialogState(() => passCtrl.text = 'Compras10@'),
-                        child: Text('Compras10@', style: GoogleFonts.robotoMono(fontSize: 10.5)),
+                      child: Text(
+                        'Importante: No aplicativo oficial Mibo, desative a opção "Criptografia de Vídeo". A senha NUNCA é a da sua conta de e-mail do app Mibo, e sim o código da etiqueta.',
+                        style: GoogleFonts.inter(fontSize: 10.5, color: const Color(0xFFD4EDDA), height: 1.35),
                       ),
-                      fluent.Button(
-                        onPressed: () => setDialogState(() => passCtrl.text = 'compras10'),
-                        child: Text('compras10', style: GoogleFonts.robotoMono(fontSize: 10.5)),
-                      ),
-                      fluent.Button(
-                        onPressed: () => setDialogState(() => passCtrl.text = 'admin'),
-                        child: Text('admin', style: GoogleFonts.robotoMono(fontSize: 10.5)),
-                      ),
-                      fluent.Button(
-                        onPressed: () => setDialogState(() => passCtrl.text = '123456'),
-                        child: Text('123456', style: GoogleFonts.robotoMono(fontSize: 10.5)),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ],
               ),
               actions: [
