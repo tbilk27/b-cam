@@ -18,42 +18,44 @@ echo "[OTA] Alvo: Xiaomi Redmi Note 10S ($PHONE_IP)"
 echo "[OTA] APK: $APK_PATH ($(du -h "$APK_PATH" | cut -f1))"
 echo "[OTA] ========================================================="
 
-# 1. Encontrar identificador do dispositivo ADB
-DEVICE_SERIAL=$(adb devices -l | grep -E "rosemary|$PHONE_IP|_adb-tls-connect" | awk '{print $1}' | head -n 1)
+# 1. Encontrar identificadores dos dispositivos ADB (Celular e/ou Emulador)
+PHONE_SERIAL=$(adb devices -l | grep -E "rosemary|$PHONE_IP|_adb-tls-connect" | awk '{print $1}' | head -n 1)
 
-if [ -z "$DEVICE_SERIAL" ]; then
-    echo "[OTA] Dispositivo não conectado diretamente. Varrendo porta Wireless ADB em $PHONE_IP..."
-    for port in 40065 40000 41000 42000 43000 44000 45000 46000 47000; do
-        if nc -zv -w 1 "$PHONE_IP" "$port" 2>/dev/null; then
-            echo "[OTA] Porta aberta encontrada: $port. Conectando..."
-            adb connect "$PHONE_IP:$port"
-            DEVICE_SERIAL="$PHONE_IP:$port"
-            break
-        fi
-    done
+if [ -z "$PHONE_SERIAL" ]; then
+    echo "[OTA] Tentando conectar ao Xiaomi via Wireless ADB em $PHONE_IP:5555..."
+    adb connect "$PHONE_IP:5555" 2>/dev/null || true
+    sleep 1
+    PHONE_SERIAL=$(adb devices -l | grep -E "rosemary|$PHONE_IP|_adb-tls-connect" | awk '{print $1}' | head -n 1)
 fi
 
-if [ -z "$DEVICE_SERIAL" ]; then
-    # Tenta reconectar na porta mDNS ativa
-    DEVICE_SERIAL=$(adb devices | grep -v "List" | grep "device$" | awk '{print $1}' | grep -v "emulator" | head -n 1)
+TARGET_DEVICES=()
+if [ -n "$PHONE_SERIAL" ]; then
+    TARGET_DEVICES+=("$PHONE_SERIAL")
+    echo "[OTA] Celular Xiaomi detectado: $PHONE_SERIAL"
+else
+    echo "[OTA] Celular Xiaomi em $PHONE_IP não respondeu diretamente (dispositivo pode estar em repouso)."
 fi
 
-if [ -z "$DEVICE_SERIAL" ]; then
-    echo "[ERRO] Não foi possível localizar o dispositivo Xiaomi via Wireless ADB."
-    exit 1
+# Detectar outros dispositivos conectados (ex: emulator-5554)
+ALL_CONNECTED=$(adb devices | grep -v "List" | grep "device$" | awk '{print $1}')
+for dev in $ALL_CONNECTED; do
+    if [ "$dev" != "$PHONE_SERIAL" ]; then
+        TARGET_DEVICES+=("$dev")
+        echo "[OTA] Dispositivo conectado adicionado: $dev"
+    fi
+done
+
+if [ ${#TARGET_DEVICES[@]} -eq 0 ]; then
+    echo "[AVISO] Nenhum dispositivo ADB ativo. O APK está pronto e disponível em $APK_PATH."
+    exit 0
 fi
 
-echo "[OTA] Dispositivo conectado: $DEVICE_SERIAL"
-
-# 2. Instalação com stream nativo ADB
-echo "[OTA] Instalando pacote via adb install -r -d..."
-adb -s "$DEVICE_SERIAL" install -r -d "$APK_PATH"
-
-# 3. Inicialização da MainActivity
-
-# 4. Inicialização da MainActivity
-echo "[OTA] Reiniciando aplicativo no primeiro plano..."
-adb -s "$DEVICE_SERIAL" shell am start -n "$PACKAGE_NAME/$ACTIVITY_NAME"
+for dev in "${TARGET_DEVICES[@]}"; do
+    echo "[OTA] Instalando APK em $dev via adb install -r -d..."
+    adb -s "$dev" install -r -d "$APK_PATH" || echo "[AVISO] Instalação falhou em $dev"
+    echo "[OTA] Inicializando app em $dev..."
+    adb -s "$dev" shell am start -n "$PACKAGE_NAME/$ACTIVITY_NAME" || true
+done
 
 # 5. Verificação do serviço de telemetria
 sleep 3

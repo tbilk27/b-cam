@@ -37,6 +37,20 @@ void main() {
         location: 'Frente / Portão',
       );
 
+      service.registerEvent(
+        CameraEvent(
+          id: 'evt-test-101',
+          cameraId: cam74.id,
+          cameraName: cam74.name,
+          type: CameraEventType.person,
+          timestamp: DateTime.now(),
+          duration: const Duration(seconds: 40),
+          description: 'Pessoa detectada',
+          confidence: 0.95,
+        ),
+        camera: cam74,
+      );
+
       final events = service.getEventsForCamera(cam74);
       expect(events.isNotEmpty, true);
       expect(events.any((e) => e.type == CameraEventType.person), true);

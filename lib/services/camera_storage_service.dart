@@ -2,12 +2,11 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/camera_device.dart';
-import '../models/manufacturer.dart';
 import '../models/scan_result.dart';
 import 'diagnostic_logger_service.dart';
 
 class CameraStorageService extends ChangeNotifier {
-  static const String _storageKey = 'bcam_saved_cameras_v1';
+  static const String _storageKey = 'bcam_saved_cameras_v2';
   final List<CameraDevice> _cameras = [];
 
   List<CameraDevice> get cameras => List.unmodifiable(_cameras);
@@ -41,75 +40,13 @@ class CameraStorageService extends ChangeNotifier {
           '${_cameras.length} câmeras comissionadas carregadas do armazenamento persistente.',
         );
       } else {
-        // Commissioned physical cameras on the user's local network
+        // Fresh install / clean app: start completely empty so user commissions their own cameras
         _cameras.clear();
-        _cameras.addAll([
-          CameraDevice(
-            id: 'cam-intelbras-frente-74',
-            name: 'Intelbras Frente da Casa',
-            ip: '192.168.3.74',
-            rtspPort: 554,
-            webPort: 80,
-            manufacturer: CameraManufacturer.intelbras,
-            username: 'admin',
-            password: 'Zs29364835',
-            channel: 1,
-            subType: 0,
-            location: 'Frente / Portão',
-            isFavorite: true,
-            isOnline: true,
-            macAddress: '98:2A:0A:89:56:62',
-          ),
-          CameraDevice(
-            id: 'cam-yoosee-corredor-23',
-            name: 'Yoosee Corredor & Jardim',
-            ip: '192.168.3.23',
-            rtspPort: 554,
-            webPort: 5000,
-            manufacturer: CameraManufacturer.yoosee,
-            username: 'admin',
-            password: 'Compras10@',
-            channel: 1,
-            subType: 0,
-            location: 'Corredor / Jardim',
-            isFavorite: true,
-            isOnline: true,
-            macAddress: '98:03:CF:DC:00:0A',
-          ),
-          CameraDevice(
-            id: 'cam-yoosee-gourmet-24',
-            name: 'Yoosee Área Gourmet',
-            ip: '192.168.3.24',
-            rtspPort: 554,
-            webPort: 5000,
-            manufacturer: CameraManufacturer.yoosee,
-            username: 'admin',
-            password: 'Compras10@',
-            channel: 1,
-            subType: 0,
-            location: 'Área Gourmet / Fundos',
-            isFavorite: true,
-            isOnline: true,
-            macAddress: '98:03:CF:DB:FD:5A',
-          ),
-          CameraDevice(
-            id: 'cam-intelbras-mibo-22',
-            name: 'Intelbras iC5',
-            ip: '192.168.3.22',
-            rtspPort: 554,
-            webPort: 80,
-            manufacturer: CameraManufacturer.intelbrasIC,
-            username: 'admin',
-            password: 'compras10',
-            channel: 1,
-            subType: 0,
-            location: 'Interior / iC5',
-            isFavorite: false,
-            isOnline: true,
-            macAddress: '18:0D:2C:5D:96:FD',
-          ),
-        ]);
         await _saveToDisk(prefs);
+        DiagnosticLoggerService.instance.logInfo(
+          'STORAGE',
+          'Instalação limpa inicializada: zero câmeras pré-configuradas. Aguardando cadastro do usuário.',
+        );
       }
     } catch (e) {
       debugPrint('Error loading cameras: $e');
@@ -117,6 +54,18 @@ class CameraStorageService extends ChangeNotifier {
       _isInitialized = true;
       notifyListeners();
     }
+  }
+
+  /// Remove todas as câmeras cadastradas e zera o armazenamento
+  Future<void> clearAllCameras() async {
+    _cameras.clear();
+    final prefs = await SharedPreferences.getInstance();
+    await _saveToDisk(prefs);
+    notifyListeners();
+    DiagnosticLoggerService.instance.logInfo(
+      'STORAGE',
+      'Todas as câmeras foram removidas do dispositivo.',
+    );
   }
 
   /// Add or update camera binding by MAC Address (DHCP resilient)

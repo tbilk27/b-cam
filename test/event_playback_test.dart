@@ -75,6 +75,17 @@ void main() {
 
       // State switches to PLAY
       expect(find.text('PLAY • NVR/SD'), findsOneWidget);
+
+      // Tap Pause to safely cancel periodic playback timer
+      final pauseBtn = find.byIcon(FluentIcons.pause);
+      if (pauseBtn.evaluate().isNotEmpty) {
+        await tester.tap(pauseBtn.first);
+        await tester.pump();
+      }
+
+      // Tear down widget tree cleanly
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(seconds: 5));
     });
   });
 }

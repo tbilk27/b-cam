@@ -47,41 +47,24 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   }
 
   Future<void> _runStartupSequence() async {
-    DiagnosticLoggerService.instance.logInfo('SPLASH', 'Iniciando sequência de inicialização b-cam...');
-
-    // Etapa 1: Carregar câmeras do storage
-    await Future.delayed(const Duration(milliseconds: 400));
-    if (!mounted || _disposed) return;
-    setState(() {
-      _statusText = 'Carregando câmeras comissionadas...';
-      _progressValue = 40.0;
-    });
+    DiagnosticLoggerService.instance.logInfo('SPLASH', 'Iniciando inicialização ultrarrápida b-cam...');
 
     final storage = Provider.of<CameraStorageService>(context, listen: false);
-    await storage.loadCameras();
 
-    // Etapa 2: Inicializar parâmetros do Firebase e IA
-    await Future.delayed(const Duration(milliseconds: 450));
-    if (!mounted || _disposed) return;
-    setState(() {
-      _statusText = 'Conectando ao barramento de eventos e IA...';
-      _progressValue = 75.0;
-    });
+    // Inicialização concorrente dos subsistemas para máxima agilidade de abertura
+    await Future.wait([
+      storage.loadCameras(),
+      FirebaseNotificationService.instance.initialize(),
+      Future.delayed(const Duration(milliseconds: 250)),
+    ]);
 
-    await FirebaseNotificationService.instance.initialize();
-
-    // Etapa 3: Concluir e rotear
-    await Future.delayed(const Duration(milliseconds: 400));
     if (!mounted || _disposed) return;
     setState(() {
       _statusText = 'Sistema pronto para monitoramento.';
       _progressValue = 100.0;
     });
 
-    await Future.delayed(const Duration(milliseconds: 250));
-    if (!mounted || _disposed) return;
-
-    // Roteia para HomeScreen
+    // Roteamento imediato para a tela principal
     Navigator.of(context).pushReplacement(
       FluentPageRoute(
         builder: (context) => const HomeScreen(),

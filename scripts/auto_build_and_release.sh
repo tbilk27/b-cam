@@ -61,10 +61,11 @@ cat <<EOF > dist/version.json
   "apkUrl": "http://192.168.3.62:8088/b-cam-arm64.apk",
   "sha256": "$APK_SHA256",
   "fileSizeBytes": $APK_SIZE,
-  "releaseNotes": "Pacote oficial com.nexeoo.bcam (domínio bcam.nexeoo.com), Powered by Bilk Sistemas, Layout Instagram, Provisionamento Wi-Fi e Zonas de Exclusão IA.",
+  "releaseNotes": "Versão 1.15.0 otimizada: inicialização ultrarrápida (splash instantâneo), throttling de logs de diagnóstico de UI, e instalação 100% limpa sem câmeras pré-carregadas para onboarding autônomo do usuário.",
   "releaseDate": "$TIMESTAMP"
 }
 EOF
+cp dist/version.json public/version.json
 
 echo "✔ Manifesto gerado com sucesso em dist/version.json"
 echo "  Tamanho: $(($APK_SIZE / 1024 / 1024)) MB | SHA256: ${APK_SHA256:0:16}..."

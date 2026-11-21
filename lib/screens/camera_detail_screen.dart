@@ -711,7 +711,7 @@ class _CameraDetailScreenState extends State<CameraDetailScreen> {
                         activeColor: const Color(0xFFFF3B30),
                         onTap: () async {
                           final active = await CameraActionService.instance.toggleSiren(_camera);
-                          if (!context.mounted) return;
+                          if (!mounted) return;
                           displayInfoBar(
                             context,
                             duration: const Duration(seconds: 3),
@@ -734,7 +734,7 @@ class _CameraDetailScreenState extends State<CameraDetailScreen> {
                         activeColor: const Color(0xFFFFD60A),
                         onTap: () async {
                           final active = await CameraActionService.instance.toggleSpotlight(_camera);
-                          if (!context.mounted) return;
+                          if (!mounted) return;
                           displayInfoBar(
                             context,
                             duration: const Duration(seconds: 3),

@@ -703,7 +703,7 @@ class _CommissionScreenState extends State<CommissionScreen> {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        'Atalhos de credenciais do ambiente:',
+                        'Atalhos de credenciais comuns (padrão de fábrica):',
                         style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: BCamTheme.textSecondary),
                       ),
                       const SizedBox(height: 6),
@@ -711,58 +711,6 @@ class _CommissionScreenState extends State<CommissionScreen> {
                         spacing: 6,
                         runSpacing: 6,
                         children: [
-                          if (_selectedManufacturer == CameraManufacturer.intelbras ||
-                              _ipController.text.endsWith('.74'))
-                            Button(
-                              style: ButtonStyle(
-                                shape: WidgetStateProperty.all(
-                                  RoundedRectangleBorder(
-                                    side: const BorderSide(color: BCamTheme.accentLightBlue),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                ),
-                              ),
-                              onPressed: () => _applyQuickCredential('admin', 'Zs29364835'),
-                              child: Text(
-                                'admin / Zs29364835 (Frente)',
-                                style: GoogleFonts.inter(fontSize: 11, color: BCamTheme.accentLightBlue, fontWeight: FontWeight.w600),
-                              ),
-                            ),
-                          if (_selectedManufacturer == CameraManufacturer.yoosee ||
-                              _ipController.text.endsWith('.23') ||
-                              _ipController.text.endsWith('.24'))
-                            Button(
-                              style: ButtonStyle(
-                                shape: WidgetStateProperty.all(
-                                  RoundedRectangleBorder(
-                                    side: const BorderSide(color: BCamTheme.accentLightBlue),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                ),
-                              ),
-                              onPressed: () => _applyQuickCredential('admin', 'Compras10@'),
-                              child: Text(
-                                'admin / Compras10@ (Yoosee)',
-                                style: GoogleFonts.inter(fontSize: 11, color: BCamTheme.accentLightBlue, fontWeight: FontWeight.w600),
-                              ),
-                            ),
-                          if (_selectedManufacturer == CameraManufacturer.intelbrasMibo ||
-                              _ipController.text.endsWith('.22'))
-                            Button(
-                              style: ButtonStyle(
-                                shape: WidgetStateProperty.all(
-                                  RoundedRectangleBorder(
-                                    side: const BorderSide(color: BCamTheme.accentLightBlue),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                ),
-                              ),
-                              onPressed: () => _applyQuickCredential('admin', 'compras10'),
-                              child: Text(
-                                'admin / compras10 (Mibo)',
-                                style: GoogleFonts.inter(fontSize: 11, color: BCamTheme.accentLightBlue, fontWeight: FontWeight.w600),
-                              ),
-                            ),
                           Button(
                             onPressed: () => _applyQuickCredential('admin', 'admin'),
                             child: Text('admin / admin', style: GoogleFonts.inter(fontSize: 11)),
@@ -778,13 +726,12 @@ class _CommissionScreenState extends State<CommissionScreen> {
                         ],
                       ),
                       if (_selectedManufacturer == CameraManufacturer.intelbrasMibo ||
-                          _selectedManufacturer == CameraManufacturer.intelbrasIC ||
-                          _ipController.text.endsWith('.22')) ...[
+                          _selectedManufacturer == CameraManufacturer.intelbrasIC) ...[
                         const SizedBox(height: 12),
                         const InfoBar(
-                          title: Text('Dica Intelbras iC5 (D06533598)'),
+                          title: Text('Dica Intelbras Linha iC / Mibo'),
                           content: Text(
-                            'No app Mibo, desative a opção "Criptografia de imagem" para liberar o RTSP, ou use a senha configurada em "Altere a senha de criptografia" (por padrão é o Código de Verificação da etiqueta).',
+                            'No app Mibo, desative a opção "Criptografia de imagem" para liberar o fluxo RTSP direto, ou use a chave de validação indicada na etiqueta do dispositivo (Código de Verificação).',
                           ),
                           severity: InfoBarSeverity.warning,
                         ),

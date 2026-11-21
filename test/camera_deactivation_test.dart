@@ -59,7 +59,17 @@ void main() {
       final storage = CameraStorageService();
       await storage.loadCameras();
 
-      // Ensure initial state
+      // Fresh install starts clean with 0 cameras
+      expect(storage.cameras.isEmpty, isTrue);
+
+      // Add a camera for testing
+      await storage.addCamera(CameraDevice(
+        id: 'cam-test-1',
+        name: 'Câmera Teste',
+        ip: '192.168.3.100',
+        isEnabled: true,
+      ));
+
       expect(storage.cameras.isNotEmpty, isTrue);
       final initialCount = storage.cameras.length;
       final targetCam = storage.cameras.first;

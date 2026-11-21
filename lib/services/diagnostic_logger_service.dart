@@ -203,6 +203,20 @@ class DiagnosticLoggerService extends ChangeNotifier {
     await response.close();
   }
 
+  Timer? _notifyThrottleTimer;
+
+  void _scheduleThrottledNotify() {
+    if (!hasListeners) return;
+    if (_notifyThrottleTimer != null && _notifyThrottleTimer!.isActive) {
+      return;
+    }
+    _notifyThrottleTimer = Timer(const Duration(milliseconds: 300), () {
+      if (hasListeners) {
+        notifyListeners();
+      }
+    });
+  }
+
   void log({
     required LogLevel level,
     required String category,
@@ -222,7 +236,7 @@ class DiagnosticLoggerService extends ChangeNotifier {
       _entries.removeRange(0, _entries.length - maxMemoryEntries);
     }
 
-    notifyListeners();
+    _scheduleThrottledNotify();
 
     // Async write to file
     _writeToFile(entry);
