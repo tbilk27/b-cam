@@ -41,8 +41,8 @@ class AppUpdateService extends ChangeNotifier {
   AppUpdateService._internal();
 
   // Current App Version (Defined in pubspec.yaml)
-  static const int appVersionCode = 33;
-  static const String appVersionName = '1.30.0';
+  static const int appVersionCode = 34;
+  static const String appVersionName = '1.31.0';
 
   String _updateServerUrl = 'https://bilkcam.web.app';
   String get updateServerUrl => _updateServerUrl;

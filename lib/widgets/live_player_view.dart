@@ -631,7 +631,8 @@ class LivePlayerViewState extends State<LivePlayerView>
 
   void _startAiSurveillanceLoop() {
     _aiSurveillanceTimer?.cancel();
-    _aiSurveillanceTimer = Timer.periodic(const Duration(seconds: 25), (_) async {
+    // Amostragem ótica a cada 3 segundos: captura o movimento logo no início da movimentação
+    _aiSurveillanceTimer = Timer.periodic(const Duration(seconds: 3), (_) async {
       if (!mounted || !_effectiveCamera.isEnabled || !_effectiveCamera.aiDetectionEnabled) return;
       if (!(_player?.state.playing ?? false)) return;
 

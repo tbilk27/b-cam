@@ -57,6 +57,7 @@ class CameraEvent {
   final Duration duration;
   final String description;
   final String? clipUrl;
+  final String? snapshotPath;
   final double confidence; // e.g. 0.94 (94%)
   final bool isFlagged;
   final List<BoundingBox> boundingBoxes;
@@ -72,12 +73,37 @@ class CameraEvent {
     required this.duration,
     required this.description,
     this.clipUrl,
+    this.snapshotPath,
     this.confidence = 1.0,
     this.isFlagged = false,
     this.boundingBoxes = const [],
     this.sceneInterpretation,
     String? deepLinkUrl,
   }) : deepLinkUrl = deepLinkUrl ?? 'bcam://event/$id';
+
+  /// True if event has a real recorded video clip (.mp4, .mkv, rtsp://) and not just an image
+  bool get hasVideoClip =>
+      clipUrl != null &&
+      clipUrl!.trim().isNotEmpty &&
+      !clipUrl!.toLowerCase().endsWith('.jpg') &&
+      !clipUrl!.toLowerCase().endsWith('.jpeg') &&
+      !clipUrl!.toLowerCase().endsWith('.png') &&
+      !clipUrl!.contains('/snapshots/');
+
+  /// Path to the evidence snapshot image captured at the moment of detection
+  String? get effectiveSnapshotPath {
+    if (snapshotPath != null && snapshotPath!.trim().isNotEmpty) {
+      return snapshotPath!.trim();
+    }
+    if (clipUrl != null &&
+        (clipUrl!.toLowerCase().endsWith('.jpg') ||
+         clipUrl!.toLowerCase().endsWith('.jpeg') ||
+         clipUrl!.toLowerCase().endsWith('.png') ||
+         clipUrl!.contains('/snapshots/'))) {
+      return clipUrl!.trim();
+    }
+    return null;
+  }
 
   String get timeFormatted {
     final h = timestamp.hour.toString().padLeft(2, '0');
@@ -111,6 +137,7 @@ class CameraEvent {
     'durationSeconds': duration.inSeconds,
     'description': description,
     'clipUrl': clipUrl,
+    'snapshotPath': effectiveSnapshotPath,
     'confidence': confidence,
     'isFlagged': isFlagged,
     'boundingBoxes': boundingBoxes.map((b) => b.toJson()).toList(),
@@ -128,6 +155,7 @@ class CameraEvent {
       duration: Duration(seconds: (json['durationSeconds'] as num?)?.toInt() ?? 30),
       description: json['description'] as String? ?? '',
       clipUrl: json['clipUrl'] as String?,
+      snapshotPath: json['snapshotPath'] as String?,
       confidence: (json['confidence'] as num?)?.toDouble() ?? 1.0,
       isFlagged: json['isFlagged'] as bool? ?? false,
       boundingBoxes: (json['boundingBoxes'] as List<dynamic>?)
@@ -148,6 +176,7 @@ class CameraEvent {
     Duration? duration,
     String? description,
     String? clipUrl,
+    String? snapshotPath,
     double? confidence,
     bool? isFlagged,
     List<BoundingBox>? boundingBoxes,
@@ -163,6 +192,7 @@ class CameraEvent {
       duration: duration ?? this.duration,
       description: description ?? this.description,
       clipUrl: clipUrl ?? this.clipUrl,
+      snapshotPath: snapshotPath ?? this.snapshotPath,
       confidence: confidence ?? this.confidence,
       isFlagged: isFlagged ?? this.isFlagged,
       boundingBoxes: boundingBoxes ?? this.boundingBoxes,

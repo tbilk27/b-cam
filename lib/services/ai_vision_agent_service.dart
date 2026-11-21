@@ -178,10 +178,10 @@ class AiVisionAgentService extends ChangeNotifier {
       final file = File(snapshotPath);
       if (!await file.exists()) return null;
 
-      // Cooldown de 30 segundos por câmera para evitar duplicidade excessiva de eventos gravados
+      // Cooldown de 15 segundos por câmera para evitar duplicidade excessiva de eventos gravados
       final now = DateTime.now();
       final lastRecorded = _lastRecordedEventPerCamera[camera.id];
-      if (!forceRegister && lastRecorded != null && now.difference(lastRecorded).inSeconds < 30) {
+      if (!forceRegister && lastRecorded != null && now.difference(lastRecorded).inSeconds < 15) {
         return null;
       }
 
@@ -244,10 +244,11 @@ class AiVisionAgentService extends ChangeNotifier {
         cameraName: camera.name,
         type: type,
         timestamp: now,
-        duration: const Duration(seconds: 30),
+        duration: const Duration(seconds: 35),
         description: desc,
         confidence: box.confidence,
-        clipUrl: snapshotPath, // Salva o caminho real da evidência de imagem
+        snapshotPath: snapshotPath, // Salva o caminho real da evidência fotográfica
+        clipUrl: null, // Permite que playbackUrlForEvent utilize o fluxo de vídeo gravado do NVR
         boundingBoxes: [box],
         sceneInterpretation: 'IA Ótica: ${box.label} identificado com ${(box.confidence * 100).toInt()}% de assertividade.',
         deepLinkUrl: 'bcam://event/$eventId',

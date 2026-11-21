@@ -60,7 +60,8 @@ class _EventClipPlayerViewState extends State<EventClipPlayerView> {
   @override
   void initState() {
     super.initState();
-    _totalDurationSeconds = max(5, widget.event.duration.inSeconds);
+    final isRtsp = widget.camera != null && widget.camera!.isEnabled && widget.camera!.manufacturer.supportsRtspPlayback;
+    _totalDurationSeconds = max(5, widget.event.duration.inSeconds + (isRtsp ? 15 : 0));
     _isPlaying = widget.autoPlay;
     _initPlayer();
   }
@@ -89,37 +90,31 @@ class _EventClipPlayerViewState extends State<EventClipPlayerView> {
 
   void _initPlayer() {
     final camera = widget.camera;
-    // Um player de evento gravado NUNCA deve abrir o stream ao vivo (camera.streamUrl)
     String? streamUrl;
-    if (widget.event.clipUrl != null &&
-        widget.event.clipUrl!.trim().isNotEmpty &&
-        (camera == null || widget.event.clipUrl!.trim() != camera.streamUrl)) {
-      streamUrl = widget.event.clipUrl!.trim();
-    } else if (camera != null && camera.isEnabled) {
+
+    // 1. Prioridade Absoluta: Gravação RTSP da câmera/NVR (com buffer pré-evento de 15s)
+    if (camera != null && camera.isEnabled && camera.manufacturer.supportsRtspPlayback) {
       final pbUrl = camera.playbackUrlForEvent(widget.event);
-      if (pbUrl != camera.streamUrl) {
+      if (pbUrl != null && pbUrl != camera.streamUrl) {
         streamUrl = pbUrl;
       }
     }
 
-    final isImage = streamUrl != null &&
-        (streamUrl.toLowerCase().endsWith('.jpg') ||
-         streamUrl.toLowerCase().endsWith('.jpeg') ||
-         streamUrl.toLowerCase().endsWith('.png') ||
-         streamUrl.contains('/snapshots/'));
+    // 2. Se a câmera não suportar playback RTSP, verifica se há arquivo de vídeo salvo (.mp4/.mkv)
+    if (streamUrl == null && widget.event.hasVideoClip) {
+      streamUrl = widget.event.clipUrl!.trim();
+    }
 
-    if (isImage) {
-      // Evidência de imagem gravada pela IA ou captura local:
-      // Exibe diretamente a evidência e simula a linha do tempo do evento sem erro do libmpv
+    // 3. Se não houver arquivo/fluxo de vídeo (câmera sem NVR como Yoosee ou foto da detecção)
+    if (streamUrl == null) {
       _isLoading = false;
       _hasVideoError = false;
-      _isPlaying = true;
-      _startPlaybackTimer();
+      _isPlaying = false;
       _scheduleHideControls();
       return;
     }
 
-    if (streamUrl != null && streamUrl.isNotEmpty) {
+    if (streamUrl.isNotEmpty) {
       try {
         final p = Player(
           configuration: const PlayerConfiguration(
@@ -326,15 +321,10 @@ class _EventClipPlayerViewState extends State<EventClipPlayerView> {
 
   Widget _buildBackgroundSnapshot() {
     // 1. Snapshot da evidência gravada pelo evento
-    final eventClip = widget.event.clipUrl;
-    if (eventClip != null &&
-        (eventClip.toLowerCase().endsWith('.jpg') ||
-         eventClip.toLowerCase().endsWith('.jpeg') ||
-         eventClip.toLowerCase().endsWith('.png') ||
-         eventClip.contains('/snapshots/')) &&
-        File(eventClip).existsSync()) {
+    final eventSnap = widget.event.effectiveSnapshotPath;
+    if (eventSnap != null && File(eventSnap).existsSync()) {
       return Image.file(
-        File(eventClip),
+        File(eventSnap),
         fit: BoxFit.cover,
       );
     }

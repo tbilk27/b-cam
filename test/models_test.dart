@@ -167,7 +167,8 @@ void main() {
       );
 
       final playbackUrl = cam.playbackUrlForEvent(event);
-      expect(playbackUrl, contains('/cam/playback?channel=1&starttime=2026_11_21_08_30_00&endtime=2026_11_21_08_30_45'));
+      // Inclui buffer de pre-roll de 15 segundos antes do evento para capturar a aproximação
+      expect(playbackUrl, contains('/cam/playback?channel=1&starttime=2026_11_21_08_29_45&endtime=2026_11_21_08_30_45'));
       expect(playbackUrl, contains('admin:password123@192.168.3.74:554'));
     });
 

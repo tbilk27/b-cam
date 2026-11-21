@@ -1,9 +1,9 @@
 {
-  "versionCode": 33,
-  "versionName": "1.30.0",
+  "versionCode": 34,
+  "versionName": "1.31.0",
   "apkUrl": "https://github.com/tbilk27/b-cam/releases/latest/download/b-cam-arm64.apk",
-  "sha256": "f35b0d0f1d06c1ed6e737e6edf0cfa1114fc3bff9a385b369155d91af48e3d62",
-  "fileSizeBytes": 34969183,
-  "releaseNotes": "Versão 1.30.0: Correção de autenticação e loop de reconexão Yoosee (401/400), proteção contra substituição de IP DHCP no radar, limitação de escala de fontes do sistema e eliminação de overflow de textos em todas as telas.",
-  "releaseDate": "2026-11-21T18:55:00Z"
+  "sha256": "d2def1093f68abbd112e286b5d0fde7fd59f841a74c0f120eb905f42a73afb8f",
+  "fileSizeBytes": 35034715,
+  "releaseNotes": "Versão 1.31.0: Botão de atualização OTA in-app na aba Sistema, correção de reprodução de vídeo de eventos com buffer pre-roll de 15 segundos para exibir o movimento antes da detecção, separação de snapshot vs vídeo RTSP, e loop de vigilância otimizado a cada 3 segundos.",
+  "releaseDate": "2026-11-21T19:26:00Z"
 }

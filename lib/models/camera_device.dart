@@ -107,9 +107,8 @@ class CameraDevice {
 
   /// Computes the actual RTSP playback URL for an event range (never returns live stream)
   String? playbackUrlForEvent(CameraEvent event, {bool forceCloud = false}) {
-    if (event.clipUrl != null &&
-        event.clipUrl!.trim().isNotEmpty &&
-        event.clipUrl!.trim() != streamUrl) {
+    // Se o evento possuir um clipe de vídeo explícito (.mp4, .mkv ou rtsp://), utiliza diretamente
+    if (event.hasVideoClip && event.clipUrl!.trim() != streamUrl) {
       return event.clipUrl!.trim();
     }
 
@@ -125,14 +124,20 @@ class CameraDevice {
         ? (remoteRtspPort != null && remoteRtspPort! > 0 ? remoteRtspPort! : 8554)
         : rtspPort;
 
+    // Buffer pré-evento crítico de 15 segundos:
+    // Quando a IA detecta movimento, a ação já iniciou segundos antes.
+    // O recuo de 15s garante que o vídeo exiba a aproximação, a ação completa e a saída do objeto!
+    final effectiveStartTime = event.timestamp.subtract(const Duration(seconds: 15));
+    final effectiveEndTime = event.timestamp.add(event.duration);
+
     return manufacturer.buildPlaybackRtspUrl(
       ip: targetHost,
       port: targetPort,
       user: username,
       password: password,
       channel: channel,
-      startTime: event.timestamp,
-      endTime: event.timestamp.add(event.duration),
+      startTime: effectiveStartTime,
+      endTime: effectiveEndTime,
       fallbackPath: customPath,
     );
   }
