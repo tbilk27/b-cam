@@ -1,8 +1,10 @@
 import 'package:bcam/models/bounding_box.dart';
 import 'package:bcam/models/camera_device.dart';
 import 'package:bcam/models/camera_event.dart';
+import 'package:bcam/services/camera_event_service.dart';
 import 'package:bcam/widgets/event_clip_player_view.dart';
 import 'package:fluent_ui/fluent_ui.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -86,6 +88,54 @@ void main() {
       // Tear down widget tree cleanly
       await tester.pumpWidget(const SizedBox());
       await tester.pump(const Duration(seconds: 5));
+    });
+
+    test('CameraEventService shareEventViaWhatsApp invokes platform channel with correct payload', () async {
+      String? sentMethod;
+      dynamic sentArgs;
+
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+        const MethodChannel('com.nexeoo.bcam/deeplink'),
+        (MethodCall call) async {
+          sentMethod = call.method;
+          sentArgs = call.arguments;
+          return true;
+        },
+      );
+
+      final event = CameraEvent(
+        id: 'evt-wa-123',
+        cameraId: 'cam-74',
+        cameraName: 'Intelbras Frente',
+        type: CameraEventType.person,
+        timestamp: DateTime(2026, 11, 21, 10, 30, 0),
+        duration: const Duration(seconds: 45),
+        description: 'Pessoa identificada no portão.',
+        confidence: 0.95,
+      );
+
+      final camera = CameraDevice(
+        id: 'cam-74',
+        name: 'Intelbras Frente',
+        ip: '192.168.3.74',
+        lastSnapshotPath: '/tmp/test_snap.jpg',
+      );
+
+      final service = CameraEventService.instance;
+      final success = await service.shareEventViaWhatsApp(
+        event,
+        camera: camera,
+      );
+
+      expect(success, isTrue);
+      expect(sentMethod, 'shareEventViaWhatsApp');
+      expect(sentArgs['filePath'], '/tmp/test_snap.jpg');
+      expect(sentArgs['message'], contains('Alerta de Vigilância b-cam PRO'));
+      expect(sentArgs['message'], contains('Intelbras Frente'));
+      expect(sentArgs['message'], contains('Pessoa Detectada'));
+      expect(sentArgs['message'], contains('95%'));
+      expect(sentArgs['message'], contains('https://bcam.nexeoo.com/event/evt-wa-123'));
     });
   });
 }

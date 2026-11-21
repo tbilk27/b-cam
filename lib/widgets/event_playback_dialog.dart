@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../models/camera_device.dart';
 import '../models/camera_event.dart';
 import '../screens/camera_detail_screen.dart';
+import '../services/camera_event_service.dart';
 import '../services/camera_storage_service.dart';
 import '../theme/fluent_theme.dart';
 import 'event_clip_player_view.dart';
@@ -103,6 +104,10 @@ class _EventPlaybackDialogState extends State<EventPlaybackDialog> {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
+              IconButton(
+                icon: const Icon(FluentIcons.share, size: 14, color: Color(0xFF25D366)),
+                onPressed: _shareViaWhatsApp,
+              ),
               if (_camera != null)
                 IconButton(
                   icon: const Icon(FluentIcons.video, size: 14, color: BCamTheme.accentLightBlue),
@@ -302,10 +307,43 @@ class _EventPlaybackDialogState extends State<EventPlaybackDialog> {
               ),
             ],
           ),
+          const SizedBox(height: 10),
+          FilledButton(
+            style: ButtonStyle(
+              backgroundColor: WidgetStateProperty.all(const Color(0xFF25D366)),
+              shape: WidgetStateProperty.all(
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+            ),
+            onPressed: _shareViaWhatsApp,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(FluentIcons.share, size: 14, color: Colors.white),
+                const SizedBox(width: 8),
+                Text(
+                  'Enviar Vídeo pelo WhatsApp',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
       // No bottom buttons as requested: "se já tem o ícone, não precisa dos botões abaixo"
       actions: null,
+    );
+  }
+
+  Future<void> _shareViaWhatsApp() async {
+    final currentEvent = _clips[_currentClipIndex];
+    await CameraEventService.instance.shareEventViaWhatsApp(
+      currentEvent,
+      camera: _camera,
     );
   }
 }

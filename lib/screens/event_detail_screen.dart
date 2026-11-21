@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../models/camera_device.dart';
 import '../models/camera_event.dart';
+import '../services/camera_event_service.dart';
 import '../services/camera_storage_service.dart';
 import '../theme/fluent_theme.dart';
 import '../widgets/event_clip_player_view.dart';
@@ -43,6 +44,21 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
               icon: const Icon(FluentIcons.back, size: 16),
               onPressed: () => Navigator.of(context).pop(),
             ),
+          ),
+          commandBar: CommandBar(
+            mainAxisAlignment: MainAxisAlignment.end,
+            primaryItems: [
+              CommandBarButton(
+                icon: const Icon(FluentIcons.share, size: 14, color: Color(0xFF25D366)),
+                label: const Text('WhatsApp'),
+                onPressed: () {
+                  CameraEventService.instance.shareEventViaWhatsApp(
+                    event,
+                    camera: camera,
+                  );
+                },
+              ),
+            ],
           ),
           title: Row(
             children: [
@@ -260,53 +276,89 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
   }
 
   Widget _buildActionsRow(CameraEvent event, CameraDevice? camera) {
-    return Row(
+    return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Expanded(
-          child: Button(
-            onPressed: () {
-              Clipboard.setData(ClipboardData(text: event.deepLinkUrl ?? 'bcam://event/${event.id}'));
-              displayInfoBar(
-                context,
-                builder: (context, close) => InfoBar(
-                  title: const Text('Deeplink Copiado'),
-                  content: Text(event.deepLinkUrl ?? 'bcam://event/${event.id}'),
-                  severity: InfoBarSeverity.success,
-                  onClose: close,
-                ),
-              );
-            },
-            child: const Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(FluentIcons.link, size: 14),
-                SizedBox(width: 6),
-                Text('Copiar Deeplink'),
-              ],
+        FilledButton(
+          style: ButtonStyle(
+            backgroundColor: WidgetStateProperty.all(const Color(0xFF25D366)),
+            shape: WidgetStateProperty.all(
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
+          ),
+          onPressed: () {
+            CameraEventService.instance.shareEventViaWhatsApp(
+              event,
+              camera: camera,
+            );
+          },
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(FluentIcons.share, size: 15, color: Colors.white),
+              const SizedBox(width: 8),
+              Text(
+                'Enviar Vídeo pelo WhatsApp',
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+              ),
+            ],
           ),
         ),
-        const SizedBox(width: 8),
-        if (camera != null)
-          Expanded(
-            child: FilledButton(
-              onPressed: () {
-                Navigator.of(context).push(
-                  FluentPageRoute(
-                    builder: (context) => CameraDetailScreen(camera: camera),
-                  ),
-                );
-              },
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(FluentIcons.video, size: 14),
-                  SizedBox(width: 6),
-                  Text('Câmera ao Vivo'),
-                ],
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: Button(
+                onPressed: () {
+                  Clipboard.setData(ClipboardData(text: event.deepLinkUrl ?? 'bcam://event/${event.id}'));
+                  displayInfoBar(
+                    context,
+                    builder: (context, close) => InfoBar(
+                      title: const Text('Deeplink Copiado'),
+                      content: Text(event.deepLinkUrl ?? 'bcam://event/${event.id}'),
+                      severity: InfoBarSeverity.success,
+                      onClose: close,
+                    ),
+                  );
+                },
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(FluentIcons.link, size: 14),
+                    SizedBox(width: 6),
+                    Text('Copiar Deeplink'),
+                  ],
+                ),
               ),
             ),
-          ),
+            if (camera != null) ...[
+              const SizedBox(width: 8),
+              Expanded(
+                child: FilledButton(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      FluentPageRoute(
+                        builder: (context) => CameraDetailScreen(camera: camera),
+                      ),
+                    );
+                  },
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(FluentIcons.video, size: 14),
+                      SizedBox(width: 6),
+                      Text('Câmera ao Vivo'),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
       ],
     );
   }

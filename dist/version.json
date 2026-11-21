@@ -1,9 +1,9 @@
 {
-  "versionCode": 24,
-  "versionName": "1.22.1",
+  "versionCode": 25,
+  "versionName": "1.23.0",
   "apkUrl": "http://192.168.3.62:8088/b-cam-arm64.apk",
-  "sha256": "d65d5d13476434cd6b1f3b23321dc240b0d6c44fd19e8e7d2112f11f8548db68",
-  "fileSizeBytes": 64185340,
-  "releaseNotes": "Versão 1.22.1: Filtragem automática na tela de varredura Wi-Fi e Radar para ocultar câmeras que já foram cadastradas no b-cam, exibindo apenas novos dispositivos detectados.",
-  "releaseDate": "2026-11-21T12:40:00Z"
+  "sha256": "7c3fc9750cc869d755eb7f15afc3d30fc8b6e094eb5746d1d3a1d4717971f3e5",
+  "fileSizeBytes": 64316412,
+  "releaseNotes": "Versão 1.23.0: Envio e compartilhamento de vídeos de eventos gravados via WhatsApp diretamente pela tela de eventos, reprodução e timeline, com captura instantânea de frame e link de visualização.",
+  "releaseDate": "2026-11-21T13:06:00Z"
 }

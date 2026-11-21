@@ -6,9 +6,11 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
+import 'package:path_provider/path_provider.dart';
 import '../models/bounding_box.dart';
 import '../models/camera_device.dart';
 import '../models/camera_event.dart';
+import '../services/camera_event_service.dart';
 import '../services/diagnostic_logger_service.dart';
 import '../theme/fluent_theme.dart';
 import 'bounding_box_overlay.dart';
@@ -251,6 +253,31 @@ class _EventClipPlayerViewState extends State<EventClipPlayerView> {
       _isMuted = !_isMuted;
     });
     _player?.setVolume(_isMuted ? 0 : 100);
+  }
+
+  Future<void> _shareViaWhatsApp() async {
+    String? snapPath;
+    try {
+      if (_player != null) {
+        final bytes = await _player!.screenshot(format: 'image/jpeg');
+        if (bytes != null && bytes.isNotEmpty) {
+          final dir = await getApplicationDocumentsDirectory();
+          final snapDir = Directory('${dir.path}/event_snaps');
+          if (!await snapDir.exists()) await snapDir.create(recursive: true);
+          final file = File('${snapDir.path}/event_${widget.event.id}_${DateTime.now().millisecondsSinceEpoch}.jpg');
+          await file.writeAsBytes(bytes);
+          snapPath = file.path;
+        }
+      }
+    } catch (e) {
+      debugPrint('Erro ao capturar frame para WhatsApp: $e');
+    }
+
+    await CameraEventService.instance.shareEventViaWhatsApp(
+      widget.event,
+      camera: widget.camera,
+      snapshotPath: snapPath,
+    );
   }
 
   String _formatTime(int totalSecs) {
@@ -619,6 +646,13 @@ class _EventClipPlayerViewState extends State<EventClipPlayerView> {
                                   _seekTo(0.0);
                                   if (!_isPlaying) _togglePlayPause();
                                 },
+                              ),
+                              const SizedBox(width: 4),
+
+                              // Enviar Vídeo via WhatsApp
+                              IconButton(
+                                icon: const Icon(FluentIcons.share, size: 14, color: Color(0xFF25D366)),
+                                onPressed: _shareViaWhatsApp,
                               ),
                             ],
                           ),

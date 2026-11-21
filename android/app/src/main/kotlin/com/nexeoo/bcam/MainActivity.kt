@@ -184,6 +184,105 @@ class MainActivity : FlutterFragmentActivity() {
                         result.error("SHARE_ERROR", e.localizedMessage, null)
                     }
                 }
+                "shareEventViaWhatsApp" -> {
+                    val filePath = call.argument<String>("filePath")
+                    val message = call.argument<String>("message") ?: "Alerta de Evento b-cam"
+                    val rawPhone = call.argument<String>("phone")
+
+                    try {
+                        val digits = rawPhone?.replace(Regex("[^0-9]"), "") ?: ""
+                        val phone = if (digits.isNotEmpty()) {
+                            if (digits.startsWith("55")) digits else "55$digits"
+                        } else null
+
+                        val isNormalInstalled = isAppInstalled("com.whatsapp")
+                        val isBusinessInstalled = isAppInstalled("com.whatsapp.w4b")
+                        val targetPackage = when {
+                            isNormalInstalled -> "com.whatsapp"
+                            isBusinessInstalled -> "com.whatsapp.w4b"
+                            else -> null
+                        }
+
+                        val file = filePath?.let { File(it) }
+
+                        if (file != null && file.exists()) {
+                            val fileUri = FileProvider.getUriForFile(
+                                this@MainActivity,
+                                "${applicationContext.packageName}.fileprovider",
+                                file
+                            )
+
+                            val mimeType = when {
+                                file.name.endsWith(".mp4", ignoreCase = true) -> "video/mp4"
+                                file.name.endsWith(".mkv", ignoreCase = true) -> "video/*"
+                                file.name.endsWith(".png", ignoreCase = true) -> "image/png"
+                                else -> "image/jpeg"
+                            }
+
+                            val intent = Intent(Intent.ACTION_SEND).apply {
+                                type = mimeType
+                                putExtra(Intent.EXTRA_STREAM, fileUri)
+                                putExtra(Intent.EXTRA_TEXT, message)
+                                if (phone != null) {
+                                    putExtra("jid", "$phone@s.whatsapp.net")
+                                }
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                if (targetPackage != null) {
+                                    setPackage(targetPackage)
+                                }
+                            }
+
+                            if (targetPackage != null) {
+                                grantUriPermission(targetPackage, fileUri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            }
+
+                            try {
+                                startActivity(intent)
+                                result.success(true)
+                            } catch (_: Exception) {
+                                val chooser = Intent.createChooser(intent, "Enviar vídeo do evento via WhatsApp").apply {
+                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                }
+                                startActivity(chooser)
+                                result.success(true)
+                            }
+                        } else {
+                            if (phone != null && phone.isNotEmpty()) {
+                                val uri = Uri.parse("https://api.whatsapp.com/send?phone=$phone&text=${URLEncoder.encode(message, "UTF-8")}")
+                                val intent = Intent(Intent.ACTION_VIEW, uri).apply {
+                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    if (targetPackage != null) {
+                                        setPackage(targetPackage)
+                                    }
+                                }
+                                startActivity(intent)
+                                result.success(true)
+                            } else {
+                                val intent = Intent(Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(Intent.EXTRA_TEXT, message)
+                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    if (targetPackage != null) {
+                                        setPackage(targetPackage)
+                                    }
+                                }
+                                try {
+                                    startActivity(intent)
+                                    result.success(true)
+                                } catch (_: Exception) {
+                                    val chooser = Intent.createChooser(intent, "Enviar vídeo do evento via WhatsApp").apply {
+                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    }
+                                    startActivity(chooser)
+                                    result.success(true)
+                                }
+                            }
+                        }
+                    } catch (e: Exception) {
+                        result.error("WHATSAPP_EVENT_SHARE_ERROR", e.localizedMessage, null)
+                    }
+                }
                 "showSystemNotification" -> {
                     val id = call.argument<Int>("id") ?: System.currentTimeMillis().toInt()
                     val title = call.argument<String>("title") ?: "🚨 Alerta b-cam"

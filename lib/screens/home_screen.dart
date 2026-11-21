@@ -1277,7 +1277,19 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ],
                 ),
-                trailing: const Icon(FluentIcons.play, size: 14, color: BCamTheme.accentLightBlue),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(FluentIcons.share, size: 14, color: Color(0xFF25D366)),
+                      onPressed: () {
+                        CameraEventService.instance.shareEventViaWhatsApp(event, camera: cam);
+                      },
+                    ),
+                    const SizedBox(width: 4),
+                    const Icon(FluentIcons.play, size: 14, color: BCamTheme.accentLightBlue),
+                  ],
+                ),
                 onPressed: () {
                   EventPlaybackDialog.show(context, event, cam);
                 },

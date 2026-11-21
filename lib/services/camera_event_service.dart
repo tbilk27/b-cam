@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/bounding_box.dart';
 import '../models/camera_device.dart';
@@ -267,5 +268,61 @@ class CameraEventService extends ChangeNotifier {
     }
 
     return true;
+  }
+
+  static const MethodChannel _platformChannel = MethodChannel('com.nexeoo.bcam/deeplink');
+
+  /// Formata e compartilha o vídeo e informações de um evento gravado via WhatsApp
+  Future<bool> shareEventViaWhatsApp(
+    CameraEvent event, {
+    CameraDevice? camera,
+    String? snapshotPath,
+    String? phone,
+  }) async {
+    try {
+      final camName = camera?.name ?? event.cameraName;
+      final videoLink = event.deepLinkUrl != null && event.deepLinkUrl!.startsWith('http')
+          ? event.deepLinkUrl!
+          : 'https://bcam.nexeoo.com/event/${event.id}';
+
+      final buffer = StringBuffer();
+      buffer.writeln('🚨 *Alerta de Vigilância b-cam PRO*');
+      buffer.writeln('');
+      buffer.writeln('📹 *Câmera:* $camName');
+      buffer.writeln('🔍 *Evento:* ${event.type.label}');
+      buffer.writeln('🕒 *Horário:* ${event.timeFormatted} (${event.dateFormatted})');
+      buffer.writeln('⚡ *Assertividade IA:* ${(event.confidence * 100).toInt()}%');
+      if (event.sceneInterpretation != null && event.sceneInterpretation!.isNotEmpty) {
+        buffer.writeln('📝 *Interpretação IA:* ${event.sceneInterpretation}');
+      } else if (event.description.isNotEmpty) {
+        buffer.writeln('📝 *Detalhes:* ${event.description}');
+      }
+      buffer.writeln('⏱️ *Duração do Clipe:* ${event.durationFormatted}');
+      buffer.writeln('');
+      buffer.writeln('▶️ *Assistir Gravação do Vídeo:*');
+      buffer.writeln(videoLink);
+
+      final message = buffer.toString();
+      final effectivePath = snapshotPath ?? camera?.lastSnapshotPath;
+
+      final result = await _platformChannel.invokeMethod<bool>('shareEventViaWhatsApp', {
+        'filePath': effectivePath,
+        'message': message,
+        'phone': phone,
+      });
+
+      DiagnosticLoggerService.instance.logInfo(
+        'EVENTS',
+        'Vídeo/alerta do evento ${event.id} (${event.type.label}) compartilhado via WhatsApp.',
+      );
+
+      return result ?? true;
+    } catch (e) {
+      DiagnosticLoggerService.instance.logError(
+        'EVENTS',
+        'Erro ao compartilhar vídeo do evento via WhatsApp: $e',
+      );
+      return false;
+    }
   }
 }

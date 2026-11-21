@@ -572,6 +572,18 @@ class _VerticalEventTimelineState extends State<VerticalEventTimeline> {
 
                       const SizedBox(width: 8),
 
+                      // WhatsApp Quick Share
+                      IconButton(
+                        icon: const Icon(FluentIcons.share, size: 14, color: Color(0xFF25D366)),
+                        onPressed: () {
+                          CameraEventService.instance.shareEventViaWhatsApp(
+                            event,
+                            camera: widget.camera,
+                          );
+                        },
+                      ),
+                      const SizedBox(width: 4),
+
                       // Play Triangle Button Icon
                       Container(
                         width: 28,
